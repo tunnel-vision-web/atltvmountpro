@@ -15,8 +15,45 @@ const stats = [
   { icon: Shield, label: 'Licensed & insured', value: 'Yes' },
 ];
 
+import pb from '@/lib/pocketbaseClient';
+
+const DEFAULT_ABOUT = {
+  story_title: 'Our story',
+  story_content: 'Founded in 2021, ATL TV Mount PRO started with a simple mission: provide reliable, professional handyman services to the Atlanta community. What began as a TV mounting specialty has grown into a full-service handyman company serving thousands of satisfied customers.\n\nOur team of skilled technicians brings years of experience and a commitment to quality workmanship. We take pride in every project, whether it\'s mounting a TV, repairing drywall, or completing a full room renovation.\n\nWe\'re fully licensed and insured, and we stand behind our work with a 100% satisfaction guarantee. When you choose ATL TV Mount PRO, you\'re choosing professionalism, reliability, and expertise.',
+  hero_image: 'https://images.unsplash.com/photo-1581858726788-75bc0f6a952d?w=1920&q=80',
+};
+
 const AboutPage = () => {
   const { openBookingModal } = useUI();
+  const [cmsData, setCmsData] = React.useState(DEFAULT_ABOUT);
+
+  React.useEffect(() => {
+    const loadCms = async () => {
+      try {
+        let record;
+        try {
+          record = await pb.collection('cms_pages').getFirstListItem('page_id="about"');
+        } catch {
+          const stored = localStorage.getItem('atltvmountpro_local_cms');
+          if (stored) {
+            record = JSON.parse(stored).about;
+          }
+        }
+        if (record) {
+          setCmsData({
+            story_title: record.story_title || DEFAULT_ABOUT.story_title,
+            story_content: record.story_content || DEFAULT_ABOUT.story_content,
+            hero_image: record.hero_image || DEFAULT_ABOUT.hero_image,
+          });
+        }
+      } catch (err) {
+        console.warn('AboutPage CMS load error:', err);
+      }
+    };
+    loadCms();
+  }, []);
+
+  const paragraphs = cmsData.story_content.split('\n\n').filter(Boolean);
 
   return (
     <>
@@ -29,7 +66,7 @@ const AboutPage = () => {
         eyebrow="About Us"
         title="About ATL TV Mount PRO"
         subtitle="Your trusted partner for professional handyman services in Atlanta"
-        image="https://images.unsplash.com/photo-1581858726788-75bc0f6a952d?w=1920&q=80"
+        image={cmsData.hero_image}
         alt="Professional handyman at work"
       />
 
@@ -42,9 +79,9 @@ const AboutPage = () => {
               transition={{ duration: 0.5, delay: 0.2 }}
             >
               <img
-                src="https://images.unsplash.com/photo-1581858726788-75bc0f6a952d"
+                src={cmsData.hero_image}
                 alt="Professional handyman at work"
-                className="rounded-2xl shadow-lg w-full"
+                className="rounded-2xl shadow-lg w-full object-cover max-h-[450px]"
               />
             </motion.div>
             <motion.div
@@ -52,16 +89,12 @@ const AboutPage = () => {
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.5, delay: 0.2 }}
             >
-              <h2 className="text-3xl font-bold mb-4">Our story</h2>
-              <p className="text-muted-foreground leading-relaxed mb-4">
-                Founded in 2021, ATL TV Mount PRO started with a simple mission: provide reliable, professional handyman services to the Atlanta community. What began as a TV mounting specialty has grown into a full-service handyman company serving thousands of satisfied customers.
-              </p>
-              <p className="text-muted-foreground leading-relaxed mb-4">
-                Our team of skilled technicians brings years of experience and a commitment to quality workmanship. We take pride in every project, whether it's mounting a TV, repairing drywall, or completing a full room renovation.
-              </p>
-              <p className="text-muted-foreground leading-relaxed">
-                We're fully licensed and insured, and we stand behind our work with a 100% satisfaction guarantee. When you choose ATL TV Mount PRO, you're choosing professionalism, reliability, and expertise.
-              </p>
+              <h2 className="text-3xl font-bold mb-4">{cmsData.story_title}</h2>
+              {paragraphs.map((p, idx) => (
+                <p key={idx} className="text-muted-foreground leading-relaxed mb-4">
+                  {p}
+                </p>
+              ))}
             </motion.div>
           </div>
 

@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom';
 import { 
   Plus, Pencil, Trash2, X, ChevronLeft, Save, Loader2, Eye, EyeOff, LogOut,
   Tv, ClipboardList, Users, UserCog, Menu, Search, CheckCircle2, Clock, AlertTriangle, FileText,
-  User, Mail, Key, Shield
+  User, Mail, Key, Shield, Lock, FileEdit, Info
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -16,12 +16,32 @@ const LOCAL_BOOKINGS_STORAGE = 'atltvmountpro_local_bookings';
 const LOCAL_QUOTES_STORAGE = 'atltvmountpro_local_quotes';
 const LOCAL_TEAM_STORAGE = 'atltvmountpro_local_team';
 const LOCAL_USERS_STORAGE = 'atltvmountpro_local_users';
+const LOCAL_CMS_STORAGE = 'atltvmountpro_local_cms';
 
 const ALL_SERVICES = [
   'TV Mounting', 'Cable Management', 'Drywall Repair',
   'Painting', 'Carpentry', 'Flooring', 'Plumbing',
   'Light Electrical', 'Shelf Installation',
 ];
+
+const DEFAULT_CMS = {
+  home: {
+    hero_title: 'Clean walls. Perfect angles.',
+    hero_subtitle: 'Atlanta\'s premier TV mounting and handyman specialists. Fast, secure, and clean installations.',
+    business_phone: '770-374-3203',
+    business_email: 'info@atltvmountpro.com',
+  },
+  about: {
+    story_title: 'Our story',
+    story_content: 'Founded in 2021, ATL TV Mount PRO started with a simple mission: provide reliable, professional handyman services to the Atlanta community. What began as a TV mounting specialty has grown into a full-service handyman company serving thousands of satisfied customers.',
+    hero_image: 'https://images.unsplash.com/photo-1581858726788-75bc0f6a952d?w=1920&q=80',
+  },
+  contact: {
+    hours: 'Monday – Saturday: 8am – 7pm',
+    address: 'Atlanta Metro Area, GA',
+    city_description: 'We serve the entire Atlanta metro area and surrounding communities. Reach out for a free quote!',
+  }
+};
 
 const EMPTY_PROJECT_FORM = {
   title: '',
@@ -44,30 +64,38 @@ const LoginScreen = ({ onLogin }) => {
     e.preventDefault();
     setErr('');
     setLoading(true);
+    
+    // Check credentials and resolve roles
+    let resolvedRole = 'Admin';
+    if (key === 'mod123') {
+      resolvedRole = 'Moderator';
+    } else if (key === 'view123') {
+      resolvedRole = 'Viewer';
+    }
+
     try {
       const res = await fetch('/api/admin/verify', {
         headers: { 'x-admin-key': key },
       });
       if (res.ok) {
         localStorage.setItem(ADMIN_KEY_STORAGE, key);
-        onLogin(key);
+        onLogin(key, 'Admin');
       } else {
-        // Fallback for standalone/mock mode if server endpoint not running
-        if (key === 'admin123' || key === 'password') {
+        if (key === 'admin123' || key === 'password' || key === 'mod123' || key === 'view123') {
           localStorage.setItem(ADMIN_KEY_STORAGE, key);
-          onLogin(key);
-          toast.info('Logged in using local fallback key');
+          onLogin(key, resolvedRole);
+          toast.info(`Logged in as ${resolvedRole}`);
         } else {
-          setErr('Invalid admin key. Try "admin123" for local mock.');
+          setErr('Invalid admin key. Try "admin123", "mod123", or "view123".');
         }
       }
     } catch {
-      if (key === 'admin123' || key === 'password') {
+      if (key === 'admin123' || key === 'password' || key === 'mod123' || key === 'view123') {
         localStorage.setItem(ADMIN_KEY_STORAGE, key);
-        onLogin(key);
-        toast.info('Logged in using local fallback key (offline)');
+        onLogin(key, resolvedRole);
+        toast.info(`Logged in as ${resolvedRole} (Offline fallback)`);
       } else {
-        setErr('Network error. Enter "admin123" to skip verification.');
+        setErr('Network error. Enter "admin123", "mod123", or "view123" to login.');
       }
     } finally {
       setLoading(false);
@@ -83,14 +111,14 @@ const LoginScreen = ({ onLogin }) => {
           className="h-10 mx-auto mb-6"
         />
         <h1 className="text-xl font-bold text-center mb-1">Admin Panel</h1>
-        <p className="text-sm text-muted-foreground text-center mb-6">Enter your admin key to continue</p>
+        <p className="text-sm text-muted-foreground text-center mb-6">Enter your credentials to continue</p>
         <form onSubmit={submit} className="space-y-4">
           <div className="relative">
             <input
               type={show ? 'text' : 'password'}
               value={key}
               onChange={(e) => setKey(e.target.value)}
-              placeholder="Admin key (e.g. admin123)"
+              placeholder="Admin, Mod, or Viewer key..."
               className="w-full bg-muted border border-border rounded-lg px-4 py-2.5 pr-10 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
               required
             />
@@ -101,6 +129,12 @@ const LoginScreen = ({ onLogin }) => {
             >
               {show ? <EyeOff size={15} /> : <Eye size={15} />}
             </button>
+          </div>
+          <div className="text-xs text-muted-foreground bg-muted/50 p-2.5 rounded-lg border border-border space-y-1">
+            <p className="font-semibold text-foreground">Mock Access Keys:</p>
+            <p>• <code className="text-primary font-bold">admin123</code> - Full Admin privileges</p>
+            <p>• <code className="text-primary font-bold">mod123</code> - Moderator permissions</p>
+            <p>• <code className="text-primary font-bold">view123</code> - Read-only Viewer</p>
           </div>
           {err && <p className="text-xs text-destructive">{err}</p>}
           <Button
@@ -119,8 +153,8 @@ const LoginScreen = ({ onLogin }) => {
   );
 };
 
-// ── Project form dialog ────────────────────────────────────────────────────────
-const ProjectFormDialog = ({ open, onClose, initial, adminKey, onSaved }) => {
+// ── Project Form Dialog ────────────────────────────────────────────────────────
+const ProjectFormDialog = ({ open, onClose, initial, adminKey, onSaved, isReadOnly }) => {
   const [form, setForm] = useState(EMPTY_PROJECT_FORM);
   const [saving, setSaving] = useState(false);
 
@@ -136,25 +170,39 @@ const ProjectFormDialog = ({ open, onClose, initial, adminKey, onSaved }) => {
 
   const field = (k, v) => setForm((f) => ({ ...f, [k]: v }));
 
-  const toggleService = (s) =>
+  const toggleService = (s) => {
+    if (isReadOnly) return;
     setForm((f) => ({
       ...f,
       services: f.services.includes(s) ? f.services.filter((x) => x !== s) : [...f.services, s],
     }));
+  };
 
-  const setImage = (i, v) =>
+  const setImage = (i, v) => {
+    if (isReadOnly) return;
     setForm((f) => {
       const imgs = [...f.images];
       imgs[i] = v;
       return { ...f, images: imgs };
     });
+  };
 
-  const addImage = () => setForm((f) => ({ ...f, images: [...f.images, ''] }));
-  const removeImage = (i) =>
+  const addImage = () => {
+    if (isReadOnly) return;
+    setForm((f) => ({ ...f, images: [...f.images, ''] }));
+  };
+  
+  const removeImage = (i) => {
+    if (isReadOnly) return;
     setForm((f) => ({ ...f, images: f.images.filter((_, idx) => idx !== i) }));
+  };
 
   const submit = async (e) => {
     e.preventDefault();
+    if (isReadOnly) {
+      toast.error('Permission Denied: Viewer role is read-only.');
+      return;
+    }
     setSaving(true);
     const payload = {
       ...form,
@@ -174,14 +222,13 @@ const ProjectFormDialog = ({ open, onClose, initial, adminKey, onSaved }) => {
       onClose();
       toast.success(initial ? 'Project updated.' : 'Project created.');
     } catch {
-      // Offline fallback
       const mockSaved = {
         ...payload,
         id: initial?.id || 'local_' + Math.random().toString(36).substr(2, 9),
       };
       onSaved(mockSaved, !!initial);
       onClose();
-      toast.success(initial ? 'Project updated (Local Mode).' : 'Project created (Local Mode).');
+      toast.success(initial ? 'Project updated (Local).' : 'Project created (Local).');
     } finally {
       setSaving(false);
     }
@@ -191,7 +238,7 @@ const ProjectFormDialog = ({ open, onClose, initial, adminKey, onSaved }) => {
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto bg-card border border-border">
         <DialogHeader>
-          <DialogTitle>{initial ? 'Edit Project' : 'New Project'}</DialogTitle>
+          <DialogTitle>{initial ? 'Edit Project' : 'New Project'} {isReadOnly && '(Read Only)'}</DialogTitle>
         </DialogHeader>
 
         <form onSubmit={submit} className="space-y-5 mt-2">
@@ -202,7 +249,8 @@ const ProjectFormDialog = ({ open, onClose, initial, adminKey, onSaved }) => {
                 value={form.title}
                 onChange={(e) => field('title', e.target.value)}
                 required
-                className="input-base w-full"
+                disabled={isReadOnly}
+                className="input-base w-full disabled:opacity-60"
                 placeholder='e.g. 75" Samsung Wall Mount'
               />
             </div>
@@ -212,7 +260,8 @@ const ProjectFormDialog = ({ open, onClose, initial, adminKey, onSaved }) => {
                 value={form.location}
                 onChange={(e) => field('location', e.target.value)}
                 required
-                className="input-base w-full"
+                disabled={isReadOnly}
+                className="input-base w-full disabled:opacity-60"
                 placeholder="e.g. Buckhead, Atlanta, GA"
               />
             </div>
@@ -224,7 +273,8 @@ const ProjectFormDialog = ({ open, onClose, initial, adminKey, onSaved }) => {
               value={form.description}
               onChange={(e) => field('description', e.target.value)}
               rows={4}
-              className="input-base w-full resize-none"
+              disabled={isReadOnly}
+              className="input-base w-full resize-none disabled:opacity-60"
               placeholder="Describe the project scope and outcome..."
             />
           </div>
@@ -237,11 +287,12 @@ const ProjectFormDialog = ({ open, onClose, initial, adminKey, onSaved }) => {
                   key={s}
                   type="button"
                   onClick={() => toggleService(s)}
+                  disabled={isReadOnly}
                   className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-150 border ${
                     form.services.includes(s)
                       ? 'bg-primary text-primary-foreground border-primary'
                       : 'bg-muted text-muted-foreground border-border hover:border-primary/40'
-                  }`}
+                  } disabled:opacity-80`}
                 >
                   {s}
                 </button>
@@ -254,7 +305,8 @@ const ProjectFormDialog = ({ open, onClose, initial, adminKey, onSaved }) => {
             <input
               value={form.thumbnail}
               onChange={(e) => field('thumbnail', e.target.value)}
-              className="input-base w-full"
+              disabled={isReadOnly}
+              className="input-base w-full disabled:opacity-60"
               placeholder="https://… or /images/projects/project-1/main.jpg"
             />
           </div>
@@ -267,10 +319,11 @@ const ProjectFormDialog = ({ open, onClose, initial, adminKey, onSaved }) => {
                   <input
                     value={img}
                     onChange={(e) => setImage(i, e.target.value)}
-                    className="input-base flex-1"
+                    disabled={isReadOnly}
+                    className="input-base flex-1 disabled:opacity-60"
                     placeholder={`Image ${i + 1} URL`}
                   />
-                  {form.images.length > 1 && (
+                  {form.images.length > 1 && !isReadOnly && (
                     <button
                       type="button"
                       onClick={() => removeImage(i)}
@@ -282,13 +335,15 @@ const ProjectFormDialog = ({ open, onClose, initial, adminKey, onSaved }) => {
                 </div>
               ))}
             </div>
-            <button
-              type="button"
-              onClick={addImage}
-              className="mt-2 text-xs text-primary hover:text-primary/80 flex items-center gap-1 transition-colors"
-            >
-              <Plus size={13} /> Add image
-            </button>
+            {!isReadOnly && (
+              <button
+                type="button"
+                onClick={addImage}
+                className="mt-2 text-xs text-primary hover:text-primary/80 flex items-center gap-1 transition-colors"
+              >
+                <Plus size={13} /> Add image
+              </button>
+            )}
           </div>
 
           <div className="w-32">
@@ -297,23 +352,22 @@ const ProjectFormDialog = ({ open, onClose, initial, adminKey, onSaved }) => {
               type="number"
               value={form.sort_order}
               onChange={(e) => field('sort_order', e.target.value)}
-              className="input-base w-full"
+              disabled={isReadOnly}
+              className="input-base w-full disabled:opacity-60"
               min={0}
             />
           </div>
 
           <div className="flex justify-end gap-3 pt-2 border-t border-border">
-            <Button type="button" variant="outline" onClick={onClose} disabled={saving}>
-              Cancel
+            <Button type="button" variant="outline" onClick={onClose}>
+              {isReadOnly ? 'Close' : 'Cancel'}
             </Button>
-            <Button
-              type="submit"
-              className="bg-primary hover:bg-primary/90 text-primary-foreground"
-              disabled={saving}
-            >
-              {saving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Save size={14} className="mr-1.5" />}
-              {initial ? 'Save Changes' : 'Create Project'}
-            </Button>
+            {!isReadOnly && (
+              <Button type="submit" className="bg-primary hover:bg-primary/90 text-primary-foreground">
+                {saving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Save size={14} className="mr-1.5" />}
+                {initial ? 'Save Changes' : 'Create Project'}
+              </Button>
+            )}
           </div>
         </form>
       </DialogContent>
@@ -322,7 +376,7 @@ const ProjectFormDialog = ({ open, onClose, initial, adminKey, onSaved }) => {
 };
 
 // ── Team Tech Form Dialog ──────────────────────────────────────────────────────
-const TechFormDialog = ({ open, onClose, initial, onSaved }) => {
+const TechFormDialog = ({ open, onClose, initial, onSaved, isReadOnly }) => {
   const [form, setForm] = useState({ name: '', photo: '', bio: '', skills: '' });
   const [saving, setSaving] = useState(false);
 
@@ -330,10 +384,7 @@ const TechFormDialog = ({ open, onClose, initial, onSaved }) => {
     if (open) {
       setForm(
         initial
-          ? {
-              ...initial,
-              skills: Array.isArray(initial.skills) ? initial.skills.join(', ') : initial.skills,
-            }
+          ? { ...initial, skills: Array.isArray(initial.skills) ? initial.skills.join(', ') : initial.skills }
           : { name: '', photo: '', bio: '', skills: '' }
       );
     }
@@ -341,6 +392,10 @@ const TechFormDialog = ({ open, onClose, initial, onSaved }) => {
 
   const submit = async (e) => {
     e.preventDefault();
+    if (isReadOnly) {
+      toast.error('Permission Denied: Viewer role is read-only.');
+      return;
+    }
     setSaving(true);
     const skillsArray = form.skills.split(',').map((s) => s.trim()).filter(Boolean);
     const payload = {
@@ -360,15 +415,14 @@ const TechFormDialog = ({ open, onClose, initial, onSaved }) => {
       onSaved(savedRecord, !!initial);
       onClose();
       toast.success(initial ? 'Technician updated.' : 'Technician added.');
-    } catch (err) {
-      console.warn('PocketBase save failed, using local storage update:', err);
+    } catch {
       const mockRecord = {
         ...payload,
         id: initial?.id || 'local_' + Math.random().toString(36).substr(2, 9),
       };
       onSaved(mockRecord, !!initial);
       onClose();
-      toast.success(initial ? 'Technician updated (Local Mode).' : 'Technician added (Local Mode).');
+      toast.success(initial ? 'Technician updated (Local).' : 'Technician added (Local).');
     } finally {
       setSaving(false);
     }
@@ -378,7 +432,7 @@ const TechFormDialog = ({ open, onClose, initial, onSaved }) => {
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="max-w-md bg-card border border-border">
         <DialogHeader>
-          <DialogTitle>{initial ? 'Edit Tech Details' : 'Add New Technician'}</DialogTitle>
+          <DialogTitle>{initial ? 'Edit Tech Details' : 'Add New Technician'} {isReadOnly && '(Read Only)'}</DialogTitle>
         </DialogHeader>
         <form onSubmit={submit} className="space-y-4 mt-2">
           <div>
@@ -387,7 +441,8 @@ const TechFormDialog = ({ open, onClose, initial, onSaved }) => {
               value={form.name}
               onChange={(e) => setForm({ ...form, name: e.target.value })}
               required
-              className="input-base w-full"
+              disabled={isReadOnly}
+              className="input-base w-full disabled:opacity-60"
               placeholder="e.g. Marcus Thompson"
             />
           </div>
@@ -396,7 +451,8 @@ const TechFormDialog = ({ open, onClose, initial, onSaved }) => {
             <input
               value={form.photo}
               onChange={(e) => setForm({ ...form, photo: e.target.value })}
-              className="input-base w-full"
+              disabled={isReadOnly}
+              className="input-base w-full disabled:opacity-60"
               placeholder="e.g. https://images.unsplash.com/photo-..."
             />
           </div>
@@ -406,8 +462,9 @@ const TechFormDialog = ({ open, onClose, initial, onSaved }) => {
               value={form.bio}
               onChange={(e) => setForm({ ...form, bio: e.target.value })}
               required
+              disabled={isReadOnly}
               rows={3}
-              className="input-base w-full resize-none"
+              className="input-base w-full resize-none disabled:opacity-60"
               placeholder="A brief bio of the technician..."
             />
           </div>
@@ -416,18 +473,21 @@ const TechFormDialog = ({ open, onClose, initial, onSaved }) => {
             <input
               value={form.skills}
               onChange={(e) => setForm({ ...form, skills: e.target.value })}
-              className="input-base w-full"
+              disabled={isReadOnly}
+              className="input-base w-full disabled:opacity-60"
               placeholder="TV Mounting, Cable Management, Drywall Repair"
             />
           </div>
           <div className="flex justify-end gap-3 pt-2">
-            <Button type="button" variant="outline" onClick={onClose} disabled={saving}>
-              Cancel
+            <Button type="button" variant="outline" onClick={onClose}>
+              {isReadOnly ? 'Close' : 'Cancel'}
             </Button>
-            <Button type="submit" disabled={saving}>
-              {saving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Save size={14} className="mr-1.5" />}
-              Save Tech
-            </Button>
+            {!isReadOnly && (
+              <Button type="submit" disabled={saving}>
+                {saving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Save size={14} className="mr-1.5" />}
+                Save Tech
+              </Button>
+            )}
           </div>
         </form>
       </DialogContent>
@@ -455,8 +515,7 @@ const UserFormDialog = ({ open, onClose, onSaved }) => {
       onSaved(savedUser);
       onClose();
       toast.success('Admin user created successfully.');
-    } catch (err) {
-      console.warn('PocketBase user creation failed, saving locally:', err);
+    } catch {
       const mockUser = {
         id: 'local_' + Math.random().toString(36).substr(2, 9),
         username: form.username,
@@ -477,7 +536,7 @@ const UserFormDialog = ({ open, onClose, onSaved }) => {
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="max-w-md bg-card border border-border">
         <DialogHeader>
-          <DialogTitle>Add Admin User</DialogTitle>
+          <DialogTitle>Add New Authorized User</DialogTitle>
         </DialogHeader>
         <form onSubmit={submit} className="space-y-4 mt-2">
           <div>
@@ -513,14 +572,15 @@ const UserFormDialog = ({ open, onClose, onSaved }) => {
             />
           </div>
           <div>
-            <label className="text-sm font-medium mb-1 block">Role</label>
+            <label className="text-sm font-medium mb-1 block">Access Role / Permissions *</label>
             <select
               value={form.role}
               onChange={(e) => setForm({ ...form, role: e.target.value })}
               className="input-base w-full bg-muted"
             >
-              <option value="Admin">Administrator</option>
-              <option value="Moderator">Moderator</option>
+              <option value="Admin">Admin (Full Read/Write/Settings)</option>
+              <option value="Moderator">Moderator (Read/Write Content, No Settings)</option>
+              <option value="Viewer">Viewer (Read Only access)</option>
             </select>
           </div>
           <div className="flex justify-end gap-3 pt-2">
@@ -545,6 +605,9 @@ const AdminPage = () => {
   const [checking, setChecking] = useState(!!adminKey);
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('projects');
+
+  // RBAC permissions state
+  const [currentUserRole, setCurrentUserRole] = useState('Admin');
 
   // Sidebar navigation toggler for mobile
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -573,11 +636,31 @@ const AdminPage = () => {
     name: 'ATL Admin',
     email: 'info@atltvmountpro.com',
     avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&h=200&fit=crop',
-    role: 'Lead Administrator',
   });
   const [users, setUsers] = useState([]);
   const [userDialogOpen, setUserDialogOpen] = useState(false);
   const [isEditingProfile, setIsEditingProfile] = useState(false);
+
+  // CMS state
+  const [cmsData, setCmsData] = useState(DEFAULT_CMS);
+  const [cmsPageTab, setCmsPageTab] = useState('home');
+  const [savingCms, setSavingCms] = useState(false);
+
+  // Helper check for role write actions
+  const checkPermission = (action) => {
+    if (currentUserRole === 'Admin') return true;
+    if (currentUserRole === 'Moderator') {
+      if (['write_projects', 'write_orders', 'write_team'].includes(action)) return true;
+    }
+    toast.error(`Permission Denied: Your role (${currentUserRole}) is not authorized for this action.`);
+    return false;
+  };
+
+  const isReadOnly = (tab) => {
+    if (currentUserRole === 'Viewer') return true;
+    if (currentUserRole === 'Moderator' && ['profile', 'cms'].includes(tab)) return true;
+    return false;
+  };
 
   // --- Fetch methods ---
 
@@ -589,7 +672,6 @@ const AdminPage = () => {
         setProjects(await res.json());
       }
     } catch {
-      // Load fallback projects if server offline
       setProjects([]);
     }
     setLoading(false);
@@ -602,7 +684,6 @@ const AdminPage = () => {
       setBookings(appts);
       localStorage.setItem(LOCAL_BOOKINGS_STORAGE, JSON.stringify(appts));
     } catch (err) {
-      console.warn('PocketBase bookings fetch failed, reading localStorage:', err);
       const stored = localStorage.getItem(LOCAL_BOOKINGS_STORAGE);
       setBookings(stored ? JSON.parse(stored) : []);
     }
@@ -612,7 +693,6 @@ const AdminPage = () => {
       setQuotes(qts);
       localStorage.setItem(LOCAL_QUOTES_STORAGE, JSON.stringify(qts));
     } catch (err) {
-      console.warn('PocketBase quotes fetch failed, reading localStorage:', err);
       const stored = localStorage.getItem(LOCAL_QUOTES_STORAGE);
       setQuotes(stored ? JSON.parse(stored) : []);
     }
@@ -626,7 +706,6 @@ const AdminPage = () => {
       setTeamMembers(team);
       localStorage.setItem(LOCAL_TEAM_STORAGE, JSON.stringify(team));
     } catch (err) {
-      console.warn('PocketBase team fetch failed, reading localStorage:', err);
       const stored = localStorage.getItem(LOCAL_TEAM_STORAGE);
       setTeamMembers(stored ? JSON.parse(stored) : []);
     }
@@ -641,22 +720,49 @@ const AdminPage = () => {
     } catch (err) {
       const stored = localStorage.getItem(LOCAL_USERS_STORAGE);
       setUsers(stored ? JSON.parse(stored) : [
-        { id: 'local_1', username: 'atladmin', email: 'info@atltvmountpro.com', role: 'Admin', created: new Date().toISOString() }
+        { id: 'local_1', username: 'atladmin', email: 'info@atltvmountpro.com', role: 'Admin', created: new Date().toISOString() },
+        { id: 'local_2', username: 'atlmod', email: 'mod@atltvmountpro.com', role: 'Moderator', created: new Date().toISOString() },
+        { id: 'local_3', username: 'atlview', email: 'view@atltvmountpro.com', role: 'Viewer', created: new Date().toISOString() }
       ]);
+    }
+  }, []);
+
+  const fetchCmsData = useCallback(async () => {
+    try {
+      const homeRecord = await pb.collection('cms_pages').getFirstListItem('page_id="home"');
+      const aboutRecord = await pb.collection('cms_pages').getFirstListItem('page_id="about"');
+      const contactRecord = await pb.collection('cms_pages').getFirstListItem('page_id="contact"');
+      
+      const remoteCms = {
+        home: homeRecord,
+        about: aboutRecord,
+        contact: contactRecord
+      };
+      setCmsData(remoteCms);
+      localStorage.setItem(LOCAL_CMS_STORAGE, JSON.stringify(remoteCms));
+    } catch (err) {
+      const stored = localStorage.getItem(LOCAL_CMS_STORAGE);
+      setCmsData(stored ? JSON.parse(stored) : DEFAULT_CMS);
     }
   }, []);
 
   // Auto-verify stored key on load
   useEffect(() => {
     if (!adminKey) { setChecking(false); return; }
+    
+    // Resolve active mock credentials
+    let initialRole = 'Admin';
+    if (adminKey === 'mod123') initialRole = 'Moderator';
+    else if (adminKey === 'view123') initialRole = 'Viewer';
+    setCurrentUserRole(initialRole);
+
     fetch('/api/admin/verify', { headers: { 'x-admin-key': adminKey } })
       .then((r) => {
         if (r.ok) { 
           setAuthed(true); 
           fetchProjects();
         } else {
-          // Check for mock verification key
-          if (adminKey === 'admin123' || adminKey === 'password') {
+          if (adminKey === 'admin123' || adminKey === 'password' || adminKey === 'mod123' || adminKey === 'view123') {
             setAuthed(true);
             fetchProjects();
           } else {
@@ -666,7 +772,7 @@ const AdminPage = () => {
         }
       })
       .catch(() => {
-        if (adminKey === 'admin123' || adminKey === 'password') {
+        if (adminKey === 'admin123' || adminKey === 'password' || adminKey === 'mod123' || adminKey === 'view123') {
           setAuthed(true);
           fetchProjects();
         }
@@ -681,10 +787,12 @@ const AdminPage = () => {
     if (activeTab === 'orders') fetchBookingsAndQuotes();
     if (activeTab === 'team') fetchTeam();
     if (activeTab === 'profile') fetchUsers();
-  }, [activeTab, authed, fetchProjects, fetchBookingsAndQuotes, fetchTeam, fetchUsers]);
+    if (activeTab === 'cms') fetchCmsData();
+  }, [activeTab, authed, fetchProjects, fetchBookingsAndQuotes, fetchTeam, fetchUsers, fetchCmsData]);
 
-  const handleLogin = (key) => {
+  const handleLogin = (key, resolvedRole) => {
     setAdminKey(key);
+    setCurrentUserRole(resolvedRole);
     setAuthed(true);
   };
 
@@ -702,6 +810,7 @@ const AdminPage = () => {
   };
 
   const handleProjectDelete = async (id) => {
+    if (!checkPermission('write_projects')) return;
     setDeletingProject(id);
     try {
       const res = await fetch(`/api/projects/${id}`, {
@@ -715,7 +824,6 @@ const AdminPage = () => {
         toast.error('Delete failed.');
       }
     } catch {
-      // Local fallback
       setProjects((prev) => prev.filter((p) => p.id !== id));
       toast.success('Project deleted locally.');
     } finally {
@@ -725,12 +833,12 @@ const AdminPage = () => {
 
   // --- Booking / Quote callbacks ---
   const handleUpdateStatus = async (collection, id, status) => {
+    if (!checkPermission('write_orders')) return;
     try {
       await pb.collection(collection).update(id, { status });
       toast.success('Status updated.');
       fetchBookingsAndQuotes();
     } catch (err) {
-      console.warn('PocketBase update failed, updating locally:', err);
       if (collection === 'appointment_bookings') {
         const updated = bookings.map((b) => (b.id === id ? { ...b, status } : b));
         setBookings(updated);
@@ -745,12 +853,12 @@ const AdminPage = () => {
   };
 
   const handleDeleteOrder = async (collection, id) => {
+    if (!checkPermission('write_orders')) return;
     try {
       await pb.collection(collection).delete(id);
       toast.success('Booking deleted.');
       fetchBookingsAndQuotes();
     } catch (err) {
-      console.warn('PocketBase delete failed, deleting locally:', err);
       if (collection === 'appointment_bookings') {
         const updated = bookings.filter((b) => b.id !== id);
         setBookings(updated);
@@ -774,6 +882,7 @@ const AdminPage = () => {
   };
 
   const handleDeleteTech = async (id) => {
+    if (!checkPermission('write_team')) return;
     try {
       await pb.collection('team_members').delete(id);
       toast.success('Technician deleted.');
@@ -788,12 +897,17 @@ const AdminPage = () => {
 
   // --- Profile / User callbacks ---
   const handleUserSaved = (saved) => {
+    if (currentUserRole !== 'Admin') return;
     const updated = [...users, saved];
     setUsers(updated);
     localStorage.setItem(LOCAL_USERS_STORAGE, JSON.stringify(updated));
   };
 
   const handleDeleteUser = async (id) => {
+    if (currentUserRole !== 'Admin') {
+      toast.error('Permission Denied: User Management is Admin only.');
+      return;
+    }
     try {
       await pb.collection('users').delete(id);
       toast.success('User deleted.');
@@ -817,6 +931,47 @@ const AdminPage = () => {
     localStorage.setItem(ADMIN_KEY_STORAGE, newKey);
     setAdminKey(newKey);
     toast.success('Admin access key updated locally.');
+  };
+
+  // --- CMS Save handlers ---
+  const handleSaveCMS = async (e) => {
+    e.preventDefault();
+    if (currentUserRole !== 'Admin') {
+      toast.error('Permission Denied: Only Admins can modify CMS layouts.');
+      return;
+    }
+    setSavingCms(true);
+    try {
+      const pageData = cmsData[cmsPageTab];
+      let updatedRecord;
+      try {
+        const existing = await pb.collection('cms_pages').getFirstListItem(`page_id="${cmsPageTab}"`);
+        updatedRecord = await pb.collection('cms_pages').update(existing.id, pageData);
+      } catch {
+        updatedRecord = await pb.collection('cms_pages').create({ ...pageData, page_id: cmsPageTab });
+      }
+
+      const updatedCms = { ...cmsData, [cmsPageTab]: updatedRecord };
+      setCmsData(updatedCms);
+      localStorage.setItem(LOCAL_CMS_STORAGE, JSON.stringify(updatedCms));
+      toast.success(`${cmsPageTab.toUpperCase()} content saved.`);
+    } catch (err) {
+      console.warn('PocketBase CMS save failed, writing locally:', err);
+      localStorage.setItem(LOCAL_CMS_STORAGE, JSON.stringify(cmsData));
+      toast.success(`${cmsPageTab.toUpperCase()} content saved locally.`);
+    } finally {
+      setSavingCms(false);
+    }
+  };
+
+  const handleCmsFieldChange = (field, value) => {
+    setCmsData({
+      ...cmsData,
+      [cmsPageTab]: {
+        ...cmsData[cmsPageTab],
+        [field]: value
+      }
+    });
   };
 
   if (checking) {
@@ -866,7 +1021,7 @@ const AdminPage = () => {
               alt="ATL TV Mount PRO"
               className="h-6"
             />
-            <span className="text-xs bg-primary/20 text-primary px-2 py-0.5 rounded font-medium">Admin</span>
+            <span className="text-xs bg-primary/20 text-primary px-2 py-0.5 rounded font-semibold capitalize">{currentUserRole}</span>
           </div>
           <button 
             onClick={() => setSidebarOpen(!sidebarOpen)}
@@ -898,11 +1053,22 @@ const AdminPage = () => {
               </button>
             </div>
 
+            {/* User Profile Summary */}
+            <div className="mb-6 bg-muted/50 border border-border rounded-xl p-3.5 flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-primary/20 border border-primary flex items-center justify-center font-bold text-primary">
+                {currentUserRole[0]}
+              </div>
+              <div className="space-y-0.5">
+                <p className="text-xs font-bold text-foreground capitalize">{currentUserRole} Access</p>
+                <p className="text-[10px] text-muted-foreground">ATL Tech Center</p>
+              </div>
+            </div>
+
             {/* Menu Links with Flat Icons */}
             <nav className="space-y-1.5 flex-1">
               <button
                 onClick={() => { setActiveTab('projects'); setSidebarOpen(false); }}
-                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 ${activeTab === 'projects' ? 'bg-primary text-primary-foreground shadow-sm shadow-primary/20' : 'text-muted-foreground hover:bg-muted hover:text-foreground'}`}
+                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 ${activeTab === 'projects' ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:bg-muted hover:text-foreground'}`}
               >
                 <Tv size={18} className="flex-shrink-0" />
                 <span>Projects Showcase</span>
@@ -910,7 +1076,7 @@ const AdminPage = () => {
 
               <button
                 onClick={() => { setActiveTab('orders'); setSidebarOpen(false); }}
-                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 ${activeTab === 'orders' ? 'bg-primary text-primary-foreground shadow-sm shadow-primary/20' : 'text-muted-foreground hover:bg-muted hover:text-foreground'}`}
+                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 ${activeTab === 'orders' ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:bg-muted hover:text-foreground'}`}
               >
                 <ClipboardList size={18} className="flex-shrink-0" />
                 <span>Bookings & Orders</span>
@@ -918,18 +1084,32 @@ const AdminPage = () => {
 
               <button
                 onClick={() => { setActiveTab('team'); setSidebarOpen(false); }}
-                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 ${activeTab === 'team' ? 'bg-primary text-primary-foreground shadow-sm shadow-primary/20' : 'text-muted-foreground hover:bg-muted hover:text-foreground'}`}
+                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 ${activeTab === 'team' ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:bg-muted hover:text-foreground'}`}
               >
                 <Users size={18} className="flex-shrink-0" />
                 <span>Team Technicians</span>
               </button>
 
               <button
-                onClick={() => { setActiveTab('profile'); setSidebarOpen(false); }}
-                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 ${activeTab === 'profile' ? 'bg-primary text-primary-foreground shadow-sm shadow-primary/20' : 'text-muted-foreground hover:bg-muted hover:text-foreground'}`}
+                onClick={() => { setActiveTab('cms'); setSidebarOpen(false); }}
+                className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 ${activeTab === 'cms' ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:bg-muted hover:text-foreground'}`}
               >
-                <UserCog size={18} className="flex-shrink-0" />
-                <span>Profile & Users</span>
+                <div className="flex items-center gap-3">
+                  <FileText size={18} className="flex-shrink-0" />
+                  <span>CMS Page Content</span>
+                </div>
+                {currentUserRole !== 'Admin' && <Lock size={12} className="opacity-60" />}
+              </button>
+
+              <button
+                onClick={() => { setActiveTab('profile'); setSidebarOpen(false); }}
+                className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 ${activeTab === 'profile' ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:bg-muted hover:text-foreground'}`}
+              >
+                <div className="flex items-center gap-3">
+                  <UserCog size={18} className="flex-shrink-0" />
+                  <span>Profile & Users</span>
+                </div>
+                {currentUserRole !== 'Admin' && <Lock size={12} className="opacity-60" />}
               </button>
             </nav>
           </div>
@@ -967,7 +1147,14 @@ const AdminPage = () => {
                   </p>
                 </div>
                 <Button
-                  onClick={() => { setEditingProject(null); setProjectDialogOpen(true); }}
+                  onClick={() => {
+                    if (isReadOnly('projects')) {
+                      toast.error('Permission Denied: Viewers cannot create projects.');
+                      return;
+                    }
+                    setEditingProject(null); 
+                    setProjectDialogOpen(true);
+                  }}
                   className="bg-primary hover:bg-primary/90 text-primary-foreground"
                 >
                   <Plus size={15} className="mr-1.5" />
@@ -984,12 +1171,14 @@ const AdminPage = () => {
               ) : projects.length === 0 ? (
                 <div className="text-center py-20 border border-dashed border-border rounded-2xl text-muted-foreground">
                   <p className="mb-4 text-sm">No projects created yet.</p>
-                  <Button
-                    onClick={() => { setEditingProject(null); setProjectDialogOpen(true); }}
-                    variant="outline"
-                  >
-                    Add your first project
-                  </Button>
+                  {!isReadOnly('projects') && (
+                    <Button
+                      onClick={() => { setEditingProject(null); setProjectDialogOpen(true); }}
+                      variant="outline"
+                    >
+                      Add your first project
+                    </Button>
+                  )}
                 </div>
               ) : (
                 <div className="rounded-xl border border-border overflow-hidden bg-card">
@@ -1032,22 +1221,27 @@ const AdminPage = () => {
                             <td className="px-4 py-3.5 text-right">
                               <div className="flex items-center gap-1 justify-end">
                                 <button
-                                  onClick={() => { setEditingProject(project); setProjectDialogOpen(true); }}
+                                  onClick={() => {
+                                    setEditingProject(project); 
+                                    setProjectDialogOpen(true);
+                                  }}
                                   className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted"
                                 >
-                                  <Pencil size={14} />
+                                  {isReadOnly('projects') ? <Eye size={14} /> : <Pencil size={14} />}
                                 </button>
-                                <button
-                                  onClick={() => handleProjectDelete(project.id)}
-                                  disabled={deletingProject === project.id}
-                                  className="p-1.5 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/15"
-                                >
-                                  {deletingProject === project.id ? (
-                                    <Loader2 size={14} className="animate-spin" />
-                                  ) : (
-                                    <Trash2 size={14} />
-                                  )}
-                                </button>
+                                {!isReadOnly('projects') && (
+                                  <button
+                                    onClick={() => handleProjectDelete(project.id)}
+                                    disabled={deletingProject === project.id}
+                                    className="p-1.5 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/15"
+                                  >
+                                    {deletingProject === project.id ? (
+                                      <Loader2 size={14} className="animate-spin" />
+                                    ) : (
+                                      <Trash2 size={14} />
+                                    )}
+                                  </button>
+                                )}
                               </div>
                             </td>
                           </tr>
@@ -1171,23 +1365,27 @@ const AdminPage = () => {
                                   >
                                     <Eye size={14} />
                                   </button>
-                                  <select
-                                    value={b.status || 'Pending'}
-                                    onChange={(e) => handleUpdateStatus('appointment_bookings', b.id, e.target.value)}
-                                    className="text-xs bg-muted border border-border rounded p-1"
-                                  >
-                                    <option value="Pending">Pending</option>
-                                    <option value="Confirmed">Confirm</option>
-                                    <option value="Completed">Complete</option>
-                                    <option value="Cancelled">Cancel</option>
-                                  </select>
-                                  <button
-                                    onClick={() => handleDeleteOrder('appointment_bookings', b.id)}
-                                    className="p-1.5 rounded-lg text-muted-foreground hover:text-destructive"
-                                    title="Delete"
-                                  >
-                                    <Trash2 size={14} />
-                                  </button>
+                                  {!isReadOnly('orders') && (
+                                    <>
+                                      <select
+                                        value={b.status || 'Pending'}
+                                        onChange={(e) => handleUpdateStatus('appointment_bookings', b.id, e.target.value)}
+                                        className="text-xs bg-muted border border-border rounded p-1"
+                                      >
+                                        <option value="Pending">Pending</option>
+                                        <option value="Confirmed">Confirm</option>
+                                        <option value="Completed">Complete</option>
+                                        <option value="Cancelled">Cancel</option>
+                                      </select>
+                                      <button
+                                        onClick={() => handleDeleteOrder('appointment_bookings', b.id)}
+                                        className="p-1.5 rounded-lg text-muted-foreground hover:text-destructive"
+                                        title="Delete"
+                                      >
+                                        <Trash2 size={14} />
+                                      </button>
+                                    </>
+                                  )}
                                 </div>
                               </td>
                             </tr>
@@ -1248,22 +1446,26 @@ const AdminPage = () => {
                                   >
                                     <Eye size={14} />
                                   </button>
-                                  <select
-                                    value={q.status || 'Pending'}
-                                    onChange={(e) => handleUpdateStatus('quote_inquiries', q.id, e.target.value)}
-                                    className="text-xs bg-muted border border-border rounded p-1"
-                                  >
-                                    <option value="Pending">Pending</option>
-                                    <option value="Confirmed">Confirm</option>
-                                    <option value="Completed">Complete</option>
-                                    <option value="Cancelled">Cancel</option>
-                                  </select>
-                                  <button
-                                    onClick={() => handleDeleteOrder('quote_inquiries', q.id)}
-                                    className="p-1.5 rounded-lg text-muted-foreground hover:text-destructive"
-                                  >
-                                    <Trash2 size={14} />
-                                  </button>
+                                  {!isReadOnly('orders') && (
+                                    <>
+                                      <select
+                                        value={q.status || 'Pending'}
+                                        onChange={(e) => handleUpdateStatus('quote_inquiries', q.id, e.target.value)}
+                                        className="text-xs bg-muted border border-border rounded p-1"
+                                      >
+                                        <option value="Pending">Pending</option>
+                                        <option value="Confirmed">Confirm</option>
+                                        <option value="Completed">Complete</option>
+                                        <option value="Cancelled">Cancel</option>
+                                      </select>
+                                      <button
+                                        onClick={() => handleDeleteOrder('quote_inquiries', q.id)}
+                                        className="p-1.5 rounded-lg text-muted-foreground hover:text-destructive"
+                                      >
+                                        <Trash2 size={14} />
+                                      </button>
+                                    </>
+                                  )}
                                 </div>
                               </td>
                             </tr>
@@ -1288,7 +1490,14 @@ const AdminPage = () => {
                   </p>
                 </div>
                 <Button
-                  onClick={() => { setEditingTech(null); setTechDialogOpen(true); }}
+                  onClick={() => {
+                    if (isReadOnly('team')) {
+                      toast.error('Permission Denied: Viewers cannot create technicians.');
+                      return;
+                    }
+                    setEditingTech(null); 
+                    setTechDialogOpen(true);
+                  }}
                   className="bg-primary hover:bg-primary/90 text-primary-foreground"
                 >
                   <Plus size={15} className="mr-1.5" />
@@ -1305,12 +1514,14 @@ const AdminPage = () => {
               ) : teamMembers.length === 0 ? (
                 <div className="text-center py-20 border border-dashed border-border rounded-2xl text-muted-foreground">
                   <p className="mb-4 text-sm">No technicians added to dynamic directory.</p>
-                  <Button
-                    onClick={() => { setEditingTech(null); setTechDialogOpen(true); }}
-                    variant="outline"
-                  >
-                    Create Technician
-                  </Button>
+                  {!isReadOnly('team') && (
+                    <Button
+                      onClick={() => { setEditingTech(null); setTechDialogOpen(true); }}
+                      variant="outline"
+                    >
+                      Create Technician
+                    </Button>
+                  )}
                 </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -1341,19 +1552,193 @@ const AdminPage = () => {
                             onClick={() => { setEditingTech(tech); setTechDialogOpen(true); }}
                             className="text-xs bg-muted text-foreground hover:bg-muted/80 px-2.5 py-1.5 rounded font-medium flex items-center gap-1"
                           >
-                            <Pencil size={12} /> Edit
+                            {isReadOnly('team') ? <Eye size={12} /> : <Pencil size={12} />} {isReadOnly('team') ? 'View' : 'Edit'}
                           </button>
-                          <button
-                            onClick={() => handleDeleteTech(tech.id)}
-                            className="text-xs bg-destructive/10 text-destructive hover:bg-destructive hover:text-destructive-foreground px-2.5 py-1.5 rounded font-medium flex items-center gap-1"
-                          >
-                            <Trash2 size={12} /> Delete
-                          </button>
+                          {!isReadOnly('team') && (
+                            <button
+                              onClick={() => handleDeleteTech(tech.id)}
+                              className="text-xs bg-destructive/10 text-destructive hover:bg-destructive hover:text-destructive-foreground px-2.5 py-1.5 rounded font-medium flex items-center gap-1"
+                            >
+                              <Trash2 size={12} /> Delete
+                            </button>
+                          )}
                         </div>
                       </div>
                     </div>
                   ))}
                 </div>
+              )}
+            </div>
+          )}
+
+          {/* TAB CONTENT: CMS PAGES */}
+          {activeTab === 'cms' && (
+            <div className="space-y-6">
+              {isReadOnly('cms') ? (
+                <div className="bg-card border border-border p-8 rounded-xl text-center space-y-4 max-w-md mx-auto my-12">
+                  <Lock className="w-16 h-16 text-primary/50 mx-auto" />
+                  <h3 className="text-lg font-bold text-foreground">Content Management System Locked</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Only users with the <span className="font-semibold text-primary">Admin</span> role can write and publish page configuration details.
+                  </p>
+                </div>
+              ) : (
+                <>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h1 className="text-2xl font-bold tracking-tight text-foreground">CMS Content Editor</h1>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        Edit live page text headings, subtext descriptions, email contacts, and hero images.
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* CMS Sub-tabs */}
+                  <div className="flex gap-2 border-b border-border pb-3">
+                    <button
+                      onClick={() => setCmsPageTab('home')}
+                      className={`px-4 py-2 text-sm font-semibold rounded-lg transition-all ${cmsPageTab === 'home' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground hover:bg-muted'}`}
+                    >
+                      Homepage Content
+                    </button>
+                    <button
+                      onClick={() => setCmsPageTab('about')}
+                      className={`px-4 py-2 text-sm font-semibold rounded-lg transition-all ${cmsPageTab === 'about' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground hover:bg-muted'}`}
+                    >
+                      About Page Content
+                    </button>
+                    <button
+                      onClick={() => setCmsPageTab('contact')}
+                      className={`px-4 py-2 text-sm font-semibold rounded-lg transition-all ${cmsPageTab === 'contact' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground hover:bg-muted'}`}
+                    >
+                      Contact Page Content
+                    </button>
+                  </div>
+
+                  <form onSubmit={handleSaveCMS} className="bg-card border border-border rounded-xl p-6 space-y-5">
+                    {cmsPageTab === 'home' && (
+                      <div className="space-y-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="space-y-1">
+                            <label className="text-xs font-semibold uppercase text-muted-foreground">Main Hero Heading</label>
+                            <input
+                              type="text"
+                              value={cmsData.home?.hero_title || ''}
+                              onChange={(e) => handleCmsFieldChange('hero_title', e.target.value)}
+                              className="input-base w-full"
+                              required
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-xs font-semibold uppercase text-muted-foreground">Business Phone</label>
+                            <input
+                              type="text"
+                              value={cmsData.home?.business_phone || ''}
+                              onChange={(e) => handleCmsFieldChange('business_phone', e.target.value)}
+                              className="input-base w-full"
+                              required
+                            />
+                          </div>
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-xs font-semibold uppercase text-muted-foreground">Hero Subheading</label>
+                          <textarea
+                            value={cmsData.home?.hero_subtitle || ''}
+                            onChange={(e) => handleCmsFieldChange('hero_subtitle', e.target.value)}
+                            rows={3}
+                            className="input-base w-full resize-none"
+                            required
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    {cmsPageTab === 'about' && (
+                      <div className="space-y-4">
+                        <div className="grid grid-cols-1 gap-4">
+                          <div className="space-y-1">
+                            <label className="text-xs font-semibold uppercase text-muted-foreground">Story Section Title</label>
+                            <input
+                              type="text"
+                              value={cmsData.about?.story_title || ''}
+                              onChange={(e) => handleCmsFieldChange('story_title', e.target.value)}
+                              className="input-base w-full"
+                              required
+                            />
+                          </div>
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-xs font-semibold uppercase text-muted-foreground">Story Narrative Content</label>
+                          <textarea
+                            value={cmsData.about?.story_content || ''}
+                            onChange={(e) => handleCmsFieldChange('story_content', e.target.value)}
+                            rows={6}
+                            className="input-base w-full resize-none"
+                            required
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-xs font-semibold uppercase text-muted-foreground">Hero Image URL</label>
+                          <input
+                            type="text"
+                            value={cmsData.about?.hero_image || ''}
+                            onChange={(e) => handleCmsFieldChange('hero_image', e.target.value)}
+                            className="input-base w-full"
+                            required
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    {cmsPageTab === 'contact' && (
+                      <div className="space-y-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="space-y-1">
+                            <label className="text-xs font-semibold uppercase text-muted-foreground">Working Hours</label>
+                            <input
+                              type="text"
+                              value={cmsData.contact?.hours || ''}
+                              onChange={(e) => handleCmsFieldChange('hours', e.target.value)}
+                              className="input-base w-full"
+                              required
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-xs font-semibold uppercase text-muted-foreground">Office / Service Address</label>
+                            <input
+                              type="text"
+                              value={cmsData.contact?.address || ''}
+                              onChange={(e) => handleCmsFieldChange('address', e.target.value)}
+                              className="input-base w-full"
+                              required
+                            />
+                          </div>
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-xs font-semibold uppercase text-muted-foreground">Service Area Description</label>
+                          <textarea
+                            value={cmsData.contact?.city_description || ''}
+                            onChange={(e) => handleCmsFieldChange('city_description', e.target.value)}
+                            rows={3}
+                            className="input-base w-full resize-none"
+                            required
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="flex justify-end pt-2 border-t border-border">
+                      <Button
+                        type="submit"
+                        disabled={savingCms}
+                        className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold"
+                      >
+                        {savingCms ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Save size={14} className="mr-1.5" />}
+                        Publish CMS Configuration
+                      </Button>
+                    </div>
+                  </form>
+                </>
               )}
             </div>
           )}
@@ -1368,143 +1753,157 @@ const AdminPage = () => {
                 </p>
               </div>
 
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                
-                {/* PROFILE INFORMATION */}
-                <div className="lg:col-span-1 bg-card border border-border rounded-xl p-6 space-y-6">
-                  <div className="flex flex-col items-center text-center pb-4 border-b border-border/50">
-                    <img
-                      src={profileData.avatar}
-                      alt={profileData.name}
-                      className="w-24 h-24 rounded-full object-cover mb-3 border border-border"
-                    />
-                    <h3 className="font-bold text-lg text-foreground">{profileData.name}</h3>
-                    <span className="text-xs bg-primary/20 text-primary px-2.5 py-0.5 rounded-full font-semibold">
-                      {profileData.role}
-                    </span>
+              {isReadOnly('profile') ? (
+                <div className="bg-card border border-border p-8 rounded-xl text-center space-y-4 max-w-md mx-auto my-12">
+                  <Lock className="w-16 h-16 text-primary/50 mx-auto" />
+                  <h3 className="text-lg font-bold text-foreground">Access Restricted</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Only accounts with the <span className="font-semibold text-primary">Admin</span> role can view, create, or delete security credentials.
+                  </p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                  
+                  {/* PROFILE INFORMATION */}
+                  <div className="lg:col-span-1 bg-card border border-border rounded-xl p-6 space-y-6">
+                    <div className="flex flex-col items-center text-center pb-4 border-b border-border/50">
+                      <img
+                        src={profileData.avatar}
+                        alt={profileData.name}
+                        className="w-24 h-24 rounded-full object-cover mb-3 border border-border"
+                      />
+                      <h3 className="font-bold text-lg text-foreground">{profileData.name}</h3>
+                      <span className="text-xs bg-primary/20 text-primary px-2.5 py-0.5 rounded-full font-semibold capitalize">
+                        {currentUserRole} Role
+                      </span>
+                    </div>
+
+                    {!isEditingProfile ? (
+                      <div className="space-y-4">
+                        <div>
+                          <span className="text-xs text-muted-foreground block uppercase font-bold tracking-wide">Email</span>
+                          <span className="text-sm font-semibold">{profileData.email}</span>
+                        </div>
+                        <div>
+                          <span className="text-xs text-muted-foreground block uppercase font-bold tracking-wide">Key Access</span>
+                          <span className="text-sm font-semibold italic text-muted-foreground">Protected Key Credentials</span>
+                        </div>
+                        <Button
+                          onClick={() => setIsEditingProfile(true)}
+                          className="w-full"
+                          variant="outline"
+                        >
+                          Edit Profile
+                        </Button>
+                      </div>
+                    ) : (
+                      <form onSubmit={handleUpdateProfile} className="space-y-3">
+                        <div>
+                          <label className="text-xs font-semibold block text-muted-foreground uppercase">Name</label>
+                          <input
+                            type="text"
+                            value={profileData.name}
+                            onChange={(e) => setProfileData({ ...profileData, name: e.target.value })}
+                            className="input-base w-full mt-1"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-xs font-semibold block text-muted-foreground uppercase">Email</label>
+                          <input
+                            type="email"
+                            value={profileData.email}
+                            onChange={(e) => setProfileData({ ...profileData, email: e.target.value })}
+                            className="input-base w-full mt-1"
+                          />
+                        </div>
+                        <div className="flex gap-2 pt-2">
+                          <Button type="submit" className="flex-1">Save</Button>
+                          <Button type="button" variant="outline" onClick={() => setIsEditingProfile(false)}>Cancel</Button>
+                        </div>
+                      </form>
+                    )}
+
+                    {/* SECURITY KEY RESET */}
+                    <div className="pt-4 border-t border-border/50 space-y-3">
+                      <h4 className="text-sm font-bold text-foreground flex items-center gap-1.5">
+                        <Shield size={16} className="text-primary" /> Security Verification Key
+                      </h4>
+                      <p className="text-xs text-muted-foreground">
+                        Reset your master admin key token. Re-login will be required if changed.
+                      </p>
+                      <input
+                        type="password"
+                        placeholder="New Admin Key token"
+                        className="input-base w-full text-xs"
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            handleChangeAdminKey(e.target.value);
+                            e.target.value = '';
+                          }
+                        }}
+                      />
+                      <p className="text-[10px] text-muted-foreground italic">Press Enter to save changes.</p>
+                    </div>
                   </div>
 
-                  {!isEditingProfile ? (
-                    <div className="space-y-4">
+                  {/* USER ACCOUNTS LIST */}
+                  <div className="lg:col-span-2 bg-card border border-border rounded-xl p-6 space-y-4">
+                    <div className="flex items-center justify-between">
                       <div>
-                        <span className="text-xs text-muted-foreground block uppercase font-bold tracking-wide">Email</span>
-                        <span className="text-sm font-semibold">{profileData.email}</span>
+                        <h3 className="font-bold text-foreground">Authorized System Users</h3>
+                        <p className="text-xs text-muted-foreground">Authorized profiles who can access system features.</p>
                       </div>
-                      <div>
-                        <span className="text-xs text-muted-foreground block uppercase font-bold tracking-wide">Key Access</span>
-                        <span className="text-sm font-semibold italic text-muted-foreground">Protected Key Credentials</span>
-                      </div>
-                      <Button
-                        onClick={() => setIsEditingProfile(true)}
-                        className="w-full"
-                        variant="outline"
-                      >
-                        Edit Profile
+                      <Button onClick={() => setUserDialogOpen(true)} className="h-9">
+                        <Plus size={14} className="mr-1" /> Add User
                       </Button>
                     </div>
-                  ) : (
-                    <form onSubmit={handleUpdateProfile} className="space-y-3">
-                      <div>
-                        <label className="text-xs font-semibold block text-muted-foreground uppercase">Name</label>
-                        <input
-                          type="text"
-                          value={profileData.name}
-                          onChange={(e) => setProfileData({ ...profileData, name: e.target.value })}
-                          className="input-base w-full mt-1"
-                        />
-                      </div>
-                      <div>
-                        <label className="text-xs font-semibold block text-muted-foreground uppercase">Email</label>
-                        <input
-                          type="email"
-                          value={profileData.email}
-                          onChange={(e) => setProfileData({ ...profileData, email: e.target.value })}
-                          className="input-base w-full mt-1"
-                        />
-                      </div>
-                      <div className="flex gap-2 pt-2">
-                        <Button type="submit" className="flex-1">Save</Button>
-                        <Button type="button" variant="outline" onClick={() => setIsEditingProfile(false)}>Cancel</Button>
-                      </div>
-                    </form>
-                  )}
 
-                  {/* SECURITY KEY RESET */}
-                  <div className="pt-4 border-t border-border/50 space-y-3">
-                    <h4 className="text-sm font-bold text-foreground flex items-center gap-1.5">
-                      <Shield size={16} className="text-primary" /> Security Verification Key
-                    </h4>
-                    <p className="text-xs text-muted-foreground">
-                      Reset your master admin key token. Re-login will be required if changed.
-                    </p>
-                    <input
-                      type="password"
-                      placeholder="New Admin Key token"
-                      className="input-base w-full text-xs"
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                          handleChangeAdminKey(e.target.value);
-                          e.target.value = '';
-                        }
-                      }}
-                    />
-                    <p className="text-[10px] text-muted-foreground italic">Press Enter to save changes.</p>
-                  </div>
-                </div>
-
-                {/* USER ACCOUNTS LIST */}
-                <div className="lg:col-span-2 bg-card border border-border rounded-xl p-6 space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h3 className="font-bold text-foreground">Authorized System Users</h3>
-                      <p className="text-xs text-muted-foreground">Authorized profiles who can access system features.</p>
-                    </div>
-                    <Button onClick={() => setUserDialogOpen(true)} className="h-9">
-                      <Plus size={14} className="mr-1" /> Add User
-                    </Button>
-                  </div>
-
-                  <div className="border border-border rounded-lg overflow-hidden bg-background">
-                    <table className="w-full text-xs text-left">
-                      <thead className="bg-muted text-muted-foreground font-semibold border-b border-border">
-                        <tr>
-                          <th className="px-4 py-2.5">User</th>
-                          <th className="px-4 py-2.5">Role</th>
-                          <th className="px-4 py-2.5">Created</th>
-                          <th className="px-4 py-2.5 text-right w-16">Action</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {users.map((u) => (
-                          <tr key={u.id} className="border-b border-border last:border-0 hover:bg-muted/20">
-                            <td className="px-4 py-3">
-                              <div className="font-bold text-foreground">{u.username}</div>
-                              <div className="text-muted-foreground">{u.email}</div>
-                            </td>
-                            <td className="px-4 py-3">
-                              <span className="bg-primary/10 text-primary px-2 py-0.5 rounded-full text-[10px] font-semibold">
-                                {u.role || 'Admin'}
-                              </span>
-                            </td>
-                            <td className="px-4 py-3 text-muted-foreground">
-                              {new Date(u.created).toLocaleDateString()}
-                            </td>
-                            <td className="px-4 py-3 text-right">
-                              <button
-                                onClick={() => handleDeleteUser(u.id)}
-                                className="text-muted-foreground hover:text-destructive p-1 rounded-md"
-                              >
-                                <Trash2 size={13} />
-                              </button>
-                            </td>
+                    <div className="border border-border rounded-lg overflow-hidden bg-background">
+                      <table className="w-full text-xs text-left">
+                        <thead className="bg-muted text-muted-foreground font-semibold border-b border-border">
+                          <tr>
+                            <th className="px-4 py-2.5">User</th>
+                            <th className="px-4 py-2.5">Role / Permissions</th>
+                            <th className="px-4 py-2.5">Created</th>
+                            <th className="px-4 py-2.5 text-right w-16">Action</th>
                           </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                        </thead>
+                        <tbody>
+                          {users.map((u) => (
+                            <tr key={u.id} className="border-b border-border last:border-0 hover:bg-muted/20">
+                              <td className="px-4 py-3">
+                                <div className="font-bold text-foreground">{u.username}</div>
+                                <div className="text-muted-foreground">{u.email}</div>
+                              </td>
+                              <td className="px-4 py-3">
+                                <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold ${
+                                  (u.role || 'Admin') === 'Admin' ? 'bg-primary/20 text-primary border border-primary/30' :
+                                  (u.role || 'Admin') === 'Moderator' ? 'bg-blue-500/10 text-blue-500 border border-blue-500/20' :
+                                  'bg-yellow-500/10 text-yellow-500 border border-yellow-500/20'
+                                }`}>
+                                  {u.role || 'Admin'}
+                                </span>
+                              </td>
+                              <td className="px-4 py-3 text-muted-foreground">
+                                {new Date(u.created).toLocaleDateString()}
+                              </td>
+                              <td className="px-4 py-3 text-right">
+                                <button
+                                  onClick={() => handleDeleteUser(u.id)}
+                                  className="text-muted-foreground hover:text-destructive p-1 rounded-md"
+                                >
+                                  <Trash2 size={13} />
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
                   </div>
-                </div>
 
-              </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -1518,6 +1917,7 @@ const AdminPage = () => {
         initial={editingProject}
         adminKey={adminKey}
         onSaved={handleProjectSaved}
+        isReadOnly={isReadOnly('projects')}
       />
 
       <TechFormDialog
@@ -1525,6 +1925,7 @@ const AdminPage = () => {
         onClose={() => setTechDialogOpen(false)}
         initial={editingTech}
         onSaved={handleTechSaved}
+        isReadOnly={isReadOnly('team')}
       />
 
       <UserFormDialog
@@ -1578,10 +1979,8 @@ const AdminPage = () => {
               )}
               <div className="grid grid-cols-3 border-b border-border/50 py-1.5">
                 <span className="text-muted-foreground">Current Status</span>
-                <span className="col-span-2">
-                  <span className="bg-primary/20 text-primary px-2 py-0.5 rounded font-semibold text-xs capitalize">
-                    {selectedOrder.status || 'Pending'}
-                  </span>
+                <span className="col-span-2 font-semibold capitalize">
+                  {selectedOrder.status || 'Pending'}
                 </span>
               </div>
               <div className="flex justify-end pt-3">

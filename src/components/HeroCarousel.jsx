@@ -6,7 +6,9 @@ import { Button } from '@/components/ui/button';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useUI } from '@/contexts/UIContext';
 
-const slides = [
+import pb from '@/lib/pocketbaseClient';
+
+const DEFAULT_SLIDES = [
   {
     image: 'https://images.unsplash.com/photo-1698047945367-112339b04d51',
     title: 'Professional TV Mounting',
@@ -29,6 +31,7 @@ const slides = [
 
 const HeroCarousel = () => {
   const { openBookingModal, openQuoteModal } = useUI();
+  const [carouselSlides, setCarouselSlides] = useState(DEFAULT_SLIDES);
   const [emblaRef, emblaApi] = useEmblaCarousel({ loop: true }, [
     Autoplay({ delay: 5500, stopOnInteraction: false }),
   ]);
@@ -43,6 +46,37 @@ const HeroCarousel = () => {
 
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [visible, setVisible] = useState(true);
+
+  // Load home page CMS dynamic fields for first slide
+  useEffect(() => {
+    const loadCms = async () => {
+      try {
+        let homeCms;
+        try {
+          homeCms = await pb.collection('cms_pages').getFirstListItem('page_id="home"');
+        } catch {
+          const stored = localStorage.getItem('atltvmountpro_local_cms');
+          if (stored) {
+            homeCms = JSON.parse(stored).home;
+          }
+        }
+        if (homeCms && (homeCms.hero_title || homeCms.hero_subtitle)) {
+          setCarouselSlides((prev) => {
+            const copy = [...prev];
+            copy[0] = {
+              ...copy[0],
+              title: homeCms.hero_title || copy[0].title,
+              description: homeCms.hero_subtitle || copy[0].description,
+            };
+            return copy;
+          });
+        }
+      } catch (err) {
+        console.warn('HeroCarousel CMS load error:', err);
+      }
+    };
+    loadCms();
+  }, []);
 
   useEffect(() => {
     if (!emblaApi) return;
@@ -76,7 +110,7 @@ const HeroCarousel = () => {
     <div className="relative overflow-hidden w-full">
       {/* Image layer — absolutely positioned, crossfades only */}
       <div className="absolute inset-0">
-        {slides.map((slide, index) => (
+        {carouselSlides.map((slide, index) => (
           <div
             key={index}
             className="absolute inset-0 w-full h-full transition-opacity duration-700 ease-in-out"
@@ -97,7 +131,7 @@ const HeroCarousel = () => {
       {/* Embla carousel — used only for auto-advance timing + scroll index, content is animated via CSS */}
       <div className="relative h-[100dvh] w-full" ref={emblaRef}>
         <div className="flex">
-          {slides.map((slide, index) => (
+          {carouselSlides.map((slide, index) => (
             <div key={index} className="flex-[0_0_100%] min-w-0 relative h-[100dvh]">
               {/* Content — centered both axes */}
               <div className="absolute inset-0 flex items-center justify-center pt-20">

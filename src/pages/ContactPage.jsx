@@ -12,6 +12,12 @@ import pb from '@/lib/pocketbaseClient';
 import { toast } from 'sonner';
 import PageHero from '@/components/PageHero';
 
+const DEFAULT_CONTACT = {
+    hours: 'Monday - Saturday: 8:00 AM - 6:00 PM\nSunday: Closed',
+    address: 'Atlanta metro area and throughout Georgia',
+    phone: '770-374-3203',
+  };
+
 const ContactPage = () => {
   const [formData, setFormData] = useState({
     name: '',
@@ -20,6 +26,36 @@ const ContactPage = () => {
     message: '',
   });
   const [loading, setLoading] = useState(false);
+  const [cmsData, setCmsData] = useState(DEFAULT_CONTACT);
+
+  useEffect(() => {
+    const loadCms = async () => {
+      try {
+        let contactCms;
+        let homeCms;
+        try {
+          contactCms = await pb.collection('cms_pages').getFirstListItem('page_id="contact"');
+          homeCms = await pb.collection('cms_pages').getFirstListItem('page_id="home"');
+        } catch {
+          const stored = localStorage.getItem('atltvmountpro_local_cms');
+          if (stored) {
+            const parsed = JSON.parse(stored);
+            contactCms = parsed.contact;
+            homeCms = parsed.home;
+          }
+        }
+        
+        setCmsData({
+          hours: contactCms?.hours || DEFAULT_CONTACT.hours,
+          address: contactCms?.address || DEFAULT_CONTACT.address,
+          phone: homeCms?.business_phone || DEFAULT_CONTACT.phone,
+        });
+      } catch (err) {
+        console.warn('ContactPage CMS load error:', err);
+      }
+    };
+    loadCms();
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -155,8 +191,8 @@ const ContactPage = () => {
                     </div>
                     <div>
                       <h3 className="font-semibold mb-1">Phone</h3>
-                      <a href="tel:770-374-3203" className="text-muted-foreground hover:text-primary transition-colors duration-200">
-                        770-374-3203
+                      <a href={`tel:${cmsData.phone}`} className="text-muted-foreground hover:text-primary transition-colors duration-200">
+                        {cmsData.phone}
                       </a>
                     </div>
                   </div>
@@ -171,8 +207,8 @@ const ContactPage = () => {
                     </div>
                     <div>
                       <h3 className="font-semibold mb-1">Service area</h3>
-                      <p className="text-muted-foreground">
-                        Atlanta metro area and throughout Georgia
+                      <p className="text-muted-foreground whitespace-pre-wrap">
+                        {cmsData.address}
                       </p>
                     </div>
                   </div>
@@ -187,9 +223,8 @@ const ContactPage = () => {
                     </div>
                     <div>
                       <h3 className="font-semibold mb-1">Hours</h3>
-                      <p className="text-muted-foreground">
-                        Monday - Saturday: 8:00 AM - 6:00 PM<br />
-                        Sunday: Closed
+                      <p className="text-muted-foreground whitespace-pre-wrap">
+                        {cmsData.hours}
                       </p>
                     </div>
                   </div>
