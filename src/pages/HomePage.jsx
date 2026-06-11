@@ -14,38 +14,38 @@ import { useUI } from '@/contexts/UIContext';
 const services = [
   {
     icon: Tv,
-    title: 'TV mounting',
-    description: 'Professional wall mounting for all TV sizes with clean cable management and optimal viewing angles',
+    title: 'TV Mounting',
+    description: 'Professional wall mounting for all TV sizes with clean cable management and optimal viewing angles.',
   },
   {
     icon: Hammer,
-    title: 'Drywall repair',
-    description: 'Expert patching of holes, crack repairs, smooth finishes, and texture matching for seamless results',
+    title: 'Drywall Repair',
+    description: 'Expert patching of holes, crack repairs, smooth finishes, and texture matching for seamless results.',
   },
   {
     icon: Paintbrush,
     title: 'Painting',
-    description: 'Interior and exterior painting services with color consultation and thorough prep work included',
+    description: 'Interior and exterior painting services with color consultation and thorough prep work included.',
   },
   {
     icon: Wrench,
     title: 'Carpentry',
-    description: 'Custom shelving, trim work, door installation, and professional carpentry repairs',
+    description: 'Custom shelving, trim work, door installation, and professional carpentry repairs.',
   },
   {
     icon: Home,
     title: 'Flooring',
-    description: 'Hardwood, laminate, and tile installation with expert repair services',
+    description: 'Hardwood, laminate, and tile installation with expert repair services.',
   },
   {
     icon: Droplet,
     title: 'Plumbing',
-    description: 'Fixture installation, leak repairs, and drain cleaning services',
+    description: 'Fixture installation, leak repairs, and drain cleaning services.',
   },
   {
     icon: Zap,
-    title: 'Light electrical',
-    description: 'Outlet installation, switch replacement, and light fixture mounting',
+    title: 'Light Electrical',
+    description: 'Outlet installation, switch replacement, and light fixture mounting.',
   },
 ];
 
@@ -60,7 +60,7 @@ const testimonials = [
     name: 'Priya Desai',
     service: 'Drywall Repair',
     rating: 5,
-    text: 'Fixed multiple holes from old shelving. You can\'t even tell there was damage.',
+    text: "Fixed multiple holes from old shelving. You can't even tell there was damage.",
   },
   {
     name: 'James Wilson',
@@ -85,38 +85,48 @@ const testimonials = [
 const faqs = [
   {
     question: 'What areas do you serve?',
-    answer: 'We serve the Atlanta metro area and throughout Georgia. Contact us to confirm service availability in your specific location.',
+    answer:
+      'We serve the Atlanta metro area and throughout Georgia. Contact us to confirm service availability in your specific location.',
   },
   {
     question: 'How much does TV mounting cost?',
-    answer: 'TV mounting starts at $120 and varies based on TV size, wall type, and complexity of cable management. Contact us for a free quote.',
+    answer:
+      'TV mounting starts at $120 and varies based on TV size, wall type, and complexity of cable management. Use our Job Estimator for a detailed breakdown.',
   },
   {
     question: 'Do you offer same-day service?',
-    answer: 'Yes, we offer same-day service with a $40 rush fee, subject to availability. Book early for best availability.',
+    answer:
+      'Yes, we offer same-day service with a $40 rush fee, subject to availability. Book early for best availability.',
   },
   {
     question: 'Are you licensed and insured?',
-    answer: 'Yes, we are fully licensed and insured for all services we provide, giving you peace of mind.',
+    answer:
+      'Yes, we are fully licensed and insured for all services we provide, giving you peace of mind.',
   },
   {
-    question: 'What\'s your guarantee?',
-    answer: 'We offer a 100% satisfaction guarantee on all work. If you\'re not happy, we\'ll make it right.',
+    question: "What's your guarantee?",
+    answer:
+      "We offer a 100% satisfaction guarantee on all work. If you're not happy, we'll make it right.",
   },
 ];
 
 const HomePage = () => {
-  const { openQuoteModal } = useUI();
+  const { openQuoteModal, openBookingModal } = useUI();
 
   return (
     <>
       <Helmet>
         <title>ATL TV Mount PRO - Professional TV Mounting & Handyman Services in Atlanta</title>
-        <meta name="description" content="Expert TV mounting, drywall repair, painting, and handyman services in Atlanta metro area. Same-day service available. Call 770-374-3203 for a free quote." />
+        <meta
+          name="description"
+          content="Expert TV mounting, drywall repair, painting, and handyman services in Atlanta metro area. Same-day service available. Call 770-374-3203 for a free estimate."
+        />
       </Helmet>
 
+      {/* Hero */}
       <HeroCarousel />
 
+      {/* Services */}
       <section className="py-20 bg-background">
         <div className="max-w-[1140px] mx-auto px-4 sm:px-6 lg:px-8">
           <motion.div
@@ -125,7 +135,7 @@ const HomePage = () => {
             transition={{ duration: 0.5 }}
             className="text-center mb-16"
           >
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">Our services</h2>
+            <h2 className="text-3xl md:text-4xl font-bold mb-4">Our Services</h2>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
               Professional handyman services for your home and business
             </p>
@@ -143,18 +153,27 @@ const HomePage = () => {
             ))}
           </div>
 
-          <div className="text-center">
+          <div className="text-center flex gap-4 justify-center flex-wrap">
             <Button
               onClick={openQuoteModal}
               size="lg"
               className="bg-primary hover:bg-primary/90 text-primary-foreground transition-all duration-200 active:scale-[0.98]"
             >
-              Get a free quote
+              Estimate My Job
+            </Button>
+            <Button
+              onClick={openBookingModal}
+              size="lg"
+              variant="outline"
+              className="transition-all duration-200 active:scale-[0.98]"
+            >
+              Book a Service
             </Button>
           </div>
         </div>
       </section>
 
+      {/* Testimonials */}
       <section className="py-20 bg-muted">
         <div className="max-w-[1140px] mx-auto px-4 sm:px-6 lg:px-8">
           <motion.div
@@ -163,9 +182,9 @@ const HomePage = () => {
             transition={{ duration: 0.5 }}
             className="text-center mb-16"
           >
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">What our clients say</h2>
+            <h2 className="text-3xl md:text-4xl font-bold mb-4">What Our Clients Say</h2>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              Real feedback from satisfied customers
+              Real feedback from satisfied customers across Atlanta
             </p>
           </motion.div>
 
@@ -177,6 +196,7 @@ const HomePage = () => {
         </div>
       </section>
 
+      {/* FAQ */}
       <section className="py-20 bg-background">
         <div className="max-w-[1140px] mx-auto px-4 sm:px-6 lg:px-8">
           <motion.div
@@ -185,7 +205,9 @@ const HomePage = () => {
             transition={{ duration: 0.5 }}
             className="text-center mb-16"
           >
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">Frequently asked questions</h2>
+            <h2 className="text-3xl md:text-4xl font-bold mb-4">
+              Frequently Asked Questions
+            </h2>
             <p className="text-lg text-muted-foreground">
               Find answers to common questions about our services
             </p>
@@ -204,12 +226,13 @@ const HomePage = () => {
         </div>
       </section>
 
+      {/* Newsletter */}
       <section className="py-20 bg-primary text-primary-foreground">
         <div className="max-w-[1140px] mx-auto px-4 sm:px-6 lg:px-8">
           <div className="max-w-2xl mx-auto text-center">
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">Stay updated</h2>
+            <h2 className="text-3xl md:text-4xl font-bold mb-4">Stay Updated</h2>
             <p className="text-lg mb-8 text-primary-foreground/90">
-              Subscribe to our newsletter for tips, special offers, and service updates
+              Subscribe for tips, special offers, and service updates from our team.
             </p>
             <NewsletterSignup />
           </div>

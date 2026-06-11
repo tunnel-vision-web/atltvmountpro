@@ -69,7 +69,7 @@ const ContactPage = () => {
             transition={{ duration: 0.5 }}
             className="text-center mb-16"
           >
-            <h1 className="text-4xl md:text-5xl font-bold mb-4">Contact us</h1>
+            <h1 className="text-3xl md:text-4xl font-bold mb-4">Contact us</h1>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
               Get in touch for a free quote or to schedule your service
             </p>

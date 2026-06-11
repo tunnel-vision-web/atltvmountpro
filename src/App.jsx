@@ -14,6 +14,8 @@ import AboutPage from './pages/AboutPage';
 import TeamPage from './pages/TeamPage';
 import TestimonialsPage from './pages/TestimonialsPage';
 import ContactPage from './pages/ContactPage';
+import PrivacyPolicyPage from './pages/PrivacyPolicyPage';
+import TermsOfServicePage from './pages/TermsOfServicePage';
 
 function App() {
   // Set dark mode on mount
@@ -35,6 +37,8 @@ function App() {
               <Route path="/team" element={<TeamPage />} />
               <Route path="/testimonials" element={<TestimonialsPage />} />
               <Route path="/contact" element={<ContactPage />} />
+              <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
+              <Route path="/terms-of-service" element={<TermsOfServicePage />} />
             </Routes>
           </main>
           <Footer />

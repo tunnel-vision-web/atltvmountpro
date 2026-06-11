@@ -30,39 +30,38 @@ const Header = () => {
   }, []);
 
   return (
-    <header 
-      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
-        isScrolled 
-          ? 'bg-gray-900/80 backdrop-blur-md border-b border-gray-700/50' 
-          : 'bg-transparent border-b border-transparent'
+    <header
+      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-400 ${
+        isScrolled
+          ? 'bg-gray-900/85 backdrop-blur-md border-b border-gray-700/50 py-3'
+          : 'bg-transparent border-b border-transparent py-5'
       }`}
-      style={{
-        padding: isScrolled ? '0.75rem 0' : '1.5rem 0'
-      }}
     >
-      <div className="max-w-[1140px] mx-auto px-4 sm:px-6 lg:px-8">
-        <div 
-          className="flex items-center justify-between w-full transition-all duration-300"
-          style={{
-            transform: isScrolled ? 'scale(0.85)' : 'scale(1)',
-            transformOrigin: 'left center'
-          }}
+      {/* Full-width centering wrapper — always centers its contents */}
+      <div className="w-full flex justify-center px-4 sm:px-6 lg:px-8">
+        <div
+          className={`flex items-center justify-between transition-all duration-400 ${
+            isScrolled ? 'w-full max-w-[980px]' : 'w-full max-w-[1140px]'
+          }`}
         >
+          {/* Logo */}
           <Link to="/" className="flex-shrink-0">
             <img
               src="https://horizons-cdn.hostinger.com/10e32518-3a0b-422d-a971-66d579a3db35/47c7080c79518d5a6d915f8a78db18d6.png"
               alt="ATL TV Mount PRO"
-              className={`transition-all duration-300 ${isScrolled ? 'h-10' : 'h-14'}`}
+              className={`transition-all duration-400 ${isScrolled ? 'h-8' : 'h-12'}`}
             />
           </Link>
 
-          {/* Navigation - only visible on desktop */}
-          <nav className="hidden md:flex items-center gap-8">
+          {/* Desktop Nav */}
+          <nav className="hidden md:flex items-center gap-7">
             {navItems.map((item) => (
               <Link
                 key={item.path}
                 to={item.path}
-                className={`text-sm font-medium transition-colors duration-200 ${
+                className={`transition-all duration-200 font-medium ${
+                  isScrolled ? 'text-sm' : 'text-sm'
+                } ${
                   location.pathname === item.path
                     ? 'text-primary'
                     : 'text-foreground hover:text-primary'
@@ -73,21 +72,26 @@ const Header = () => {
             ))}
           </nav>
 
-          <div className="hidden md:flex items-center gap-4">
-            <a 
-              href="tel:770-374-3203" 
-              className="text-sm font-medium text-foreground hover:text-primary transition-colors duration-200 whitespace-nowrap"
+          {/* Desktop Actions */}
+          <div className="hidden md:flex items-center gap-3">
+            <a
+              href="tel:770-374-3203"
+              className={`font-medium text-foreground hover:text-primary transition-colors duration-200 whitespace-nowrap ${
+                isScrolled ? 'text-sm' : 'text-sm'
+              }`}
             >
               770-374-3203
             </a>
             <Button
               onClick={openBookingModal}
+              size={isScrolled ? 'sm' : 'default'}
               className="bg-primary hover:bg-primary/90 text-primary-foreground transition-all duration-200 active:scale-[0.98]"
             >
-              Book now
+              Book Now
             </Button>
           </div>
 
+          {/* Mobile Hamburger */}
           <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
             <SheetTrigger asChild className="md:hidden">
               <Button variant="ghost" size="icon">
@@ -123,7 +127,7 @@ const Header = () => {
                   }}
                   className="bg-primary hover:bg-primary/90 text-primary-foreground transition-all duration-200 active:scale-[0.98]"
                 >
-                  Book now
+                  Book Now
                 </Button>
               </nav>
             </SheetContent>
