@@ -144,22 +144,25 @@ const HeroCarousel = () => {
         </div>
       </div>
 
-      {/* Prev / Next */}
-      <button
-        onClick={scrollPrev}
-        className="absolute left-4 top-1/2 -translate-y-1/2 z-10 bg-white/10 backdrop-blur-sm hover:bg-white/25 text-white p-2.5 rounded-xl transition-all duration-200 border border-white/20"
-        aria-label="Previous slide"
-      >
-        <ChevronLeft className="w-5 h-5" />
-      </button>
-
-      <button
-        onClick={scrollNext}
-        className="absolute right-4 top-1/2 -translate-y-1/2 z-10 bg-white/10 backdrop-blur-sm hover:bg-white/25 text-white p-2.5 rounded-xl transition-all duration-200 border border-white/20"
-        aria-label="Next slide"
-      >
-        <ChevronRight className="w-5 h-5" />
-      </button>
+      {/* Prev / Next — constrained to the same 1140px layout grid */}
+      <div className="absolute top-1/2 -translate-y-1/2 z-10 w-full pointer-events-none">
+        <div className="max-w-[1140px] mx-auto px-4 sm:px-6 lg:px-8 flex justify-between pointer-events-none">
+          <button
+            onClick={scrollPrev}
+            className="pointer-events-auto bg-white/10 backdrop-blur-sm hover:bg-white/25 text-white p-2.5 rounded-xl transition-all duration-200 border border-white/20"
+            aria-label="Previous slide"
+          >
+            <ChevronLeft className="w-5 h-5" />
+          </button>
+          <button
+            onClick={scrollNext}
+            className="pointer-events-auto bg-white/10 backdrop-blur-sm hover:bg-white/25 text-white p-2.5 rounded-xl transition-all duration-200 border border-white/20"
+            aria-label="Next slide"
+          >
+            <ChevronRight className="w-5 h-5" />
+          </button>
+        </div>
+      </div>
 
       {/* Dots */}
       <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-10 flex gap-2">

@@ -9,6 +9,7 @@ import { useUI } from '@/contexts/UIContext';
 const navItems = [
   { name: 'Home', path: '/' },
   { name: 'Services', path: '/services' },
+  { name: 'Projects', path: '/projects' },
   { name: 'About', path: '/about' },
   { name: 'Team', path: '/team' },
   { name: 'Testimonials', path: '/testimonials' },

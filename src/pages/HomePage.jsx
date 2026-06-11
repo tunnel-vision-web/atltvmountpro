@@ -1,8 +1,8 @@
-
 import React from 'react';
 import { Helmet } from 'react-helmet';
 import { motion } from 'framer-motion';
-import { Tv, Hammer, Paintbrush, Wrench, Home, Droplet, Zap } from 'lucide-react';
+import { Tv, Hammer, Paintbrush, Wrench, Home, Droplet, Zap, ArrowRight } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import HeroCarousel from '@/components/HeroCarousel';
@@ -46,6 +46,33 @@ const services = [
     icon: Zap,
     title: 'Light Electrical',
     description: 'Outlet installation, switch replacement, and light fixture mounting.',
+  },
+];
+
+const featuredServices = [
+  {
+    title: 'TV Mounting & AV Setup',
+    tagline: 'Clean walls. Perfect angles.',
+    description:
+      'We mount any size TV on any wall type — brick, tile, concrete, or drywall — with full in-wall cable concealment.',
+    image: 'https://images.unsplash.com/photo-1698047945367-112339b04d51?w=900&q=80',
+    bg: 'from-black/70 via-black/50 to-black/20',
+  },
+  {
+    title: 'Drywall & Painting',
+    tagline: 'Flawless finishes, every time.',
+    description:
+      'Seamless hole repairs with texture matching, full-room priming and painting with colour consultation included.',
+    image: 'https://images.unsplash.com/photo-1562259949-e8e7689d7828?w=900&q=80',
+    bg: 'from-black/70 via-black/50 to-black/20',
+  },
+  {
+    title: 'Carpentry & Custom Shelving',
+    tagline: 'Built exactly the way you need it.',
+    description:
+      'Floating shelves, entertainment centers, trim work, and custom storage built to fit your space perfectly.',
+    image: 'https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=900&q=80',
+    bg: 'from-black/70 via-black/50 to-black/20',
   },
 ];
 
@@ -126,7 +153,64 @@ const HomePage = () => {
       {/* Hero */}
       <HeroCarousel />
 
-      {/* Services */}
+      {/* ── Featured Services Spotlight ── */}
+      <section className="py-20 bg-muted">
+        <div className="max-w-[1140px] mx-auto px-4 sm:px-6 lg:px-8">
+          <motion.div
+            initial={{ opacity: 0, y: 18 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+            className="text-center mb-12"
+          >
+            <p className="text-xs tracking-[0.18em] uppercase text-primary font-medium mb-3">
+              What We Do Best
+            </p>
+            <h2 className="text-3xl md:text-4xl font-bold mb-4">Our Core Services</h2>
+            <p className="text-muted-foreground max-w-xl mx-auto">
+              From precision TV installs to custom carpentry — professional results on every job.
+            </p>
+          </motion.div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+            {featuredServices.map((svc, i) => (
+              <motion.div
+                key={i}
+                initial={{ opacity: 0, y: 24 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: i * 0.1 }}
+                className="group relative rounded-2xl overflow-hidden cursor-pointer"
+                style={{ minHeight: '340px' }}
+              >
+                {/* Background image */}
+                <img
+                  src={svc.image}
+                  alt={svc.title}
+                  className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out"
+                />
+                {/* Gradient overlay */}
+                <div className={`absolute inset-0 bg-gradient-to-t ${svc.bg} transition-opacity duration-300 group-hover:opacity-90`} />
+
+                {/* Content */}
+                <div className="relative h-full flex flex-col justify-end p-7" style={{ minHeight: '340px' }}>
+                  <p className="text-xs tracking-[0.15em] uppercase text-primary font-semibold mb-2">
+                    {svc.tagline}
+                  </p>
+                  <h3 className="text-xl font-bold text-white mb-2 leading-snug">{svc.title}</h3>
+                  <p className="text-white/75 text-sm leading-relaxed mb-5">{svc.description}</p>
+                  <Link
+                    to="/services"
+                    className="inline-flex items-center gap-1.5 text-sm font-semibold text-white/90 hover:text-white transition-colors duration-200"
+                  >
+                    Learn More <ArrowRight size={14} />
+                  </Link>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── All Services ── */}
       <section className="py-20 bg-background">
         <div className="max-w-[1140px] mx-auto px-4 sm:px-6 lg:px-8">
           <motion.div
@@ -135,7 +219,7 @@ const HomePage = () => {
             transition={{ duration: 0.5 }}
             className="text-center mb-16"
           >
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">Our Services</h2>
+            <h2 className="text-3xl md:text-4xl font-bold mb-4">All Services</h2>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
               Professional handyman services for your home and business
             </p>
@@ -173,8 +257,36 @@ const HomePage = () => {
         </div>
       </section>
 
-      {/* Testimonials */}
-      <section className="py-20 bg-muted">
+      {/* ── Featured Projects teaser ── */}
+      <section className="py-20 bg-muted border-t border-border">
+        <div className="max-w-[1140px] mx-auto px-4 sm:px-6 lg:px-8">
+          <motion.div
+            initial={{ opacity: 0, y: 18 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+            className="text-center mb-3"
+          >
+            <p className="text-xs tracking-[0.18em] uppercase text-primary font-medium mb-3">
+              Real Results
+            </p>
+            <h2 className="text-3xl md:text-4xl font-bold mb-4">Our Work Speaks for Itself</h2>
+            <p className="text-muted-foreground max-w-xl mx-auto mb-10">
+              Browse completed projects across the Atlanta metro area.
+            </p>
+            <Link to="/projects">
+              <Button
+                size="lg"
+                className="bg-primary hover:bg-primary/90 text-primary-foreground transition-all duration-200 active:scale-[0.98]"
+              >
+                View All Projects <ArrowRight size={16} className="ml-1.5" />
+              </Button>
+            </Link>
+          </motion.div>
+        </div>
+      </section>
+
+      {/* ── Testimonials ── */}
+      <section className="py-20 bg-background">
         <div className="max-w-[1140px] mx-auto px-4 sm:px-6 lg:px-8">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -196,8 +308,8 @@ const HomePage = () => {
         </div>
       </section>
 
-      {/* FAQ */}
-      <section className="py-20 bg-background">
+      {/* ── FAQ ── */}
+      <section className="py-20 bg-muted">
         <div className="max-w-[1140px] mx-auto px-4 sm:px-6 lg:px-8">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -226,7 +338,7 @@ const HomePage = () => {
         </div>
       </section>
 
-      {/* Newsletter */}
+      {/* ── Newsletter ── */}
       <section className="py-20 bg-primary text-primary-foreground">
         <div className="max-w-[1140px] mx-auto px-4 sm:px-6 lg:px-8">
           <div className="max-w-2xl mx-auto text-center">
