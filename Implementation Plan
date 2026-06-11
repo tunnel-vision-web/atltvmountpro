@@ -1,0 +1,29 @@
+Implementation Plan: Backend CMS, Roles & Permissions
+This plan expands the Admin Panel of ATL TV Mount PRO with CMS (Content Management System) capabilities and enforces roles-based permissions.
+
+Proposed Changes
+CMS Management Layout
+[MODIFY] 
+AdminPage.jsx
+CMS Pages Tab: Add a new tab cms in the admin side panel (visible and editable only for Admin role).
+Page Manager UI: Let admins select pages (Home, About, Contact) to edit page metadata, hero images, hero text, and contact variables.
+Image CMS Selector: Create a visual directory manager to manage site image URLs, showing image previews and allowing edits to Unsplash references or public asset paths.
+Role Verification: Hide or lock tabs according to the user's role. Limit CMS edits and User Management exclusively to Admin users.
+[MODIFY] 
+HomePage.jsx
+Fetch CMS text configurations from PocketBase (cms_pages) or LocalStorage fallback, dynamically replacing the default hero title, subheadings, and contact details.
+[MODIFY] 
+AboutPage.jsx
+Fetch CMS details for About Page story text, statistics values, choose sections, and hero image URLs.
+[MODIFY] 
+ContactPage.jsx
+Dynamically fetch contact information (hours, location address, phone number, city descriptions) from the dynamic CMS configurations.
+Roles & Permissions Setup
+Roles & Permissions Definition:
+Admin: Full permissions (View/Write on Projects, Bookings, Techs, CMS, and User Management).
+Moderator: Read/Write permissions on Projects, Bookings, Techs. Restricted/hidden access to User Management and CMS edit operations.
+Viewer: Read-only access to all sections. Can search/filter, but cannot save, edit, or delete items.
+User Management Extension:
+Add a Role selector dropdown (Admin, Moderator, Viewer) when creating system users.
+In AdminPage.jsx, intercept all submit handlers (projects, techs, bookings status, CMS saving, user additions/deletions) to block actions if the logged-in user's role doesn't have the appropriate clearance.
+Render visually locked indicators (e.g., lock icon 🔒, disabled save buttons, and helper banners) if the current user's role has insufficient permissions.
