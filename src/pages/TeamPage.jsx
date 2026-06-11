@@ -1,11 +1,12 @@
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Helmet } from 'react-helmet';
 import { motion } from 'framer-motion';
 import TeamCard from '@/components/TeamCard';
 import PageHero from '@/components/PageHero';
+import pb from '@/lib/pocketbaseClient';
 
-const team = [
+const STATIC_TEAM = [
   {
     photo: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d',
     name: 'Marcus Thompson',
@@ -33,6 +34,38 @@ const team = [
 ];
 
 const TeamPage = () => {
+  const [teamMembers, setTeamMembers] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const loadTeam = async () => {
+      try {
+        const records = await pb.collection('team_members').getFullList({
+          sort: 'created',
+        });
+        if (records && records.length > 0) {
+          // Map pocketbase record properties to standard fields
+          const mapped = records.map(r => ({
+            id: r.id,
+            photo: r.photo || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde',
+            name: r.name,
+            bio: r.bio,
+            skills: Array.isArray(r.skills) ? r.skills : (r.skills ? JSON.parse(r.skills) : []),
+          }));
+          setTeamMembers(mapped);
+        } else {
+          setTeamMembers(STATIC_TEAM);
+        }
+      } catch (error) {
+        console.warn('Failed to load team from PocketBase, using static fallback:', error);
+        setTeamMembers(STATIC_TEAM);
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadTeam();
+  }, []);
+
   return (
     <>
       <Helmet>
@@ -50,11 +83,19 @@ const TeamPage = () => {
 
       <div className="py-20 bg-background">
         <div className="max-w-[1140px] mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-            {team.map((member, index) => (
-              <TeamCard key={index} {...member} index={index} />
-            ))}
-          </div>
+          {loading ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="h-80 bg-muted animate-pulse rounded-xl" />
+              ))}
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+              {teamMembers.map((member, index) => (
+                <TeamCard key={member.id || index} {...member} index={index} />
+              ))}
+            </div>
+          )}
 
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -73,3 +114,4 @@ const TeamPage = () => {
 };
 
 export default TeamPage;
+

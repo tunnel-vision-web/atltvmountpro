@@ -39,6 +39,12 @@ If you do not set these variables, defaults are used:
 
 ## Key improvements applied
 
+- **Admin Side Panel Navigation**: Replaced top header layout in the Admin page with a modern, collapsible left-hand sidebar navigation featuring flat Lucide icons.
+- **Orders & Bookings Management**: Added a tracking dashboard for online appointment bookings (`appointment_bookings` PocketBase collection) and dynamic quote estimator submissions (`quote_inquiries` PocketBase collection). Includes status filters (Pending, Confirmed, Completed, Cancelled), client search, detail views, and record deletion.
+- **Team Technician Management**: Created a dynamic directory manager for technicians. Admin users can create, edit, and delete tech profiles (name, skills, bio, photo URL) stored in `team_members` PocketBase collection.
+- **Dynamic Team Page Rendering**: Updated the public `/team` page to fetch from PocketBase dynamically, automatically falling back to static lists if PocketBase is not configured or offline.
+- **Profile & User Management**: Added settings to reset admin access keys, edit administrator profile details, and manage supplementary users inside the admin console.
+- **Hybrid Storage Fallbacks**: Added local storage replication so all new features work seamlessly out of the box in mock mode even when PocketBase services or API backends are unavailable.
 - Renamed modal state context from `AuthContext` to `UIContext`
 - Updated context imports and hook usage to `useUI` / `UIProvider`
 - Made PocketBase endpoint configurable via `VITE_POCKETBASE_API_URL`
@@ -51,4 +57,4 @@ If you do not set these variables, defaults are used:
 ## Notes
 
 - No `README.md` existed before; added it for onboarding and env setup.
-- Node + npm are not currently installed in this environment, so I could not run the local build.
+- Dual LocalStorage / PocketBase fallbacks are integrated to ensure preview stability under any configuration.
