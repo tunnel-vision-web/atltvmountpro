@@ -42,9 +42,12 @@
   --font-sans: "DM Sans", sans-serif;
   --font-serif: "Outfit", serif;
 
-  --radius-lg: var(--radius);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-sm: calc(var(--radius) - 4px);
+  --radius-sm:  3px;
+  --radius-md:  3px;
+  --radius-lg:  3px;
+  --radius-xl:  3px;
+  --radius-2xl: 3px;
+  --radius-3xl: 3px;
 
   --animate-accordion-down: accordion-down 0.2s ease-out;
   --animate-accordion-up: accordion-up 0.2s ease-out;
@@ -80,7 +83,7 @@
     --border: 0 0% 89%;
     --input: 0 0% 89%;
     --ring: 0 84% 60%;
-    --radius: 0.5rem;
+    --radius: 3px;
     --sidebar-background: 0 0% 98%;
     --sidebar-foreground: 0 0% 4%;
     --sidebar-primary: 0 84% 60%;
@@ -111,6 +114,7 @@
     --border: 0 0% 18%;
     --input: 0 0% 18%;
     --ring: 0 84% 60%;
+    --radius: 3px;
     --sidebar-background: 0 0% 8%;
     --sidebar-foreground: 0 0% 98%;
     --sidebar-primary: 0 84% 60%;
