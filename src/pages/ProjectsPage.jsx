@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Helmet } from 'react-helmet';
 import { motion } from 'framer-motion';
 import ProjectCard from '@/components/ProjectCard';
+import PageHero from '@/components/PageHero';
 
 const ProjectsPage = () => {
   const [projects, setProjects] = useState([]);
@@ -34,24 +35,13 @@ const ProjectsPage = () => {
         />
       </Helmet>
 
-      {/* Page header */}
-      <div className="pt-32 pb-16 bg-muted border-b border-border">
-        <div className="max-w-[1140px] mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <motion.div
-            initial={{ opacity: 0, y: 18 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-          >
-            <p className="text-xs tracking-[0.18em] uppercase text-primary font-medium mb-3">
-              Our Work
-            </p>
-            <h1 className="text-4xl md:text-5xl font-bold mb-4">Featured Projects</h1>
-            <p className="text-lg text-muted-foreground max-w-xl mx-auto">
-              A showcase of professional TV mounting and handyman work across the Atlanta metro area.
-            </p>
-          </motion.div>
-        </div>
-      </div>
+      <PageHero
+        eyebrow="Our Work"
+        title="Featured Projects"
+        subtitle="A showcase of professional TV mounting and handyman work across the Atlanta metro area."
+        image="https://images.unsplash.com/photo-1503387762-592deb58ef4e?w=1920&q=80"
+        alt="Professional project work"
+      />
 
       {/* Grid */}
       <section className="py-20 bg-background">

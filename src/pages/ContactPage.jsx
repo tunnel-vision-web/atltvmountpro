@@ -10,6 +10,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Phone, MapPin, Clock } from 'lucide-react';
 import pb from '@/lib/pocketbaseClient';
 import { toast } from 'sonner';
+import PageHero from '@/components/PageHero';
 
 const ContactPage = () => {
   const [formData, setFormData] = useState({
@@ -61,20 +62,16 @@ const ContactPage = () => {
         <meta name="description" content="Contact ATL TV Mount PRO for professional handyman services in Atlanta. Call 770-374-3203 or fill out our contact form for a free quote." />
       </Helmet>
 
-      <div className="py-20 bg-background">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-            className="text-center mb-16"
-          >
-            <h1 className="text-3xl md:text-4xl font-bold mb-4">Contact us</h1>
-            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              Get in touch for a free quote or to schedule your service
-            </p>
-          </motion.div>
+      <PageHero
+        eyebrow="Get In Touch"
+        title="Contact Us"
+        subtitle="Get in touch for a free quote or to schedule your service"
+        image="https://images.unsplash.com/photo-1486325212027-8081e485255e?w=1920&q=80"
+        alt="Atlanta cityscape"
+      />
 
+      <div className="py-20 bg-background">
+        <div className="max-w-[1140px] mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
             <motion.div
               initial={{ opacity: 0, x: -20 }}

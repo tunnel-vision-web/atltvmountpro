@@ -6,6 +6,7 @@ import { Award, Clock, Shield, Users } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useUI } from '@/contexts/UIContext';
+import PageHero from '@/components/PageHero';
 
 const stats = [
   { icon: Clock, label: 'Years experience', value: '5+' },
@@ -24,21 +25,17 @@ const AboutPage = () => {
         <meta name="description" content="Learn about ATL TV Mount PRO - 5+ years of professional handyman services in Atlanta with 1,000+ installations completed. Licensed, insured, and trusted." />
       </Helmet>
 
-      <div className="py-20 bg-background">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-            className="text-center mb-16"
-          >
-            <h1 className="text-3xl md:text-4xl font-bold mb-4">About ATL TV Mount PRO</h1>
-            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              Your trusted partner for professional handyman services in Atlanta
-            </p>
-          </motion.div>
+      <PageHero
+        eyebrow="About Us"
+        title="About ATL TV Mount PRO"
+        subtitle="Your trusted partner for professional handyman services in Atlanta"
+        image="https://images.unsplash.com/photo-1581858726788-75bc0f6a952d?w=1920&q=80"
+        alt="Professional handyman at work"
+      />
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center mb-20">
+      <div className="py-20 bg-background">
+        <div className="max-w-[1140px] mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-start mb-20">
             <motion.div
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}

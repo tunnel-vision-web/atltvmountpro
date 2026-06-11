@@ -3,6 +3,7 @@ import React from 'react';
 import { Helmet } from 'react-helmet';
 import { motion } from 'framer-motion';
 import TestimonialCard from '@/components/TestimonialCard';
+import PageHero from '@/components/PageHero';
 
 const testimonials = [
   {
@@ -75,20 +76,16 @@ const TestimonialsPage = () => {
         <meta name="description" content="Read reviews from satisfied customers of ATL TV Mount PRO. See why Atlanta homeowners trust us for TV mounting, drywall repair, painting, and more." />
       </Helmet>
 
-      <div className="py-20 bg-background">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-            className="text-center mb-16"
-          >
-            <h1 className="text-3xl md:text-4xl font-bold mb-4">Client testimonials</h1>
-            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              Real feedback from homeowners who trust ATL TV Mount PRO
-            </p>
-          </motion.div>
+      <PageHero
+        eyebrow="Reviews"
+        title="Client Testimonials"
+        subtitle="Real feedback from homeowners who trust ATL TV Mount PRO"
+        image="https://images.unsplash.com/photo-1560518883-ce09059eeffa?w=1920&q=80"
+        alt="Happy homeowner"
+      />
 
+      <div className="py-20 bg-background">
+        <div className="max-w-[1140px] mx-auto px-4 sm:px-6 lg:px-8">
           <div className="columns-1 md:columns-2 lg:columns-3 gap-6">
             {testimonials.map((testimonial, index) => (
               <TestimonialCard key={index} {...testimonial} index={index} />

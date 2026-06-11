@@ -6,6 +6,7 @@ import { Tv, Hammer, Paintbrush, Wrench, Home, Droplet, Zap } from 'lucide-react
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useUI } from '@/contexts/UIContext';
+import PageHero from '@/components/PageHero';
 
 const services = [
   {
@@ -76,20 +77,16 @@ const ServicesPage = () => {
         <meta name="description" content="Professional TV mounting, drywall repair, painting, carpentry, flooring, plumbing, and electrical services in Atlanta. Expert handyman services for your home." />
       </Helmet>
 
-      <div className="py-20 bg-background">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-            className="text-center mb-16"
-          >
-            <h1 className="text-3xl md:text-4xl font-bold mb-4">Our services</h1>
-            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              Professional handyman services delivered with expertise and care
-            </p>
-          </motion.div>
+      <PageHero
+        eyebrow="What We Do"
+        title="Our Services"
+        subtitle="Professional handyman services delivered with expertise and care"
+        image="https://images.unsplash.com/photo-1698047945367-112339b04d51?w=1920&q=80"
+        alt="Professional TV mounting service"
+      />
 
+      <div className="py-20 bg-background">
+        <div className="max-w-[1140px] mx-auto px-4 sm:px-6 lg:px-8">
           <div className="space-y-16">
             {services.map((service, index) => (
               <motion.div

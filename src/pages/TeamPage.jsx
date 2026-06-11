@@ -3,6 +3,7 @@ import React from 'react';
 import { Helmet } from 'react-helmet';
 import { motion } from 'framer-motion';
 import TeamCard from '@/components/TeamCard';
+import PageHero from '@/components/PageHero';
 
 const team = [
   {
@@ -39,20 +40,16 @@ const TeamPage = () => {
         <meta name="description" content="Meet the professional technicians at ATL TV Mount PRO. Experienced, certified, and dedicated to quality handyman services in Atlanta." />
       </Helmet>
 
-      <div className="py-20 bg-background">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-            className="text-center mb-16"
-          >
-            <h1 className="text-3xl md:text-4xl font-bold mb-4">Our techs</h1>
-            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              Meet the skilled professionals who bring expertise and care to every project
-            </p>
-          </motion.div>
+      <PageHero
+        eyebrow="The Team"
+        title="Our Techs"
+        subtitle="Meet the skilled professionals who bring expertise and care to every project"
+        image="https://images.unsplash.com/photo-1504307651254-35680f356dfd?w=1920&q=80"
+        alt="Professional technicians at work"
+      />
 
+      <div className="py-20 bg-background">
+        <div className="max-w-[1140px] mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
             {team.map((member, index) => (
               <TeamCard key={index} {...member} index={index} />
