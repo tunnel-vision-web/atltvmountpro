@@ -1,34 +1,47 @@
-import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
-import { useClientAuth, getLocalJobs } from '@/contexts/ClientAuthContext';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { toast } from 'sonner';
-import { ClipboardList, Calendar, Wrench, ArrowLeft, DollarSign, CreditCard } from 'lucide-react';
+import React, { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
+import { useClientAuth, getLocalJobs } from "@/contexts/ClientAuthContext";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { toast } from "sonner";
+import {
+  ClipboardList,
+  Calendar,
+  Wrench,
+  ArrowLeft,
+  DollarSign,
+  CreditCard,
+} from "lucide-react";
 
 const statusColors = {
-  pending: 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20',
-  scheduled: 'bg-blue-500/10 text-blue-500 border-blue-500/20',
-  'in-progress': 'bg-purple-500/10 text-purple-500 border-purple-500/20',
-  completed: 'bg-green-500/10 text-green-500 border-green-500/20',
-  invoiced: 'bg-orange-500/10 text-orange-500 border-orange-500/20',
-  paid: 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20',
+  pending: "bg-yellow-500/10 text-yellow-500 border-yellow-500/20",
+  scheduled: "bg-blue-500/10 text-blue-500 border-blue-500/20",
+  "in-progress": "bg-purple-500/10 text-purple-500 border-purple-500/20",
+  completed: "bg-green-500/10 text-green-500 border-green-500/20",
+  invoiced: "bg-orange-500/10 text-orange-500 border-orange-500/20",
+  paid: "bg-emerald-500/10 text-emerald-500 border-emerald-500/20",
 };
 
 const ClientDashboard = () => {
-  const { user, isAuthenticated, isCustomer } = useClientAuth();
+  const { user, isAuthenticated, isCustomer, isTech } = useClientAuth();
   const [jobs, setJobs] = useState([]);
   const [invoices, setInvoices] = useState([]);
-  const [activeTab, setActiveTab] = useState('jobs');
+  const [activeTab, setActiveTab] = useState("jobs");
 
   useEffect(() => {
     if (!user) return;
     const allJobs = getLocalJobs();
-    const myJobs = allJobs.filter((j) => j.clientId === user.id || j.clientEmail === user.email);
+    const myJobs = allJobs.filter(
+      (j) => j.clientId === user.id || j.clientEmail === user.email,
+    );
     setJobs(myJobs);
 
-    const allInvoices = JSON.parse(localStorage.getItem('atltv_invoices') || '[]');
-    const myInvoices = allInvoices.filter((inv) => inv.clientId === user.id || inv.clientEmail === user.email);
+    const allInvoices = JSON.parse(
+      localStorage.getItem("atltv_invoices") || "[]",
+    );
+    const myInvoices = allInvoices.filter(
+      (inv) => inv.clientId === user.id || inv.clientEmail === user.email,
+    );
     setInvoices(myInvoices);
   }, [user]);
 
@@ -38,7 +51,8 @@ const ClientDashboard = () => {
         <ClipboardList className="w-12 h-12 text-muted-foreground mb-4" />
         <h1 className="text-2xl font-bold mb-2">Please Sign In</h1>
         <p className="text-muted-foreground mb-6 text-center max-w-sm">
-          Sign in to your account to view your jobs, invoices, and track progress.
+          Sign in to your account to view your jobs, invoices, and track
+          progress.
         </p>
         <Link to="/">
           <Button className="bg-primary hover:bg-primary/90 text-primary-foreground">
@@ -50,11 +64,11 @@ const ClientDashboard = () => {
   }
 
   const totalSpent = invoices
-    .filter((inv) => inv.status === 'paid')
+    .filter((inv) => inv.status === "paid")
     .reduce((sum, inv) => sum + (inv.total || 0), 0);
 
   const unpaidTotal = invoices
-    .filter((inv) => inv.status === 'sent' || inv.status === 'pending')
+    .filter((inv) => inv.status === "sent" || inv.status === "pending")
     .reduce((sum, inv) => sum + (inv.total || 0), 0);
 
   return (
@@ -63,8 +77,15 @@ const ClientDashboard = () => {
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
           <div>
-            <h1 className="text-2xl font-bold">My Dashboard</h1>
-            <p className="text-muted-foreground text-sm mt-1">
+            <div className="flex items-center gap-2 mb-1">
+              <h1 className="text-2xl font-bold">My Dashboard</h1>
+              {isTech && (
+                <span className="text-xs bg-secondary/20 text-secondary px-2 py-0.5 rounded-full font-semibold border border-secondary/30">
+                  Technician
+                </span>
+              )}
+            </div>
+            <p className="text-muted-foreground text-sm">
               Welcome back, {user?.name || user?.email}
             </p>
           </div>
@@ -111,21 +132,21 @@ const ClientDashboard = () => {
         {/* Tabs */}
         <div className="flex items-center gap-1 mb-6 border-b border-border">
           <button
-            onClick={() => setActiveTab('jobs')}
+            onClick={() => setActiveTab("jobs")}
             className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
-              activeTab === 'jobs'
-                ? 'border-primary text-primary'
-                : 'border-transparent text-muted-foreground hover:text-foreground'
+              activeTab === "jobs"
+                ? "border-primary text-primary"
+                : "border-transparent text-muted-foreground hover:text-foreground"
             }`}
           >
             My Jobs
           </button>
           <button
-            onClick={() => setActiveTab('invoices')}
+            onClick={() => setActiveTab("invoices")}
             className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
-              activeTab === 'invoices'
-                ? 'border-primary text-primary'
-                : 'border-transparent text-muted-foreground hover:text-foreground'
+              activeTab === "invoices"
+                ? "border-primary text-primary"
+                : "border-transparent text-muted-foreground hover:text-foreground"
             }`}
           >
             Invoices
@@ -133,7 +154,7 @@ const ClientDashboard = () => {
         </div>
 
         {/* Jobs Tab */}
-        {activeTab === 'jobs' && (
+        {activeTab === "jobs" && (
           <div className="space-y-4">
             {jobs.length === 0 ? (
               <div className="bg-card border border-border rounded-xl p-8 text-center">
@@ -143,7 +164,10 @@ const ClientDashboard = () => {
                   You haven't requested any services yet.
                 </p>
                 <Link to="/services">
-                  <Button size="sm" className="bg-primary hover:bg-primary/90 text-primary-foreground">
+                  <Button
+                    size="sm"
+                    className="bg-primary hover:bg-primary/90 text-primary-foreground"
+                  >
                     Browse Services
                   </Button>
                 </Link>
@@ -157,18 +181,25 @@ const ClientDashboard = () => {
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                     <div>
                       <div className="flex items-center gap-2 mb-1">
-                        <h3 className="font-semibold">{job.service || 'General Service'}</h3>
-                        <Badge variant="outline" className={statusColors[job.status] || ''}>
+                        <h3 className="font-semibold">
+                          {job.service || "General Service"}
+                        </h3>
+                        <Badge
+                          variant="outline"
+                          className={statusColors[job.status] || ""}
+                        >
                           {job.status}
                         </Badge>
                       </div>
                       <p className="text-sm text-muted-foreground">
-                        Requested on {new Date(job.created).toLocaleDateString()}
+                        Requested on{" "}
+                        {new Date(job.created).toLocaleDateString()}
                       </p>
                       {job.scheduledDate && (
                         <p className="text-sm text-muted-foreground flex items-center gap-1 mt-0.5">
                           <Calendar size={12} />
-                          Scheduled: {new Date(job.scheduledDate).toLocaleDateString()}
+                          Scheduled:{" "}
+                          {new Date(job.scheduledDate).toLocaleDateString()}
                         </p>
                       )}
                     </div>
@@ -190,7 +221,7 @@ const ClientDashboard = () => {
         )}
 
         {/* Invoices Tab */}
-        {activeTab === 'invoices' && (
+        {activeTab === "invoices" && (
           <div className="space-y-4">
             {invoices.length === 0 ? (
               <div className="bg-card border border-border rounded-xl p-8 text-center">
@@ -209,19 +240,30 @@ const ClientDashboard = () => {
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                     <div>
                       <div className="flex items-center gap-2 mb-1">
-                        <h3 className="font-semibold">Invoice #{inv.number || inv.id.slice(-6)}</h3>
-                        <Badge variant="outline" className={statusColors[inv.status] || ''}>
+                        <h3 className="font-semibold">
+                          Invoice #{inv.number || inv.id.slice(-6)}
+                        </h3>
+                        <Badge
+                          variant="outline"
+                          className={statusColors[inv.status] || ""}
+                        >
                           {inv.status}
                         </Badge>
                       </div>
                       <p className="text-sm text-muted-foreground">
-                        {inv.description || 'Service Invoice'} • {new Date(inv.created).toLocaleDateString()}
+                        {inv.description || "Service Invoice"} •{" "}
+                        {new Date(inv.created).toLocaleDateString()}
                       </p>
                     </div>
                     <div className="flex items-center gap-3">
-                      <p className="text-lg font-bold">${(inv.total || 0).toFixed(2)}</p>
-                      {(inv.status === 'sent' || inv.status === 'pending') && (
-                        <Button size="sm" className="bg-primary hover:bg-primary/90 text-primary-foreground">
+                      <p className="text-lg font-bold">
+                        ${(inv.total || 0).toFixed(2)}
+                      </p>
+                      {(inv.status === "sent" || inv.status === "pending") && (
+                        <Button
+                          size="sm"
+                          className="bg-primary hover:bg-primary/90 text-primary-foreground"
+                        >
                           Pay Now
                         </Button>
                       )}

@@ -708,6 +708,181 @@ const UserFormDialog = ({ open, onClose, onSaved }) => {
   );
 };
 
+// ── Admin demo seed data (used when PocketBase collections are empty) ──────────
+const ADMIN_DEMO_BOOKINGS = [
+  {
+    id: "demo_b1",
+    name: "Sarah Johnson",
+    email: "sarah.j@email.com",
+    phone: "(404) 555-0101",
+    service_type: "TV Mounting",
+    preferred_date: "2026-06-20",
+    preferred_time: "10:00 AM",
+    project_description: "65-inch TV above the fireplace, standard drywall.",
+    status: "Pending",
+    created: "2026-06-10T10:30:00Z",
+  },
+  {
+    id: "demo_b2",
+    name: "David Martinez",
+    email: "d.martinez@gmail.com",
+    phone: "(678) 555-0234",
+    service_type: "Drywall Repair",
+    preferred_date: "2026-06-22",
+    preferred_time: "9:00 AM",
+    project_description:
+      "Several holes in living room from old shelving removal.",
+    status: "Confirmed",
+    created: "2026-06-11T08:15:00Z",
+  },
+  {
+    id: "demo_b3",
+    name: "Priya Nair",
+    email: "priya.n@email.com",
+    phone: "(770) 555-0345",
+    service_type: "Painting",
+    preferred_date: "2026-06-25",
+    preferred_time: "8:00 AM",
+    project_description:
+      "Full repaint of master bedroom and en-suite bathroom.",
+    status: "Pending",
+    created: "2026-06-12T13:00:00Z",
+  },
+  {
+    id: "demo_b4",
+    name: "James Wilson",
+    email: "jwilson@email.com",
+    phone: "(404) 555-0456",
+    service_type: "Flooring",
+    preferred_date: "2026-07-01",
+    preferred_time: "9:00 AM",
+    project_description: "Laminate flooring in two bedrooms, ~400 sq ft.",
+    status: "Completed",
+    created: "2026-06-05T09:00:00Z",
+  },
+  {
+    id: "demo_b5",
+    name: "Lisa Thompson",
+    email: "l.thompson@email.com",
+    phone: "(678) 555-0567",
+    service_type: "Light Electrical",
+    preferred_date: "2026-06-28",
+    preferred_time: "1:00 PM",
+    project_description: "Install 3 new outlets and replace 2 light fixtures.",
+    status: "Confirmed",
+    created: "2026-06-13T15:30:00Z",
+  },
+];
+
+const ADMIN_DEMO_QUOTES = [
+  {
+    id: "demo_q1",
+    name: "Michael Chen",
+    email: "mchen@email.com",
+    phone: "(770) 555-0312",
+    service_type: "TV Mounting",
+    project_details:
+      "75-inch TV on brick wall, in-wall cable concealment needed.",
+    estimated_quote: 275,
+    status: "Pending",
+    created: "2026-06-09T14:00:00Z",
+  },
+  {
+    id: "demo_q2",
+    name: "Angela Ross",
+    email: "angela.r@gmail.com",
+    phone: "(404) 555-0678",
+    service_type: "Carpentry",
+    project_details:
+      "Custom floating shelves in home office — 3 shelves, 6ft wide.",
+    estimated_quote: 390,
+    status: "Confirmed",
+    created: "2026-06-10T11:20:00Z",
+  },
+  {
+    id: "demo_q3",
+    name: "Robert Kim",
+    email: "rkim@email.com",
+    phone: "(678) 555-0789",
+    service_type: "Drywall Repair",
+    project_details: "Water-damaged ceiling section ~4x4ft in master bedroom.",
+    estimated_quote: 220,
+    status: "Pending",
+    created: "2026-06-11T16:45:00Z",
+  },
+  {
+    id: "demo_q4",
+    name: "Nicole Foster",
+    email: "nfoster@email.com",
+    phone: "(770) 555-0890",
+    service_type: "Painting",
+    project_details:
+      "Entire first floor (living room + hallway + dining room), ~1,100 sq ft.",
+    estimated_quote: 815,
+    status: "Completed",
+    created: "2026-06-03T10:00:00Z",
+  },
+];
+
+const ADMIN_DEMO_TEAM = [
+  {
+    id: "demo_t1",
+    name: "Marcus Thompson",
+    photo:
+      "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&q=80",
+    bio: "Lead technician with 8 years of experience in TV mounting and home theater.",
+    skills: ["TV Mounting", "Cable Management", "Home Theater"],
+    created: "2024-01-01T00:00:00Z",
+  },
+  {
+    id: "demo_t2",
+    name: "James Rodriguez",
+    photo:
+      "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400&q=80",
+    bio: "Senior tech specializing in drywall repair and professional painting.",
+    skills: ["Drywall Repair", "Painting", "Texture Matching"],
+    created: "2024-01-02T00:00:00Z",
+  },
+  {
+    id: "demo_t3",
+    name: "Kevin Patel",
+    photo:
+      "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=400&q=80",
+    bio: "Experienced in custom carpentry builds and precision flooring.",
+    skills: ["Carpentry", "Flooring", "Custom Shelving"],
+    created: "2024-01-03T00:00:00Z",
+  },
+  {
+    id: "demo_t4",
+    name: "Andre Williams",
+    photo:
+      "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=400&q=80",
+    bio: "Certified in fixture installation, plumbing, and light electrical work.",
+    skills: ["Plumbing", "Light Electrical", "Fixture Installation"],
+    created: "2024-01-04T00:00:00Z",
+  },
+  {
+    id: "demo_t5",
+    name: "Darius Jackson",
+    photo:
+      "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=400&q=80",
+    bio: "Versatile handyman for complex multi-trade jobs and same-day calls.",
+    skills: ["TV Mounting", "Drywall Repair", "Carpentry", "Same-Day Service"],
+    created: "2024-01-05T00:00:00Z",
+  },
+  {
+    id: "demo_t6",
+    name: "Carlos Mendez",
+    photo:
+      "https://images.unsplash.com/photo-1560250097-0dc05ae561e0?w=400&q=80",
+    bio: "Flooring and painting specialist with showroom-quality finishes.",
+    skills: ["Flooring", "Painting", "Surface Prep", "Color Consultation"],
+    created: "2024-01-06T00:00:00Z",
+  },
+];
+
+const LOCAL_PROJECTS_STORAGE = "atltvmountpro_local_projects";
+
 // ── Main Admin Panel ──────────────────────────────────────────────────────────
 const AdminPage = () => {
   const [currentUser, setCurrentUser] = useState(null);
@@ -756,11 +931,16 @@ const AdminPage = () => {
     try {
       const res = await fetch("/api/projects");
       if (res.ok) {
-        setProjects(await res.json());
+        const data = await res.json();
+        setProjects(data);
+        localStorage.setItem(LOCAL_PROJECTS_STORAGE, JSON.stringify(data));
+      } else {
+        throw new Error("Not ok");
       }
     } catch {
-      // Load fallback projects if server offline
-      setProjects([]);
+      // Fallback to localStorage
+      const stored = localStorage.getItem(LOCAL_PROJECTS_STORAGE);
+      setProjects(stored ? JSON.parse(stored) : []);
     }
     setLoading(false);
   }, []);
@@ -904,6 +1084,19 @@ const AdminPage = () => {
     fetchUsers,
   ]);
 
+  // Seed demo data into localStorage if collections are empty
+  useEffect(() => {
+    if (!authed) return;
+    const seedIfEmpty = (key, data) => {
+      if (!localStorage.getItem(key)) {
+        localStorage.setItem(key, JSON.stringify(data));
+      }
+    };
+    seedIfEmpty(LOCAL_BOOKINGS_STORAGE, ADMIN_DEMO_BOOKINGS);
+    seedIfEmpty(LOCAL_QUOTES_STORAGE, ADMIN_DEMO_QUOTES);
+    seedIfEmpty(LOCAL_TEAM_STORAGE, ADMIN_DEMO_TEAM);
+  }, [authed]);
+
   const handleLogin = (user) => {
     const allowedRoles = [ROLES.Admin, ROLES.Moderator];
 
@@ -928,11 +1121,13 @@ const AdminPage = () => {
 
   // --- Project callbacks ---
   const handleProjectSaved = (saved, isUpdate) => {
-    setProjects((prev) =>
-      isUpdate
+    setProjects((prev) => {
+      const updated = isUpdate
         ? prev.map((p) => (p.id === saved.id ? saved : p))
-        : [saved, ...prev],
-    );
+        : [saved, ...prev];
+      localStorage.setItem(LOCAL_PROJECTS_STORAGE, JSON.stringify(updated));
+      return updated;
+    });
   };
 
   const handleProjectDelete = async (id) => {

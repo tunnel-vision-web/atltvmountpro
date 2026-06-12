@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import usePageTitle from "@/hooks/usePageTitle";
+import DUMMY_PROJECTS from "@/data/dummyProjects";
 import { motion } from "framer-motion";
 import { MapPin, ChevronLeft, CheckCircle2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -20,6 +21,13 @@ const ProjectDetailPage = () => {
 
   useEffect(() => {
     setLoading(true);
+    // Check demo projects first (no API needed)
+    const demoMatch = DUMMY_PROJECTS.find((p) => p.id === id);
+    if (demoMatch) {
+      setProject(demoMatch);
+      setLoading(false);
+      return;
+    }
     fetch(`/api/projects/${id}`)
       .then((r) => {
         if (r.status === 404) {
