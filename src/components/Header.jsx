@@ -51,7 +51,7 @@ const Header = () => {
             <img
               src="/images/logo/logo.png"
               alt="ATL TV Mount PRO"
-              className={`transition-all duration-400 ${isScrolled ? "h-8" : "h-12"}`}
+              className={`transition-all duration-400 ${isScrolled ? "h-11" : "h-16"}`}
             />
           </Link>
 

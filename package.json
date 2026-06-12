@@ -75,5 +75,8 @@
     "vaul": "^1.1.2",
     "vite": "^8.0.16",
     "zod": "latest"
+  },
+  "dependencies": {
+    "react-helmet-async": "^3.0.0"
   }
 }

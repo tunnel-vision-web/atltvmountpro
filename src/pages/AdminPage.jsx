@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from "react";
-import { Helmet } from "react-helmet";
+import { Helmet } from "react-helmet-async";
 import { Link } from "react-router-dom";
 import {
   Plus,
@@ -150,7 +150,7 @@ const LoginScreen = ({ onLogin }) => {
         <img
           src="/images/logo/logo.png"
           alt="ATL TV Mount PRO"
-          className="h-10 mx-auto mb-6"
+          className="h-14 mx-auto mb-6"
         />
         <h1 className="text-xl font-bold text-center mb-1">Admin Panel</h1>
         <p className="text-sm text-muted-foreground text-center mb-6">
@@ -1103,7 +1103,7 @@ const AdminPage = () => {
             <img
               src="/images/logo/logo.png"
               alt="ATL TV Mount PRO"
-              className="h-6"
+              className="h-9"
             />
             <span className="text-xs bg-primary/20 text-primary px-2 py-0.5 rounded font-medium">
               Admin
@@ -1128,7 +1128,7 @@ const AdminPage = () => {
                 <img
                   src="/images/logo/logo.png"
                   alt="ATL TV Mount PRO"
-                  className="h-7"
+                  className="h-10"
                 />
                 <span className="text-[10px] uppercase tracking-wider font-semibold text-primary bg-primary/10 px-1.5 py-0.5 rounded">
                   Pro
