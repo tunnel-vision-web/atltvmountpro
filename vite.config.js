@@ -308,6 +308,13 @@ export default defineConfig({
 			'.app-preview.com',
 			'.app-preview.io',
 		],
+		proxy: {
+			'/hcgi/platform': {
+				target: 'http://127.0.0.1:8090',
+				changeOrigin: true,
+				rewrite: (p) => p.replace(/^\/hcgi\/platform/, ''),
+			},
+		},
 		fs: {
 			strict: true,
 			allow: [
