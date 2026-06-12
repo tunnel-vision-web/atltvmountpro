@@ -1,29 +1,29 @@
-
-import React, { useCallback, useEffect, useState } from 'react';
-import useEmblaCarousel from 'embla-carousel-react';
-import Autoplay from 'embla-carousel-autoplay';
-import { Button } from '@/components/ui/button';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { useUI } from '@/contexts/UIContext';
+import React, { useCallback, useEffect, useState } from "react";
+import useEmblaCarousel from "embla-carousel-react";
+import Autoplay from "embla-carousel-autoplay";
+import { Button } from "@/components/ui/button";
+import { ChevronLeft, ChevronRight } from "lucide-react";
+import { useUI } from "@/contexts/UIContext";
 
 const slides = [
   {
-    image: 'https://images.unsplash.com/photo-1698047945367-112339b04d51',
-    title: 'Professional TV Mounting',
-    description: 'Expert installation for all TV sizes with clean cable management',
-    cta: 'Book Installation',
+    image: "/images/hero/hero-tv-mounting.jpg",
+    title: "Professional TV Mounting",
+    description:
+      "Expert installation for all TV sizes with clean cable management",
+    cta: "Book Installation",
   },
   {
-    image: 'https://images.unsplash.com/photo-1618832515521-3a8c6716aafc',
-    title: 'Drywall Repair Experts',
-    description: 'Seamless repairs and texture matching for perfect finishes',
-    cta: 'Estimate Your Job',
+    image: "/images/hero/hero-drywall.jpg",
+    title: "Drywall Repair Experts",
+    description: "Seamless repairs and texture matching for perfect finishes",
+    cta: "Estimate Your Job",
   },
   {
-    image: 'https://images.unsplash.com/photo-1629195352955-850830e4d6c9',
-    title: 'Professional Painting',
-    description: 'Interior and exterior painting with color consultation',
-    cta: 'Book a Service',
+    image: "/images/hero/hero-painting.jpg",
+    title: "Professional Painting",
+    description: "Interior and exterior painting with color consultation",
+    cta: "Book a Service",
   },
 ];
 
@@ -56,11 +56,11 @@ const HeroCarousel = () => {
       }, 120);
     };
 
-    emblaApi.on('select', onSelect);
+    emblaApi.on("select", onSelect);
     onSelect();
 
     return () => {
-      emblaApi.off('select', onSelect);
+      emblaApi.off("select", onSelect);
     };
   }, [emblaApi]);
 
@@ -98,24 +98,23 @@ const HeroCarousel = () => {
       <div className="relative h-[100dvh] w-full" ref={emblaRef}>
         <div className="flex">
           {slides.map((slide, index) => (
-            <div key={index} className="flex-[0_0_100%] min-w-0 relative h-[100dvh]">
+            <div
+              key={index}
+              className="flex-[0_0_100%] min-w-0 relative h-[100dvh]"
+            >
               {/* Content — centered both axes */}
               <div className="absolute inset-0 flex items-center justify-center pt-20">
                 <div className="w-full max-w-[860px] mx-auto px-6 sm:px-10 text-center">
                   {/* Animated content wrapper — only shown for active slide */}
                   {selectedIndex === index && (
                     <div
-                      className={`hero-content ${visible ? 'hero-content--visible' : 'hero-content--hidden'}`}
+                      className={`hero-content ${visible ? "hero-content--visible" : "hero-content--hidden"}`}
                     >
                       <p className="hero-eyebrow">
                         Atlanta's Trusted Handyman Service
                       </p>
-                      <h1 className="hero-title">
-                        {slide.title}
-                      </h1>
-                      <p className="hero-desc">
-                        {slide.description}
-                      </p>
+                      <h1 className="hero-title">{slide.title}</h1>
+                      <p className="hero-desc">{slide.description}</p>
                       <div className="hero-cta">
                         <Button
                           size="lg"
@@ -171,7 +170,7 @@ const HeroCarousel = () => {
             key={index}
             onClick={() => emblaApi?.scrollTo(index)}
             className={`h-1.5 rounded-full transition-all duration-400 ${
-              index === selectedIndex ? 'bg-white w-8' : 'bg-white/40 w-2'
+              index === selectedIndex ? "bg-white w-8" : "bg-white/40 w-2"
             }`}
             aria-label={`Go to slide ${index + 1}`}
           />

@@ -1,8 +1,8 @@
-import React, { useEffect, useState } from 'react';
-import { Helmet } from 'react-helmet';
-import { motion } from 'framer-motion';
-import ProjectCard from '@/components/ProjectCard';
-import PageHero from '@/components/PageHero';
+import React, { useEffect, useState } from "react";
+import { Helmet } from "react-helmet";
+import { motion } from "framer-motion";
+import ProjectCard from "@/components/ProjectCard";
+import PageHero from "@/components/PageHero";
 
 const ProjectsPage = () => {
   const [projects, setProjects] = useState([]);
@@ -10,9 +10,9 @@ const ProjectsPage = () => {
   const [error, setError] = useState(false);
 
   useEffect(() => {
-    fetch('/api/projects')
+    fetch("/api/projects")
       .then((r) => {
-        if (!r.ok) throw new Error('Failed to load');
+        if (!r.ok) throw new Error("Failed to load");
         return r.json();
       })
       .then((data) => {
@@ -39,7 +39,7 @@ const ProjectsPage = () => {
         eyebrow="Our Work"
         title="Featured Projects"
         subtitle="A showcase of professional TV mounting and handyman work across the Atlanta metro area."
-        image="https://images.unsplash.com/photo-1503387762-592deb58ef4e?w=1920&q=80"
+        image="/images/pages/page-projects.jpg"
         alt="Professional project work"
       />
 
@@ -49,7 +49,10 @@ const ProjectsPage = () => {
           {loading && (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {Array.from({ length: 6 }).map((_, i) => (
-                <div key={i} className="rounded-xl overflow-hidden border border-border bg-card">
+                <div
+                  key={i}
+                  className="rounded-xl overflow-hidden border border-border bg-card"
+                >
                   <div className="h-56 bg-muted animate-pulse" />
                   <div className="p-5 space-y-3">
                     <div className="h-4 bg-muted animate-pulse rounded w-3/4" />
