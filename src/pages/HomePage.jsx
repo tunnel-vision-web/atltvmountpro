@@ -10,6 +10,7 @@ import ServiceCard from '@/components/ServiceCard';
 import TestimonialCard from '@/components/TestimonialCard';
 import NewsletterSignup from '@/components/NewsletterSignup';
 import { useUI } from '@/contexts/UIContext';
+import { useCMS } from '@/hooks/useCMS';
 
 const services = [
   {
@@ -49,33 +50,6 @@ const services = [
   },
 ];
 
-const featuredServices = [
-  {
-    title: 'TV Mounting & AV Setup',
-    tagline: 'Clean walls. Perfect angles.',
-    description:
-      'We mount any size TV on any wall type — brick, tile, concrete, or drywall — with full in-wall cable concealment.',
-    image: 'https://images.unsplash.com/photo-1698047945367-112339b04d51?w=900&q=80',
-    bg: 'from-black/70 via-black/50 to-black/20',
-  },
-  {
-    title: 'Drywall & Painting',
-    tagline: 'Flawless finishes, every time.',
-    description:
-      'Seamless hole repairs with texture matching, full-room priming and painting with colour consultation included.',
-    image: 'https://images.unsplash.com/photo-1562259949-e8e7689d7828?w=900&q=80',
-    bg: 'from-black/70 via-black/50 to-black/20',
-  },
-  {
-    title: 'Carpentry & Custom Shelving',
-    tagline: 'Built exactly the way you need it.',
-    description:
-      'Floating shelves, entertainment centers, trim work, and custom storage built to fit your space perfectly.',
-    image: 'https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=900&q=80',
-    bg: 'from-black/70 via-black/50 to-black/20',
-  },
-];
-
 const testimonials = [
   {
     name: 'Marcus Chen',
@@ -109,36 +83,67 @@ const testimonials = [
   },
 ];
 
-const faqs = [
-  {
-    question: 'What areas do you serve?',
-    answer:
-      'We serve the Atlanta metro area and throughout Georgia. Contact us to confirm service availability in your specific location.',
-  },
-  {
-    question: 'How much does TV mounting cost?',
-    answer:
-      'TV mounting starts at $120 and varies based on TV size, wall type, and complexity of cable management. Use our Job Estimator for a detailed breakdown.',
-  },
-  {
-    question: 'Do you offer same-day service?',
-    answer:
-      'Yes, we offer same-day service with a $40 rush fee, subject to availability. Book early for best availability.',
-  },
-  {
-    question: 'Are you licensed and insured?',
-    answer:
-      'Yes, we are fully licensed and insured for all services we provide, giving you peace of mind.',
-  },
-  {
-    question: "What's your guarantee?",
-    answer:
-      "We offer a 100% satisfaction guarantee on all work. If you're not happy, we'll make it right.",
-  },
-];
-
 const HomePage = () => {
   const { openQuoteModal, openBookingModal } = useUI();
+  const { data: cmsHome } = useCMS('home');
+
+  const cmsFeaturedServices = cmsHome?.featuredServices;
+  const cmsFaqs = cmsHome?.faqs;
+
+  const featuredServices = cmsFeaturedServices?.length > 0 ? cmsFeaturedServices : [
+    {
+      title: 'TV Mounting & AV Setup',
+      tagline: 'Clean walls. Perfect angles.',
+      description:
+        'We mount any size TV on any wall type — brick, tile, concrete, or drywall — with full in-wall cable concealment.',
+      image: 'https://images.unsplash.com/photo-1698047945367-112339b04d51?w=900&q=80',
+      bg: 'from-black/70 via-black/50 to-black/20',
+    },
+    {
+      title: 'Drywall & Painting',
+      tagline: 'Flawless finishes, every time.',
+      description:
+        'Seamless hole repairs with texture matching, full-room priming and painting with colour consultation included.',
+      image: 'https://images.unsplash.com/photo-1562259949-e8e7689d7828?w=900&q=80',
+      bg: 'from-black/70 via-black/50 to-black/20',
+    },
+    {
+      title: 'Carpentry & Custom Shelving',
+      tagline: 'Built exactly the way you need it.',
+      description:
+        'Floating shelves, entertainment centers, trim work, and custom storage built to fit your space perfectly.',
+      image: 'https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=900&q=80',
+      bg: 'from-black/70 via-black/50 to-black/20',
+    },
+  ];
+
+  const faqs = cmsFaqs?.length > 0 ? cmsFaqs : [
+    {
+      question: 'What areas do you serve?',
+      answer:
+        'We serve the Atlanta metro area and throughout Georgia. Contact us to confirm service availability in your specific location.',
+    },
+    {
+      question: 'How much does TV mounting cost?',
+      answer:
+        'TV mounting starts at $120 and varies based on TV size, wall type, and complexity of cable management. Use our Job Estimator for a detailed breakdown.',
+    },
+    {
+      question: 'Do you offer same-day service?',
+      answer:
+        'Yes, we offer same-day service with a $40 rush fee, subject to availability. Book early for best availability.',
+    },
+    {
+      question: 'Are you licensed and insured?',
+      answer:
+        'Yes, we are fully licensed and insured for all services we provide, giving you peace of mind.',
+    },
+    {
+      question: "What's your guarantee?",
+      answer:
+        "We offer a 100% satisfaction guarantee on all work. If you're not happy, we'll make it right.",
+    },
+  ];
 
   return (
     <>
@@ -172,7 +177,7 @@ const HomePage = () => {
           </motion.div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-            {featuredServices.map((svc, i) => (
+            {(featuredServices.length > 0 ? featuredServices : []).map((svc, i) => (
               <motion.div
                 key={i}
                 initial={{ opacity: 0, y: 24 }}
@@ -326,7 +331,7 @@ const HomePage = () => {
           </motion.div>
 
           <Accordion type="single" collapsible className="w-full">
-            {faqs.map((faq, index) => (
+            {(faqs.length > 0 ? faqs : []).map((faq, index) => (
               <AccordionItem key={index} value={`item-${index}`}>
                 <AccordionTrigger className="text-left">{faq.question}</AccordionTrigger>
                 <AccordionContent className="text-muted-foreground">

@@ -4,12 +4,14 @@ import { Link } from 'react-router-dom';
 import { 
   Plus, Pencil, Trash2, X, ChevronLeft, Save, Loader2, Eye, EyeOff, LogOut,
   Tv, ClipboardList, Users, UserCog, Menu, Search, CheckCircle2, Clock, AlertTriangle, FileText,
-  User, Mail, Key, Shield
+  User, Mail, Key, Shield, Lock, Image as ImageIcon, DollarSign
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { toast } from 'sonner';
 import pb from '@/lib/pocketbaseClient';
+import CMSEditor from '@/components/CMSEditor';
+import FinanceModule from '@/components/FinanceModule';
 
 const ADMIN_KEY_STORAGE = 'atltvmountpro_admin_key';
 const LOCAL_BOOKINGS_STORAGE = 'atltvmountpro_local_bookings';
@@ -33,10 +35,41 @@ const EMPTY_PROJECT_FORM = {
   sort_order: 0,
 };
 
+// ── Permission constants ──────────────────────────────────────────────────────
+const ROLES = {
+  Admin: 'Admin',
+  Moderator: 'Moderator',
+  Viewer: 'Viewer',
+};
+
+const PERMISSIONS = {
+  [ROLES.Admin]: {
+    canView: ['projects', 'orders', 'team', 'profile', 'cms', 'finance'],
+    canEdit: ['projects', 'orders', 'team', 'profile', 'cms', 'users', 'finance'],
+    canDelete: ['projects', 'orders', 'team', 'profile', 'cms', 'users', 'finance'],
+  },
+  [ROLES.Moderator]: {
+    canView: ['projects', 'orders', 'team', 'profile', 'finance'],
+    canEdit: ['projects', 'orders', 'team', 'finance'],
+    canDelete: ['projects', 'orders', 'team'],
+  },
+  [ROLES.Viewer]: {
+    canView: ['projects', 'orders', 'team', 'profile', 'finance'],
+    canEdit: [],
+    canDelete: [],
+  },
+};
+
+function hasPermission(role, action, resource) {
+  if (!role || !PERMISSIONS[role]) return false;
+  return PERMISSIONS[role][action]?.includes(resource) ?? false;
+}
+
 // ── Login screen ──────────────────────────────────────────────────────────────
 const LoginScreen = ({ onLogin }) => {
-  const [key, setKey] = useState('');
-  const [show, setShow] = useState(false);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState('');
 
@@ -45,30 +78,15 @@ const LoginScreen = ({ onLogin }) => {
     setErr('');
     setLoading(true);
     try {
-      const res = await fetch('/api/admin/verify', {
-        headers: { 'x-admin-key': key },
-      });
-      if (res.ok) {
-        localStorage.setItem(ADMIN_KEY_STORAGE, key);
-        onLogin(key);
-      } else {
-        // Fallback for standalone/mock mode if server endpoint not running
-        if (key === 'admin123' || key === 'password') {
-          localStorage.setItem(ADMIN_KEY_STORAGE, key);
-          onLogin(key);
-          toast.info('Logged in using local fallback key');
-        } else {
-          setErr('Invalid admin key. Try "admin123" for local mock.');
-        }
-      }
-    } catch {
-      if (key === 'admin123' || key === 'password') {
-        localStorage.setItem(ADMIN_KEY_STORAGE, key);
-        onLogin(key);
-        toast.info('Logged in using local fallback key (offline)');
-      } else {
-        setErr('Network error. Enter "admin123" to skip verification.');
-      }
+      const authData = await pb.collection('users').authWithPassword(email, password);
+      // Fetch full user record to get role
+      const userRecord = await pb.collection('users').getOne(authData.record.id);
+      const role = userRecord.role || ROLES.Admin;
+      onLogin({ email, role, id: userRecord.id });
+      toast.success('Signed in successfully.');
+    } catch (error) {
+      console.error('Login error:', error);
+      setErr('Invalid email or password. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -83,23 +101,35 @@ const LoginScreen = ({ onLogin }) => {
           className="h-10 mx-auto mb-6"
         />
         <h1 className="text-xl font-bold text-center mb-1">Admin Panel</h1>
-        <p className="text-sm text-muted-foreground text-center mb-6">Enter your admin key to continue</p>
+        <p className="text-sm text-muted-foreground text-center mb-6">Sign in with your credentials</p>
         <form onSubmit={submit} className="space-y-4">
-          <div className="relative">
+          <div>
+            <label className="text-xs font-medium text-muted-foreground mb-1 block">Email</label>
             <input
-              type={show ? 'text' : 'password'}
-              value={key}
-              onChange={(e) => setKey(e.target.value)}
-              placeholder="Admin key (e.g. admin123)"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="admin@atltvmountpro.com"
+              className="w-full bg-muted border border-border rounded-lg px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
+              required
+            />
+          </div>
+          <div className="relative">
+            <label className="text-xs font-medium text-muted-foreground mb-1 block">Password</label>
+            <input
+              type={showPassword ? 'text' : 'password'}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="••••••••"
               className="w-full bg-muted border border-border rounded-lg px-4 py-2.5 pr-10 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
               required
             />
             <button
               type="button"
-              onClick={() => setShow(!show)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute right-3 top-[26px] text-muted-foreground hover:text-foreground"
             >
-              {show ? <EyeOff size={15} /> : <Eye size={15} />}
+              {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
             </button>
           </div>
           {err && <p className="text-xs text-destructive">{err}</p>}
@@ -120,7 +150,7 @@ const LoginScreen = ({ onLogin }) => {
 };
 
 // ── Project form dialog ────────────────────────────────────────────────────────
-const ProjectFormDialog = ({ open, onClose, initial, adminKey, onSaved }) => {
+const ProjectFormDialog = ({ open, onClose, initial, onSaved }) => {
   const [form, setForm] = useState(EMPTY_PROJECT_FORM);
   const [saving, setSaving] = useState(false);
 
@@ -165,7 +195,7 @@ const ProjectFormDialog = ({ open, onClose, initial, adminKey, onSaved }) => {
       const url = initial ? `/api/projects/${initial.id}` : '/api/projects';
       const res = await fetch(url, {
         method: initial ? 'PUT' : 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-admin-key': adminKey },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
       if (!res.ok) throw new Error('Save failed');
@@ -521,6 +551,7 @@ const UserFormDialog = ({ open, onClose, onSaved }) => {
             >
               <option value="Admin">Administrator</option>
               <option value="Moderator">Moderator</option>
+              <option value="Viewer">Viewer</option>
             </select>
           </div>
           <div className="flex justify-end gap-3 pt-2">
@@ -540,9 +571,9 @@ const UserFormDialog = ({ open, onClose, onSaved }) => {
 
 // ── Main Admin Panel ──────────────────────────────────────────────────────────
 const AdminPage = () => {
-  const [adminKey, setAdminKey] = useState(() => localStorage.getItem(ADMIN_KEY_STORAGE) ?? '');
+  const [currentUser, setCurrentUser] = useState(null);
   const [authed, setAuthed] = useState(false);
-  const [checking, setChecking] = useState(!!adminKey);
+  const [checking, setChecking] = useState(true);
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('projects');
 
@@ -646,33 +677,29 @@ const AdminPage = () => {
     }
   }, []);
 
-  // Auto-verify stored key on load
+  // Auto-verify auth on load using PocketBase authStore
   useEffect(() => {
-    if (!adminKey) { setChecking(false); return; }
-    fetch('/api/admin/verify', { headers: { 'x-admin-key': adminKey } })
-      .then((r) => {
-        if (r.ok) { 
-          setAuthed(true); 
-          fetchProjects();
-        } else {
-          // Check for mock verification key
-          if (adminKey === 'admin123' || adminKey === 'password') {
-            setAuthed(true);
-            fetchProjects();
-          } else {
-            localStorage.removeItem(ADMIN_KEY_STORAGE); 
-            setAdminKey(''); 
-          }
-        }
-      })
-      .catch(() => {
-        if (adminKey === 'admin123' || adminKey === 'password') {
+    const checkAuth = async () => {
+      if (pb.authStore.isValid && pb.authStore.model) {
+        try {
+          const userRecord = await pb.collection('users').getOne(pb.authStore.model.id);
+          setCurrentUser({
+            id: userRecord.id,
+            email: userRecord.email,
+            role: userRecord.role || ROLES.Admin,
+          });
           setAuthed(true);
-          fetchProjects();
+        } catch {
+          pb.authStore.clear();
+          setAuthed(false);
         }
-      })
-      .finally(() => setChecking(false));
-  }, [adminKey, fetchProjects]);
+      } else {
+        setAuthed(false);
+      }
+      setChecking(false);
+    };
+    checkAuth();
+  }, []);
 
   // Load specific tab data
   useEffect(() => {
@@ -683,14 +710,14 @@ const AdminPage = () => {
     if (activeTab === 'profile') fetchUsers();
   }, [activeTab, authed, fetchProjects, fetchBookingsAndQuotes, fetchTeam, fetchUsers]);
 
-  const handleLogin = (key) => {
-    setAdminKey(key);
+  const handleLogin = (user) => {
+    setCurrentUser(user);
     setAuthed(true);
   };
 
   const handleLogout = () => {
-    localStorage.removeItem(ADMIN_KEY_STORAGE);
-    setAdminKey('');
+    pb.authStore.clear();
+    setCurrentUser(null);
     setAuthed(false);
   };
 
@@ -706,7 +733,7 @@ const AdminPage = () => {
     try {
       const res = await fetch(`/api/projects/${id}`, {
         method: 'DELETE',
-        headers: { 'x-admin-key': adminKey },
+        headers: { 'Content-Type': 'application/json' },
       });
       if (res.ok) {
         setProjects((prev) => prev.filter((p) => p.id !== id));
@@ -924,18 +951,46 @@ const AdminPage = () => {
                 <span>Team Technicians</span>
               </button>
 
-              <button
-                onClick={() => { setActiveTab('profile'); setSidebarOpen(false); }}
-                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 ${activeTab === 'profile' ? 'bg-primary text-primary-foreground shadow-sm shadow-primary/20' : 'text-muted-foreground hover:bg-muted hover:text-foreground'}`}
-              >
-                <UserCog size={18} className="flex-shrink-0" />
-                <span>Profile & Users</span>
-              </button>
+              {hasPermission(currentUser?.role, 'canView', 'profile') && (
+                <button
+                  onClick={() => { setActiveTab('profile'); setSidebarOpen(false); }}
+                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 ${activeTab === 'profile' ? 'bg-primary text-primary-foreground shadow-sm shadow-primary/20' : 'text-muted-foreground hover:bg-muted hover:text-foreground'}`}
+                >
+                  <UserCog size={18} className="flex-shrink-0" />
+                  <span>Profile & Users</span>
+                </button>
+              )}
+
+              {hasPermission(currentUser?.role, 'canView', 'finance') && (
+                <button
+                  onClick={() => { setActiveTab('finance'); setSidebarOpen(false); }}
+                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 ${activeTab === 'finance' ? 'bg-primary text-primary-foreground shadow-sm shadow-primary/20' : 'text-muted-foreground hover:bg-muted hover:text-foreground'}`}
+                >
+                  <DollarSign size={18} className="flex-shrink-0" />
+                  <span>Finance</span>
+                </button>
+              )}
+
+              {hasPermission(currentUser?.role, 'canView', 'cms') && (
+                <button
+                  onClick={() => { setActiveTab('cms'); setSidebarOpen(false); }}
+                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 ${activeTab === 'cms' ? 'bg-primary text-primary-foreground shadow-sm shadow-primary/20' : 'text-muted-foreground hover:bg-muted hover:text-foreground'}`}
+                >
+                  <FileText size={18} className="flex-shrink-0" />
+                  <span>CMS</span>
+                </button>
+              )}
             </nav>
           </div>
 
           {/* Footer of Sidebar */}
           <div className="p-4 border-t border-border bg-muted/40 flex flex-col gap-2">
+            {currentUser?.role && (
+              <div className="flex items-center justify-center gap-1.5 py-1.5 px-3 bg-card border border-border rounded-lg">
+                <Shield size={12} className="text-primary" />
+                <span className="text-xs font-semibold text-foreground">{currentUser.role}</span>
+              </div>
+            )}
             <Link 
               to="/" 
               className="flex items-center justify-center gap-1.5 py-2 px-3 border border-border rounded-lg text-xs text-muted-foreground hover:text-foreground hover:bg-card transition-all"
@@ -955,6 +1010,12 @@ const AdminPage = () => {
 
         {/* MAIN DISPLAY CONTENT */}
         <main className="flex-1 min-h-screen px-4 sm:px-6 lg:px-8 py-8 md:py-10 max-w-[1200px] w-full">
+          {currentUser?.role === ROLES.Viewer && (
+            <div className="mb-4 flex items-center gap-2 bg-yellow-500/10 text-yellow-600 border border-yellow-500/20 rounded-lg px-4 py-2.5 text-sm">
+              <Lock size={14} />
+              <span>You are viewing in <strong>read-only mode</strong>. Contact an administrator for editing access.</span>
+            </div>
+          )}
           
           {/* TAB CONTENT: PROJECTS */}
           {activeTab === 'projects' && (
@@ -966,13 +1027,15 @@ const AdminPage = () => {
                     Manage the customer projects that are visible on your main website.
                   </p>
                 </div>
-                <Button
-                  onClick={() => { setEditingProject(null); setProjectDialogOpen(true); }}
-                  className="bg-primary hover:bg-primary/90 text-primary-foreground"
-                >
-                  <Plus size={15} className="mr-1.5" />
-                  New Project
-                </Button>
+                {hasPermission(currentUser?.role, 'canEdit', 'projects') && (
+                  <Button
+                    onClick={() => { setEditingProject(null); setProjectDialogOpen(true); }}
+                    className="bg-primary hover:bg-primary/90 text-primary-foreground"
+                  >
+                    <Plus size={15} className="mr-1.5" />
+                    New Project
+                  </Button>
+                )}
               </div>
 
               {loading ? (
@@ -1031,23 +1094,27 @@ const AdminPage = () => {
                             </td>
                             <td className="px-4 py-3.5 text-right">
                               <div className="flex items-center gap-1 justify-end">
-                                <button
-                                  onClick={() => { setEditingProject(project); setProjectDialogOpen(true); }}
-                                  className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted"
-                                >
-                                  <Pencil size={14} />
-                                </button>
-                                <button
-                                  onClick={() => handleProjectDelete(project.id)}
-                                  disabled={deletingProject === project.id}
-                                  className="p-1.5 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/15"
-                                >
-                                  {deletingProject === project.id ? (
-                                    <Loader2 size={14} className="animate-spin" />
-                                  ) : (
-                                    <Trash2 size={14} />
-                                  )}
-                                </button>
+                                {hasPermission(currentUser?.role, 'canEdit', 'projects') && (
+                                  <button
+                                    onClick={() => { setEditingProject(project); setProjectDialogOpen(true); }}
+                                    className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted"
+                                  >
+                                    <Pencil size={14} />
+                                  </button>
+                                )}
+                                {hasPermission(currentUser?.role, 'canDelete', 'projects') && (
+                                  <button
+                                    onClick={() => handleProjectDelete(project.id)}
+                                    disabled={deletingProject === project.id}
+                                    className="p-1.5 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/15"
+                                  >
+                                    {deletingProject === project.id ? (
+                                      <Loader2 size={14} className="animate-spin" />
+                                    ) : (
+                                      <Trash2 size={14} />
+                                    )}
+                                  </button>
+                                )}
                               </div>
                             </td>
                           </tr>
@@ -1171,23 +1238,31 @@ const AdminPage = () => {
                                   >
                                     <Eye size={14} />
                                   </button>
-                                  <select
-                                    value={b.status || 'Pending'}
-                                    onChange={(e) => handleUpdateStatus('appointment_bookings', b.id, e.target.value)}
-                                    className="text-xs bg-muted border border-border rounded p-1"
-                                  >
-                                    <option value="Pending">Pending</option>
-                                    <option value="Confirmed">Confirm</option>
-                                    <option value="Completed">Complete</option>
-                                    <option value="Cancelled">Cancel</option>
-                                  </select>
-                                  <button
-                                    onClick={() => handleDeleteOrder('appointment_bookings', b.id)}
-                                    className="p-1.5 rounded-lg text-muted-foreground hover:text-destructive"
-                                    title="Delete"
-                                  >
-                                    <Trash2 size={14} />
-                                  </button>
+                                  {hasPermission(currentUser?.role, 'canEdit', 'orders') ? (
+                                    <select
+                                      value={b.status || 'Pending'}
+                                      onChange={(e) => handleUpdateStatus('appointment_bookings', b.id, e.target.value)}
+                                      className="text-xs bg-muted border border-border rounded p-1"
+                                    >
+                                      <option value="Pending">Pending</option>
+                                      <option value="Confirmed">Confirm</option>
+                                      <option value="Completed">Complete</option>
+                                      <option value="Cancelled">Cancel</option>
+                                    </select>
+                                  ) : (
+                                    <span className="text-xs bg-muted border border-border rounded px-2 py-1">
+                                      {b.status || 'Pending'}
+                                    </span>
+                                  )}
+                                  {hasPermission(currentUser?.role, 'canDelete', 'orders') && (
+                                    <button
+                                      onClick={() => handleDeleteOrder('appointment_bookings', b.id)}
+                                      className="p-1.5 rounded-lg text-muted-foreground hover:text-destructive"
+                                      title="Delete"
+                                    >
+                                      <Trash2 size={14} />
+                                    </button>
+                                  )}
                                 </div>
                               </td>
                             </tr>
@@ -1248,22 +1323,30 @@ const AdminPage = () => {
                                   >
                                     <Eye size={14} />
                                   </button>
-                                  <select
-                                    value={q.status || 'Pending'}
-                                    onChange={(e) => handleUpdateStatus('quote_inquiries', q.id, e.target.value)}
-                                    className="text-xs bg-muted border border-border rounded p-1"
-                                  >
-                                    <option value="Pending">Pending</option>
-                                    <option value="Confirmed">Confirm</option>
-                                    <option value="Completed">Complete</option>
-                                    <option value="Cancelled">Cancel</option>
-                                  </select>
-                                  <button
-                                    onClick={() => handleDeleteOrder('quote_inquiries', q.id)}
-                                    className="p-1.5 rounded-lg text-muted-foreground hover:text-destructive"
-                                  >
-                                    <Trash2 size={14} />
-                                  </button>
+                                  {hasPermission(currentUser?.role, 'canEdit', 'orders') ? (
+                                    <select
+                                      value={q.status || 'Pending'}
+                                      onChange={(e) => handleUpdateStatus('quote_inquiries', q.id, e.target.value)}
+                                      className="text-xs bg-muted border border-border rounded p-1"
+                                    >
+                                      <option value="Pending">Pending</option>
+                                      <option value="Confirmed">Confirm</option>
+                                      <option value="Completed">Complete</option>
+                                      <option value="Cancelled">Cancel</option>
+                                    </select>
+                                  ) : (
+                                    <span className="text-xs bg-muted border border-border rounded px-2 py-1">
+                                      {q.status || 'Pending'}
+                                    </span>
+                                  )}
+                                  {hasPermission(currentUser?.role, 'canDelete', 'orders') && (
+                                    <button
+                                      onClick={() => handleDeleteOrder('quote_inquiries', q.id)}
+                                      className="p-1.5 rounded-lg text-muted-foreground hover:text-destructive"
+                                    >
+                                      <Trash2 size={14} />
+                                    </button>
+                                  )}
                                 </div>
                               </td>
                             </tr>
@@ -1287,13 +1370,15 @@ const AdminPage = () => {
                     Manage profiles, photos, and skills of technicians displayed on the public Team page.
                   </p>
                 </div>
-                <Button
-                  onClick={() => { setEditingTech(null); setTechDialogOpen(true); }}
-                  className="bg-primary hover:bg-primary/90 text-primary-foreground"
-                >
-                  <Plus size={15} className="mr-1.5" />
-                  Add Tech
-                </Button>
+                {hasPermission(currentUser?.role, 'canEdit', 'team') && (
+                  <Button
+                    onClick={() => { setEditingTech(null); setTechDialogOpen(true); }}
+                    className="bg-primary hover:bg-primary/90 text-primary-foreground"
+                  >
+                    <Plus size={15} className="mr-1.5" />
+                    Add Tech
+                  </Button>
+                )}
               </div>
 
               {loading ? (
@@ -1337,18 +1422,22 @@ const AdminPage = () => {
                           ))}
                         </div>
                         <div className="flex justify-end gap-2">
-                          <button
-                            onClick={() => { setEditingTech(tech); setTechDialogOpen(true); }}
-                            className="text-xs bg-muted text-foreground hover:bg-muted/80 px-2.5 py-1.5 rounded font-medium flex items-center gap-1"
-                          >
-                            <Pencil size={12} /> Edit
-                          </button>
-                          <button
-                            onClick={() => handleDeleteTech(tech.id)}
-                            className="text-xs bg-destructive/10 text-destructive hover:bg-destructive hover:text-destructive-foreground px-2.5 py-1.5 rounded font-medium flex items-center gap-1"
-                          >
-                            <Trash2 size={12} /> Delete
-                          </button>
+                          {hasPermission(currentUser?.role, 'canEdit', 'team') && (
+                            <button
+                              onClick={() => { setEditingTech(tech); setTechDialogOpen(true); }}
+                              className="text-xs bg-muted text-foreground hover:bg-muted/80 px-2.5 py-1.5 rounded font-medium flex items-center gap-1"
+                            >
+                              <Pencil size={12} /> Edit
+                            </button>
+                          )}
+                          {hasPermission(currentUser?.role, 'canDelete', 'team') && (
+                            <button
+                              onClick={() => handleDeleteTech(tech.id)}
+                              className="text-xs bg-destructive/10 text-destructive hover:bg-destructive hover:text-destructive-foreground px-2.5 py-1.5 rounded font-medium flex items-center gap-1"
+                            >
+                              <Trash2 size={12} /> Delete
+                            </button>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -1375,12 +1464,12 @@ const AdminPage = () => {
                   <div className="flex flex-col items-center text-center pb-4 border-b border-border/50">
                     <img
                       src={profileData.avatar}
-                      alt={profileData.name}
+                      alt={currentUser?.email || profileData.name}
                       className="w-24 h-24 rounded-full object-cover mb-3 border border-border"
                     />
-                    <h3 className="font-bold text-lg text-foreground">{profileData.name}</h3>
+                    <h3 className="font-bold text-lg text-foreground">{currentUser?.email || profileData.name}</h3>
                     <span className="text-xs bg-primary/20 text-primary px-2.5 py-0.5 rounded-full font-semibold">
-                      {profileData.role}
+                      {currentUser?.role || profileData.role}
                     </span>
                   </div>
 
@@ -1459,9 +1548,11 @@ const AdminPage = () => {
                       <h3 className="font-bold text-foreground">Authorized System Users</h3>
                       <p className="text-xs text-muted-foreground">Authorized profiles who can access system features.</p>
                     </div>
-                    <Button onClick={() => setUserDialogOpen(true)} className="h-9">
-                      <Plus size={14} className="mr-1" /> Add User
-                    </Button>
+                    {hasPermission(currentUser?.role, 'canEdit', 'users') && (
+                      <Button onClick={() => setUserDialogOpen(true)} className="h-9">
+                        <Plus size={14} className="mr-1" /> Add User
+                      </Button>
+                    )}
                   </div>
 
                   <div className="border border-border rounded-lg overflow-hidden bg-background">
@@ -1490,12 +1581,14 @@ const AdminPage = () => {
                               {new Date(u.created).toLocaleDateString()}
                             </td>
                             <td className="px-4 py-3 text-right">
-                              <button
-                                onClick={() => handleDeleteUser(u.id)}
-                                className="text-muted-foreground hover:text-destructive p-1 rounded-md"
-                              >
-                                <Trash2 size={13} />
-                              </button>
+                              {hasPermission(currentUser?.role, 'canDelete', 'users') && (
+                                <button
+                                  onClick={() => handleDeleteUser(u.id)}
+                                  className="text-muted-foreground hover:text-destructive p-1 rounded-md"
+                                >
+                                  <Trash2 size={13} />
+                                </button>
+                              )}
                             </td>
                           </tr>
                         ))}
@@ -1508,6 +1601,16 @@ const AdminPage = () => {
             </div>
           )}
 
+          {/* TAB CONTENT: FINANCE */}
+          {activeTab === 'finance' && (
+            <FinanceModule />
+          )}
+
+          {/* TAB CONTENT: CMS */}
+          {activeTab === 'cms' && (
+            <CMSEditor />
+          )}
+
         </main>
       </div>
 
@@ -1516,7 +1619,6 @@ const AdminPage = () => {
         open={projectDialogOpen}
         onClose={() => setProjectDialogOpen(false)}
         initial={editingProject}
-        adminKey={adminKey}
         onSaved={handleProjectSaved}
       />
 

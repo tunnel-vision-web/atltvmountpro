@@ -11,6 +11,7 @@ import { Phone, MapPin, Clock } from 'lucide-react';
 import pb from '@/lib/pocketbaseClient';
 import { toast } from 'sonner';
 import PageHero from '@/components/PageHero';
+import { useCMS } from '@/hooks/useCMS';
 
 const ContactPage = () => {
   const [formData, setFormData] = useState({
@@ -20,6 +21,16 @@ const ContactPage = () => {
     message: '',
   });
   const [loading, setLoading] = useState(false);
+
+  const { data: cmsContact } = useCMS('contact');
+
+  const contactInfo = {
+    phone: cmsContact?.phone || '770-374-3203',
+    serviceArea: cmsContact?.serviceArea || 'Atlanta metro area and throughout Georgia',
+    hours: cmsContact?.hours || 'Monday - Saturday: 8:00 AM - 6:00 PM\nSunday: Closed',
+    address: cmsContact?.address || 'Atlanta, GA',
+    mapEmbed: cmsContact?.mapEmbed || 'https://www.openstreetmap.org/export/embed.html?bbox=-84.4882%2C33.6490%2C-84.2882%2C33.8490&layer=mapnik&marker=33.7490%2C-84.3882',
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -64,9 +75,9 @@ const ContactPage = () => {
 
       <PageHero
         eyebrow="Get In Touch"
-        title="Contact Us"
-        subtitle="Get in touch for a free quote or to schedule your service"
-        image="https://images.unsplash.com/photo-1486325212027-8081e485255e?w=1920&q=80"
+        title={cmsContact?.heroTitle || 'Contact Us'}
+        subtitle={cmsContact?.heroSubtitle || 'Get in touch for a free quote or to schedule your service'}
+        image={cmsContact?.heroImage || 'https://images.unsplash.com/photo-1486325212027-8081e485255e?w=1920&q=80'}
         alt="Atlanta cityscape"
       />
 
@@ -155,8 +166,8 @@ const ContactPage = () => {
                     </div>
                     <div>
                       <h3 className="font-semibold mb-1">Phone</h3>
-                      <a href="tel:770-374-3203" className="text-muted-foreground hover:text-primary transition-colors duration-200">
-                        770-374-3203
+                      <a href={`tel:${contactInfo.phone}`} className="text-muted-foreground hover:text-primary transition-colors duration-200">
+                        {contactInfo.phone}
                       </a>
                     </div>
                   </div>
@@ -172,7 +183,7 @@ const ContactPage = () => {
                     <div>
                       <h3 className="font-semibold mb-1">Service area</h3>
                       <p className="text-muted-foreground">
-                        Atlanta metro area and throughout Georgia
+                        {contactInfo.serviceArea}
                       </p>
                     </div>
                   </div>
@@ -187,9 +198,8 @@ const ContactPage = () => {
                     </div>
                     <div>
                       <h3 className="font-semibold mb-1">Hours</h3>
-                      <p className="text-muted-foreground">
-                        Monday - Saturday: 8:00 AM - 6:00 PM<br />
-                        Sunday: Closed
+                      <p className="text-muted-foreground whitespace-pre-line">
+                        {contactInfo.hours}
                       </p>
                     </div>
                   </div>
@@ -198,7 +208,7 @@ const ContactPage = () => {
 
               <div className="rounded-2xl overflow-hidden shadow-lg h-[300px]">
                 <iframe
-                  src="https://www.openstreetmap.org/export/embed.html?bbox=-84.4882%2C33.6490%2C-84.2882%2C33.8490&layer=mapnik&marker=33.7490%2C-84.3882"
+                  src={contactInfo.mapEmbed}
                   width="100%"
                   height="100%"
                   style={{ border: 0 }}

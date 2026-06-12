@@ -3,8 +3,9 @@ import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
-import { Menu } from 'lucide-react';
+import { Menu, LogIn, User } from 'lucide-react';
 import { useUI } from '@/contexts/UIContext';
+import { useClientAuth } from '@/contexts/ClientAuthContext';
 
 const navItems = [
   { name: 'Home', path: '/' },
@@ -18,7 +19,8 @@ const navItems = [
 
 const Header = () => {
   const location = useLocation();
-  const { openBookingModal } = useUI();
+  const { openBookingModal, openAuthModal } = useUI();
+  const { user, isAuthenticated, logout, isCustomer } = useClientAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
 
@@ -75,14 +77,43 @@ const Header = () => {
 
           {/* Desktop Actions */}
           <div className="hidden md:flex items-center gap-3">
-            <a
-              href="tel:770-374-3203"
-              className={`font-medium text-foreground hover:text-primary transition-colors duration-200 whitespace-nowrap ${
-                isScrolled ? 'text-sm' : 'text-sm'
-              }`}
-            >
-              770-374-3203
-            </a>
+            {isAuthenticated ? (
+              <div className="flex items-center gap-3">
+                <Link
+                  to={isCustomer ? '/dashboard' : '/dashboard'}
+                  className="flex items-center gap-2 text-sm font-medium text-foreground hover:text-primary transition-colors"
+                >
+                  <User size={16} />
+                  {user?.name || user?.email}
+                </Link>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={logout}
+                  className="text-muted-foreground hover:text-foreground"
+                >
+                  Sign Out
+                </Button>
+              </div>
+            ) : (
+              <div className="flex flex-col items-end">
+                <Button
+                  onClick={() => openAuthModal('login')}
+                  size={isScrolled ? 'sm' : 'sm'}
+                  variant="outline"
+                  className="border-primary/50 text-primary hover:bg-primary hover:text-primary-foreground transition-all duration-200 active:scale-[0.98]"
+                >
+                  <LogIn size={14} className="mr-1" />
+                  Log In
+                </Button>
+                <button
+                  onClick={() => openAuthModal('chooseType')}
+                  className="text-xs text-muted-foreground hover:text-primary transition-colors mt-0.5"
+                >
+                  Sign up
+                </button>
+              </div>
+            )}
             <Button
               onClick={openBookingModal}
               size={isScrolled ? 'sm' : 'default'}
@@ -115,12 +146,49 @@ const Header = () => {
                     {item.name}
                   </Link>
                 ))}
-                <a
-                  href="tel:770-374-3203"
-                  className="text-lg font-medium text-foreground hover:text-primary transition-colors duration-200"
-                >
-                  770-374-3203
-                </a>
+                {isAuthenticated ? (
+                  <>
+                    <Link
+                      to="/dashboard"
+                      onClick={() => setMobileMenuOpen(false)}
+                      className="text-lg font-medium text-primary flex items-center gap-2"
+                    >
+                      <User size={18} />
+                      {user?.name || user?.email}
+                    </Link>
+                    <button
+                      onClick={() => {
+                        setMobileMenuOpen(false);
+                        logout();
+                      }}
+                      className="text-lg font-medium text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      Sign Out
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <button
+                      onClick={() => {
+                        setMobileMenuOpen(false);
+                        openAuthModal('login');
+                      }}
+                      className="text-lg font-medium text-foreground hover:text-primary transition-colors flex items-center gap-2"
+                    >
+                      <LogIn size={18} />
+                      Log In
+                    </button>
+                    <button
+                      onClick={() => {
+                        setMobileMenuOpen(false);
+                        openAuthModal('chooseType');
+                      }}
+                      className="text-sm text-muted-foreground hover:text-primary transition-colors"
+                    >
+                      New here? Sign up
+                    </button>
+                  </>
+                )}
                 <Button
                   onClick={() => {
                     setMobileMenuOpen(false);

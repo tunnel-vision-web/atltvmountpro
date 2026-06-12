@@ -14,11 +14,18 @@ export const useUI = () => {
 export const UIProvider = ({ children }) => {
   const [quoteModalOpen, setQuoteModalOpen] = useState(false);
   const [bookingModalOpen, setBookingModalOpen] = useState(false);
+  const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [authModalMode, setAuthModalMode] = useState('login');
 
   const openQuoteModal = () => setQuoteModalOpen(true);
   const closeQuoteModal = () => setQuoteModalOpen(false);
   const openBookingModal = () => setBookingModalOpen(true);
   const closeBookingModal = () => setBookingModalOpen(false);
+  const openAuthModal = (mode = 'login') => {
+    setAuthModalMode(mode);
+    setAuthModalOpen(true);
+  };
+  const closeAuthModal = () => setAuthModalOpen(false);
 
   const value = {
     quoteModalOpen,
@@ -29,6 +36,11 @@ export const UIProvider = ({ children }) => {
     setBookingModalOpen,
     openBookingModal,
     closeBookingModal,
+    authModalOpen,
+    authModalMode,
+    setAuthModalMode,
+    openAuthModal,
+    closeAuthModal,
   };
 
   return <UIContext.Provider value={value}>{children}</UIContext.Provider>;
