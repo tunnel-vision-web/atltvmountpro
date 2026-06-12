@@ -1,6 +1,6 @@
 import React from "react";
 import { Route, Routes, BrowserRouter as Router } from "react-router-dom";
-import { HelmetProvider } from "react-helmet-async";
+
 import { Toaster } from "@/components/ui/sonner";
 import { UIProvider } from "@/contexts/UIContext";
 import { ClientAuthProvider } from "@/contexts/ClientAuthContext";
@@ -29,73 +29,71 @@ function App() {
   }, []);
 
   return (
-    <HelmetProvider>
-      <UIProvider>
-        <ClientAuthProvider>
-          <Router>
-            <ScrollToTop />
-            <Routes>
-              {/* Admin — no site chrome */}
-              <Route path="/admin" element={<AdminPage />} />
+    <UIProvider>
+      <ClientAuthProvider>
+        <Router>
+          <ScrollToTop />
+          <Routes>
+            {/* Admin — no site chrome */}
+            <Route path="/admin" element={<AdminPage />} />
 
-              {/* Client Dashboard — minimal chrome */}
-              <Route
-                path="/dashboard"
-                element={
-                  <div className="flex flex-col min-h-screen bg-background text-foreground">
-                    <Header />
-                    <main className="flex-1 pt-0">
-                      <ClientDashboard />
-                    </main>
-                  </div>
-                }
-              />
+            {/* Client Dashboard — minimal chrome */}
+            <Route
+              path="/dashboard"
+              element={
+                <div className="flex flex-col min-h-screen bg-background text-foreground">
+                  <Header />
+                  <main className="flex-1 pt-0">
+                    <ClientDashboard />
+                  </main>
+                </div>
+              }
+            />
 
-              {/* Public site */}
-              <Route
-                path="*"
-                element={
-                  <div className="flex flex-col min-h-screen bg-background text-foreground">
-                    <Header />
-                    <main className="flex-1 pt-0">
-                      <Routes>
-                        <Route path="/" element={<HomePage />} />
-                        <Route path="/services" element={<ServicesPage />} />
-                        <Route path="/about" element={<AboutPage />} />
-                        <Route path="/team" element={<TeamPage />} />
-                        <Route
-                          path="/testimonials"
-                          element={<TestimonialsPage />}
-                        />
-                        <Route path="/contact" element={<ContactPage />} />
-                        <Route path="/projects" element={<ProjectsPage />} />
-                        <Route
-                          path="/projects/:id"
-                          element={<ProjectDetailPage />}
-                        />
-                        <Route
-                          path="/privacy-policy"
-                          element={<PrivacyPolicyPage />}
-                        />
-                        <Route
-                          path="/terms-of-service"
-                          element={<TermsOfServicePage />}
-                        />
-                      </Routes>
-                    </main>
-                    <Footer />
-                    <QuoteEstimatorModal />
-                    <AppointmentBookingModal />
-                    <ClientAuthModal />
-                  </div>
-                }
-              />
-            </Routes>
-            <Toaster />
-          </Router>
-        </ClientAuthProvider>
-      </UIProvider>
-    </HelmetProvider>
+            {/* Public site */}
+            <Route
+              path="*"
+              element={
+                <div className="flex flex-col min-h-screen bg-background text-foreground">
+                  <Header />
+                  <main className="flex-1 pt-0">
+                    <Routes>
+                      <Route path="/" element={<HomePage />} />
+                      <Route path="/services" element={<ServicesPage />} />
+                      <Route path="/about" element={<AboutPage />} />
+                      <Route path="/team" element={<TeamPage />} />
+                      <Route
+                        path="/testimonials"
+                        element={<TestimonialsPage />}
+                      />
+                      <Route path="/contact" element={<ContactPage />} />
+                      <Route path="/projects" element={<ProjectsPage />} />
+                      <Route
+                        path="/projects/:id"
+                        element={<ProjectDetailPage />}
+                      />
+                      <Route
+                        path="/privacy-policy"
+                        element={<PrivacyPolicyPage />}
+                      />
+                      <Route
+                        path="/terms-of-service"
+                        element={<TermsOfServicePage />}
+                      />
+                    </Routes>
+                  </main>
+                  <Footer />
+                  <QuoteEstimatorModal />
+                  <AppointmentBookingModal />
+                  <ClientAuthModal />
+                </div>
+              }
+            />
+          </Routes>
+          <Toaster />
+        </Router>
+      </ClientAuthProvider>
+    </UIProvider>
   );
 }
 

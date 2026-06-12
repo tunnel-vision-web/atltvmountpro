@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
-import { Helmet } from "react-helmet-async";
+import usePageTitle from "@/hooks/usePageTitle";
 import { motion } from "framer-motion";
 import { MapPin, ChevronLeft, CheckCircle2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -14,6 +14,9 @@ const ProjectDetailPage = () => {
   const [project, setProject] = useState(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
+  usePageTitle(
+    project ? `${project.title} — ATL TV Mount PRO` : "ATL TV Mount PRO",
+  );
 
   useEffect(() => {
     setLoading(true);
@@ -67,11 +70,6 @@ const ProjectDetailPage = () => {
 
   return (
     <>
-      <Helmet>
-        <title>{project.title} — ATL TV Mount PRO</title>
-        <meta name="description" content={project.description.slice(0, 155)} />
-      </Helmet>
-
       {/* Carousel (full-width, sits behind the fixed header) */}
       <div className="pt-20">
         <ProjectCarousel images={project.images} title={project.title} />

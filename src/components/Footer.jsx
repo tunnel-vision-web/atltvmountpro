@@ -8,7 +8,7 @@ const Footer = () => {
       <div className="max-w-[1140px] mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           {/* Brand */}
-          <div>
+          <div className="flex flex-col items-center text-center">
             <img
               src="/images/logo/logo.png"
               alt="ATL TV Mount PRO"

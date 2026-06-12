@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from "react";
-import { Helmet } from "react-helmet-async";
+
 import { Link } from "react-router-dom";
 import {
   Plus,
@@ -1092,10 +1092,6 @@ const AdminPage = () => {
 
   return (
     <>
-      <Helmet>
-        <title>Admin Dashboard — ATL TV Mount PRO</title>
-      </Helmet>
-
       <div className="min-h-screen bg-background flex flex-col md:flex-row">
         {/* MOBILE HEADER */}
         <header className="md:hidden sticky top-0 z-40 bg-card border-b border-border px-4 py-3 flex items-center justify-between">
@@ -1123,20 +1119,15 @@ const AdminPage = () => {
         >
           <div className="p-5 flex-1 flex flex-col">
             {/* Sidebar Branding */}
-            <div className="flex items-center justify-between mb-8 pb-4 border-b border-border/50">
-              <div className="flex items-center gap-2.5">
-                <img
-                  src="/images/logo/logo.png"
-                  alt="ATL TV Mount PRO"
-                  className="h-10"
-                />
-                <span className="text-[10px] uppercase tracking-wider font-semibold text-primary bg-primary/10 px-1.5 py-0.5 rounded">
-                  Pro
-                </span>
-              </div>
+            <div className="relative flex items-center justify-center mb-8 pb-4 border-b border-border/50">
+              <img
+                src="/images/logo/logo.png"
+                alt="ATL TV Mount PRO"
+                className="h-10 mx-auto"
+              />
               <button
                 onClick={() => setSidebarOpen(false)}
-                className="md:hidden text-muted-foreground hover:text-foreground"
+                className="md:hidden text-muted-foreground hover:text-foreground absolute right-0"
               >
                 <X size={18} />
               </button>

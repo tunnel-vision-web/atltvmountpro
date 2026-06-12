@@ -1,5 +1,8 @@
-import React from 'react';
-import { motion } from 'framer-motion';
+import React from "react";
+import { motion } from "framer-motion";
+
+const HERO_FALLBACK =
+  "https://images.unsplash.com/photo-1581858726788-75bc0f6a952d?w=1920&q=80";
 
 const PageHero = ({ eyebrow, title, subtitle, image, alt }) => (
   <div className="relative w-full h-[380px] overflow-hidden">
@@ -7,6 +10,10 @@ const PageHero = ({ eyebrow, title, subtitle, image, alt }) => (
       src={image}
       alt={alt || title}
       className="absolute inset-0 w-full h-full object-cover"
+      onError={(e) => {
+        e.target.onerror = null;
+        e.target.src = HERO_FALLBACK;
+      }}
     />
     <div className="absolute inset-0 bg-black/58" />
     <div className="absolute inset-0 pt-20 flex items-center justify-center">
@@ -21,7 +28,9 @@ const PageHero = ({ eyebrow, title, subtitle, image, alt }) => (
               {eyebrow}
             </p>
           )}
-          <h1 className="text-4xl md:text-5xl font-bold text-white mb-4">{title}</h1>
+          <h1 className="text-4xl md:text-5xl font-bold text-white mb-4">
+            {title}
+          </h1>
           {subtitle && (
             <p className="text-lg text-white/75 max-w-xl mx-auto">{subtitle}</p>
           )}

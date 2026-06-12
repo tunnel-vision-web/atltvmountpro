@@ -1,5 +1,5 @@
 import React from "react";
-import { Helmet } from "react-helmet-async";
+import usePageTitle from "@/hooks/usePageTitle";
 import { motion } from "framer-motion";
 import {
   Tv,
@@ -30,6 +30,8 @@ const services = [
       "Same-day service available",
     ],
     image: "/images/services/service-tv-mounting.jpg",
+    fallback:
+      "https://images.unsplash.com/photo-1698047945367-112339b04d51?w=900&q=80",
   },
   {
     icon: Hammer,
@@ -45,6 +47,8 @@ const services = [
       "Paint-ready results",
     ],
     image: "/images/services/service-drywall.jpg",
+    fallback:
+      "https://images.unsplash.com/photo-1618832515521-3a8c6716aafc?w=900&q=80",
   },
   {
     icon: Paintbrush,
@@ -60,6 +64,8 @@ const services = [
       "Complete cleanup",
     ],
     image: "/images/services/service-painting.jpg",
+    fallback:
+      "https://images.unsplash.com/photo-1629195352955-850830e4d6c9?w=900&q=80",
   },
   {
     icon: Wrench,
@@ -75,6 +81,8 @@ const services = [
       "Precise measurements",
     ],
     image: "/images/services/service-carpentry.jpg",
+    fallback:
+      "https://images.unsplash.com/photo-1581858726788-75bc0f6a952d?w=900&q=80",
   },
   {
     icon: Home,
@@ -90,6 +98,8 @@ const services = [
       "Subfloor prep",
     ],
     image: "/images/services/service-flooring.jpg",
+    fallback:
+      "https://images.unsplash.com/photo-1615971677499-5467cbab01c0?w=900&q=80",
   },
   {
     icon: Droplet,
@@ -105,6 +115,8 @@ const services = [
       "Toilet installation",
     ],
     image: "/images/services/service-plumbing.jpg",
+    fallback:
+      "https://images.unsplash.com/photo-1607472586893-edb57bdc0e39?w=900&q=80",
   },
   {
     icon: Zap,
@@ -120,22 +132,17 @@ const services = [
       "Safety tested",
     ],
     image: "/images/services/service-electrical.jpg",
+    fallback:
+      "https://images.unsplash.com/photo-1621905251918-48416bd8575a?w=900&q=80",
   },
 ];
 
 const ServicesPage = () => {
   const { openQuoteModal } = useUI();
+  usePageTitle("Our Services - ATL TV Mount PRO");
 
   return (
     <>
-      <Helmet>
-        <title>Our Services - ATL TV Mount PRO</title>
-        <meta
-          name="description"
-          content="Professional TV mounting, drywall repair, painting, carpentry, flooring, plumbing, and electrical services in Atlanta. Expert handyman services for your home."
-        />
-      </Helmet>
-
       <PageHero
         eyebrow="What We Do"
         title="Our Services"
@@ -163,6 +170,10 @@ const ServicesPage = () => {
                         src={service.image}
                         alt={service.title}
                         className="w-full h-full object-cover min-h-[300px]"
+                        onError={(e) => {
+                          e.target.onerror = null;
+                          e.target.src = service.fallback;
+                        }}
                       />
                     </div>
                     <CardContent

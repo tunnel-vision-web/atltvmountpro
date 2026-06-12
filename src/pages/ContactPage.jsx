@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Helmet } from "react-helmet-async";
+import usePageTitle from "@/hooks/usePageTitle";
 import { motion } from "framer-motion";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -20,6 +20,7 @@ const ContactPage = () => {
     message: "",
   });
   const [loading, setLoading] = useState(false);
+  usePageTitle("Contact Us - ATL TV Mount PRO");
 
   const { data: cmsContact } = useCMS("contact");
 
@@ -80,14 +81,6 @@ const ContactPage = () => {
 
   return (
     <>
-      <Helmet>
-        <title>Contact Us - ATL TV Mount PRO</title>
-        <meta
-          name="description"
-          content="Contact ATL TV Mount PRO for professional handyman services in Atlanta. Call 770-374-3203 or fill out our contact form for a free quote."
-        />
-      </Helmet>
-
       <PageHero
         eyebrow="Get In Touch"
         title={cmsContact?.heroTitle || "Contact Us"}

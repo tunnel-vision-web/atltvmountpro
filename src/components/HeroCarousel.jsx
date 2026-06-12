@@ -8,6 +8,8 @@ import { useUI } from "@/contexts/UIContext";
 const slides = [
   {
     image: "/images/hero/hero-tv-mounting.jpg",
+    fallback:
+      "https://images.unsplash.com/photo-1698047945367-112339b04d51?w=1920&q=80",
     title: "Professional TV Mounting",
     description:
       "Expert installation for all TV sizes with clean cable management",
@@ -15,12 +17,16 @@ const slides = [
   },
   {
     image: "/images/hero/hero-drywall.jpg",
+    fallback:
+      "https://images.unsplash.com/photo-1618832515521-3a8c6716aafc?w=1920&q=80",
     title: "Drywall Repair Experts",
     description: "Seamless repairs and texture matching for perfect finishes",
     cta: "Estimate Your Job",
   },
   {
     image: "/images/hero/hero-painting.jpg",
+    fallback:
+      "https://images.unsplash.com/photo-1629195352955-850830e4d6c9?w=1920&q=80",
     title: "Professional Painting",
     description: "Interior and exterior painting with color consultation",
     cta: "Book a Service",
@@ -86,6 +92,10 @@ const HeroCarousel = () => {
               src={slide.image}
               alt={slide.title}
               className="w-full h-full object-cover"
+              onError={(e) => {
+                e.target.onerror = null;
+                e.target.src = slide.fallback;
+              }}
             />
           </div>
         ))}

@@ -1,5 +1,5 @@
 import React from "react";
-import { Helmet } from "react-helmet-async";
+import usePageTitle from "@/hooks/usePageTitle";
 import { motion } from "framer-motion";
 import {
   Tv,
@@ -175,19 +175,12 @@ const HomePage = () => {
           },
         ];
 
+  usePageTitle(
+    "ATL TV Mount PRO - Professional TV Mounting & Handyman Services in Atlanta",
+  );
+
   return (
     <>
-      <Helmet>
-        <title>
-          ATL TV Mount PRO - Professional TV Mounting & Handyman Services in
-          Atlanta
-        </title>
-        <meta
-          name="description"
-          content="Expert TV mounting, drywall repair, painting, and handyman services in Atlanta metro area. Same-day service available. Call 770-374-3203 for a free estimate."
-        />
-      </Helmet>
-
       {/* Hero */}
       <HeroCarousel />
 
@@ -399,13 +392,13 @@ const HomePage = () => {
       </section>
 
       {/* ── Newsletter ── */}
-      <section className="py-20 bg-primary text-primary-foreground">
+      <section className="py-20" style={{ backgroundColor: "#e6b377" }}>
         <div className="max-w-[1140px] mx-auto px-4 sm:px-6 lg:px-8">
           <div className="max-w-2xl mx-auto text-center">
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">
+            <h2 className="text-3xl md:text-4xl font-bold mb-4 text-gray-900">
               Stay Updated
             </h2>
-            <p className="text-lg mb-8 text-primary-foreground/90">
+            <p className="text-lg mb-8 text-gray-700">
               Subscribe for tips, special offers, and service updates from our
               team.
             </p>

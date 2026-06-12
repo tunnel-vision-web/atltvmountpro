@@ -1,5 +1,5 @@
 import React from "react";
-import { Helmet } from "react-helmet-async";
+import usePageTitle from "@/hooks/usePageTitle";
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
 
@@ -13,16 +13,9 @@ const Section = ({ title, children }) => (
 );
 
 const TermsOfServicePage = () => {
+  usePageTitle("Terms of Service - ATL TV Mount PRO");
   return (
     <>
-      <Helmet>
-        <title>Terms of Service - ATL TV Mount PRO</title>
-        <meta
-          name="description"
-          content="Read the Terms of Service for ATL TV Mount PRO. Understand your rights and responsibilities when booking and receiving our handyman services."
-        />
-      </Helmet>
-
       <div className="py-24 bg-background min-h-screen">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
           <motion.div

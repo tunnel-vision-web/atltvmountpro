@@ -1,5 +1,5 @@
 import React from "react";
-import { Helmet } from "react-helmet-async";
+import usePageTitle from "@/hooks/usePageTitle";
 import { motion } from "framer-motion";
 import TestimonialCard from "@/components/TestimonialCard";
 import PageHero from "@/components/PageHero";
@@ -68,16 +68,9 @@ const testimonials = [
 ];
 
 const TestimonialsPage = () => {
+  usePageTitle("Testimonials - ATL TV Mount PRO");
   return (
     <>
-      <Helmet>
-        <title>Testimonials - ATL TV Mount PRO</title>
-        <meta
-          name="description"
-          content="Read reviews from satisfied customers of ATL TV Mount PRO. See why Atlanta homeowners trust us for TV mounting, drywall repair, painting, and more."
-        />
-      </Helmet>
-
       <PageHero
         eyebrow="Reviews"
         title="Client Testimonials"

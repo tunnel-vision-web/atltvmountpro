@@ -1,5 +1,5 @@
 import React from "react";
-import { Helmet } from "react-helmet-async";
+import usePageTitle from "@/hooks/usePageTitle";
 import { motion } from "framer-motion";
 import { Award, Clock, Shield, Users } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
@@ -56,16 +56,10 @@ const AboutPage = () => {
           },
         ];
 
+  usePageTitle("About Us - ATL TV Mount PRO");
+
   return (
     <>
-      <Helmet>
-        <title>About Us - ATL TV Mount PRO</title>
-        <meta
-          name="description"
-          content="Learn about ATL TV Mount PRO - 5+ years of professional handyman services in Atlanta with 1,000+ installations completed. Licensed, insured, and trusted."
-        />
-      </Helmet>
-
       <PageHero
         eyebrow="About Us"
         title={cmsAbout?.heroTitle || "About ATL TV Mount PRO"}
@@ -89,6 +83,11 @@ const AboutPage = () => {
                 src={cmsAbout?.heroImage || "/images/about/about-hero.jpg"}
                 alt="Professional handyman at work"
                 className="rounded-2xl shadow-lg w-full"
+                onError={(e) => {
+                  e.target.onerror = null;
+                  e.target.src =
+                    "https://images.unsplash.com/photo-1581858726788-75bc0f6a952d?w=900&q=80";
+                }}
               />
             </motion.div>
             <motion.div
@@ -118,9 +117,11 @@ const AboutPage = () => {
               >
                 <Card className="text-center bg-card border-border">
                   <CardContent className="p-6">
-                    <div className="mb-4 p-3 bg-primary/10 rounded-xl w-fit mx-auto">
-                      <stat.icon className="w-8 h-8 text-primary" />
-                    </div>
+                    {stat.icon && (
+                      <div className="mb-4 p-3 bg-primary/10 rounded-xl w-fit mx-auto">
+                        <stat.icon className="w-8 h-8 text-primary" />
+                      </div>
+                    )}
                     <p className="text-3xl font-bold mb-2 text-card-foreground">
                       {stat.value}
                     </p>
