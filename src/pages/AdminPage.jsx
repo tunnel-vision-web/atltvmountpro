@@ -742,8 +742,7 @@ const AdminPage = () => {
   const [profileData, setProfileData] = useState({
     name: "ATL Admin",
     email: "info@atltvmountpro.com",
-    avatar:
-      "/images/admin/admin-avatar.jpg"
+    avatar: "/images/admin/admin-avatar.jpg",
     role: "Lead Administrator",
   });
   const [users, setUsers] = useState([]);
@@ -1816,8 +1815,7 @@ const AdminPage = () => {
                       <div className="flex gap-4">
                         <img
                           src={
-                            tech.photo ||
-                            "/images/team/team-placeholder.jpg"
+                            tech.photo || "/images/team/team-placeholder.jpg"
                           }
                           alt={tech.name}
                           className="w-16 h-16 rounded-full object-cover border border-border"
