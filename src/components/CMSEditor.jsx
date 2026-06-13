@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Save, Loader2, Image as ImageIcon, AlertCircle } from 'lucide-react';
+import { Save, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
-import { useAllCMS, DEFAULT_CMS_DATA } from '@/hooks/useCMS';
+import { useAllCMS } from '@/hooks/useCMS';
+import MediaPickerButton from '@/components/MediaPickerButton';
 
 const PAGES = [
   { id: 'home', label: 'Home Page' },
@@ -121,6 +122,13 @@ export default function CMSEditor() {
                 placeholder="Short description for SEO/meta..."
               />
             </div>
+            <MediaPickerButton
+              label="Hero Background Video (optional)"
+              value={formData.heroVideo || ''}
+              onChange={(val) => updateField('heroVideo', val)}
+              accept="video"
+              placeholder="Select or upload a hero video…"
+            />
           </CMSCard>
 
           <CMSCard title="Featured Services">
@@ -165,17 +173,26 @@ export default function CMSEditor() {
                     className="input-base w-full resize-none"
                   />
                 </div>
-                <div>
-                  <label className="text-xs font-medium text-muted-foreground mb-1 block">Image URL</label>
-                  <ImageInput
-                    value={svc.image || ''}
-                    onChange={(val) => {
-                      const updated = [...(formData.featuredServices || [])];
-                      updated[idx] = { ...updated[idx], image: val };
-                      updateField('featuredServices', updated);
-                    }}
-                  />
-                </div>
+                <MediaPickerButton
+                  label="Service Image"
+                  value={svc.image || ''}
+                  onChange={(val) => {
+                    const updated = [...(formData.featuredServices || [])];
+                    updated[idx] = { ...updated[idx], image: val };
+                    updateField('featuredServices', updated);
+                  }}
+                  accept="image"
+                />
+                <MediaPickerButton
+                  label="Service Video (optional)"
+                  value={svc.video || ''}
+                  onChange={(val) => {
+                    const updated = [...(formData.featuredServices || [])];
+                    updated[idx] = { ...updated[idx], video: val };
+                    updateField('featuredServices', updated);
+                  }}
+                  accept="video"
+                />
               </div>
             ))}
           </CMSCard>
@@ -234,13 +251,18 @@ export default function CMSEditor() {
                 className="input-base w-full"
               />
             </div>
-            <div>
-              <label className="text-xs font-medium text-muted-foreground mb-1 block">Hero Image</label>
-              <ImageInput
-                value={formData.heroImage || ''}
-                onChange={(val) => updateField('heroImage', val)}
-              />
-            </div>
+            <MediaPickerButton
+              label="Hero Image"
+              value={formData.heroImage || ''}
+              onChange={(val) => updateField('heroImage', val)}
+              accept="image"
+            />
+            <MediaPickerButton
+              label="Hero Video (optional)"
+              value={formData.heroVideo || ''}
+              onChange={(val) => updateField('heroVideo', val)}
+              accept="video"
+            />
           </CMSCard>
 
           <CMSCard title="Our Story">
@@ -346,13 +368,18 @@ export default function CMSEditor() {
                 className="input-base w-full"
               />
             </div>
-            <div>
-              <label className="text-xs font-medium text-muted-foreground mb-1 block">Hero Image</label>
-              <ImageInput
-                value={formData.heroImage || ''}
-                onChange={(val) => updateField('heroImage', val)}
-              />
-            </div>
+            <MediaPickerButton
+              label="Hero Image"
+              value={formData.heroImage || ''}
+              onChange={(val) => updateField('heroImage', val)}
+              accept="image"
+            />
+            <MediaPickerButton
+              label="Hero Video (optional)"
+              value={formData.heroVideo || ''}
+              onChange={(val) => updateField('heroVideo', val)}
+              accept="video"
+            />
           </CMSCard>
 
           <CMSCard title="Contact Information">
@@ -420,28 +447,3 @@ function CMSCard({ title, children }) {
   );
 }
 
-function ImageInput({ value, onChange }) {
-  return (
-    <div className="space-y-2">
-      <div className="flex gap-2 items-center">
-        <input
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          className="input-base flex-1"
-          placeholder="https://images.unsplash.com/... or /images/..."
-        />
-      </div>
-      {value && (
-        <div className="relative w-full h-40 rounded-lg overflow-hidden border border-border bg-muted">
-          <img src={value} alt="Preview" className="w-full h-full object-cover" />
-        </div>
-      )}
-      {!value && (
-        <div className="flex items-center gap-2 text-xs text-muted-foreground p-4 border border-dashed border-border rounded-lg">
-          <ImageIcon size={14} />
-          <span>No image selected. Paste a URL above.</span>
-        </div>
-      )}
-    </div>
-  );
-}

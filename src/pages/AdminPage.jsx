@@ -29,6 +29,11 @@ import {
   Lock,
   Image as ImageIcon,
   DollarSign,
+  LayoutGrid,
+  List,
+  Send,
+  Smartphone,
+  MessageSquare,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -37,10 +42,25 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { toast } from "sonner";
 import pb from "@/lib/pocketbaseClient";
 import CMSEditor from "@/components/CMSEditor";
 import FinanceModule from "@/components/FinanceModule";
+import MediaLibraryAdmin from "@/components/MediaLibraryAdmin";
+import MediaPickerButton from "@/components/MediaPickerButton";
+import AppointmentsCalendar from "@/components/AppointmentsCalendar";
+import {
+  autoCreateInvoiceForBooking,
+  getInvoiceForBooking,
+  sendInvoiceVia,
+} from "@/lib/invoiceUtils";
 
 const ADMIN_KEY_STORAGE = "atltvmountpro_admin_key";
 const LOCAL_BOOKINGS_STORAGE = "atltvmountpro_local_bookings";
@@ -79,7 +99,7 @@ const ROLES = {
 
 const PERMISSIONS = {
   [ROLES.Admin]: {
-    canView: ["projects", "orders", "team", "profile", "cms", "finance"],
+    canView: ["projects", "orders", "team", "profile", "cms", "finance", "media"],
     canEdit: [
       "projects",
       "orders",
@@ -88,6 +108,7 @@ const PERMISSIONS = {
       "cms",
       "users",
       "finance",
+      "media",
     ],
     canDelete: [
       "projects",
@@ -97,15 +118,16 @@ const PERMISSIONS = {
       "cms",
       "users",
       "finance",
+      "media",
     ],
   },
   [ROLES.Moderator]: {
-    canView: ["projects", "orders", "team", "profile", "finance"],
-    canEdit: ["projects", "orders", "team", "finance"],
-    canDelete: ["projects", "orders", "team"],
+    canView: ["projects", "orders", "team", "profile", "finance", "media"],
+    canEdit: ["projects", "orders", "team", "finance", "media"],
+    canDelete: ["projects", "orders", "team", "media"],
   },
   [ROLES.Viewer]: {
-    canView: ["projects", "orders", "team", "profile", "finance"],
+    canView: ["projects", "orders", "team", "profile", "finance", "media"],
     canEdit: [],
     canDelete: [],
   },
@@ -358,17 +380,13 @@ const ProjectFormDialog = ({ open, onClose, initial, onSaved }) => {
             </div>
           </div>
 
-          <div>
-            <label className="text-sm font-medium mb-1.5 block text-foreground">
-              Thumbnail URL
-            </label>
-            <input
-              value={form.thumbnail}
-              onChange={(e) => field("thumbnail", e.target.value)}
-              className="input-base w-full"
-              placeholder="https://… or /images/projects/project-1/main.jpg"
-            />
-          </div>
+          <MediaPickerButton
+            label="Thumbnail"
+            value={form.thumbnail}
+            onChange={(val) => field("thumbnail", val)}
+            accept="image"
+            placeholder="Select project thumbnail…"
+          />
 
           <div>
             <label className="text-sm font-medium mb-2 block text-foreground">
@@ -376,18 +394,20 @@ const ProjectFormDialog = ({ open, onClose, initial, onSaved }) => {
             </label>
             <div className="space-y-2">
               {form.images.map((img, i) => (
-                <div key={i} className="flex gap-2 items-center">
-                  <input
-                    value={img}
-                    onChange={(e) => setImage(i, e.target.value)}
-                    className="input-base flex-1"
-                    placeholder={`Image ${i + 1} URL`}
-                  />
+                <div key={i} className="flex gap-2 items-start">
+                  <div className="flex-1">
+                    <MediaPickerButton
+                      value={img}
+                      onChange={(val) => setImage(i, val)}
+                      accept="image"
+                      placeholder={`Carousel image ${i + 1}…`}
+                    />
+                  </div>
                   {form.images.length > 1 && (
                     <button
                       type="button"
                       onClick={() => removeImage(i)}
-                      className="text-muted-foreground hover:text-destructive transition-colors"
+                      className="text-muted-foreground hover:text-destructive transition-colors mt-8"
                     >
                       <X size={16} />
                     </button>
@@ -535,15 +555,13 @@ const TechFormDialog = ({ open, onClose, initial, onSaved }) => {
               placeholder="e.g. Marcus Thompson"
             />
           </div>
-          <div>
-            <label className="text-sm font-medium mb-1 block">Photo URL</label>
-            <input
-              value={form.photo}
-              onChange={(e) => setForm({ ...form, photo: e.target.value })}
-              className="input-base w-full"
-              placeholder="e.g. https://images.unsplash.com/photo-..."
-            />
-          </div>
+          <MediaPickerButton
+            label="Profile Photo"
+            value={form.photo}
+            onChange={(val) => setForm({ ...form, photo: val })}
+            accept="image"
+            placeholder="Select technician photo…"
+          />
           <div>
             <label className="text-sm font-medium mb-1 block">Bio *</label>
             <textarea
@@ -902,11 +920,14 @@ const AdminPage = () => {
 
   // Orders / Bookings state
   const [ordersTab, setOrdersTab] = useState("appointments");
+  const [bookingsViewMode, setBookingsViewMode] = useState("list");
   const [bookings, setBookings] = useState([]);
   const [quotes, setQuotes] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
   const [selectedOrder, setSelectedOrder] = useState(null);
+  const [showSendInvoice, setShowSendInvoice] = useState(false);
+  const [invoiceToSend, setInvoiceToSend] = useState(null);
 
   // Team state
   const [teamMembers, setTeamMembers] = useState([]);
@@ -1072,7 +1093,10 @@ const AdminPage = () => {
   useEffect(() => {
     if (!authed) return;
     if (activeTab === "projects") fetchProjects();
-    if (activeTab === "orders") fetchBookingsAndQuotes();
+    if (activeTab === "orders") {
+      fetchBookingsAndQuotes();
+      fetchTeam();
+    }
     if (activeTab === "team") fetchTeam();
     if (activeTab === "profile") fetchUsers();
   }, [
@@ -1153,26 +1177,107 @@ const AdminPage = () => {
   };
 
   // --- Booking / Quote callbacks ---
-  const handleUpdateStatus = async (collection, id, status) => {
+  const normalizeStatus = (status) => {
+    if (!status) return "Pending";
+    const s = String(status).toLowerCase();
+    return s.charAt(0).toUpperCase() + s.slice(1);
+  };
+
+  const persistBookings = (updated) => {
+    setBookings(updated);
+    localStorage.setItem(LOCAL_BOOKINGS_STORAGE, JSON.stringify(updated));
+  };
+
+  const maybeCreateInvoiceForBooking = (booking, status) => {
+    const normalized = normalizeStatus(status);
+    if (normalized === "Pending" || normalized === "Confirmed") {
+      const inv = autoCreateInvoiceForBooking(booking);
+      if (inv) toast.success(`Draft invoice ${inv.number} created.`);
+    }
+  };
+
+  const handleUpdateBooking = async (id, updates) => {
+    const payload = { ...updates };
+    if (payload.status) payload.status = normalizeStatus(payload.status);
+
+    const booking = bookings.find((b) => b.id === id);
+    if (!booking) return;
+
     try {
-      await pb.collection(collection).update(id, { status });
+      await pb.collection("appointment_bookings").update(id, payload);
+      const updated = bookings.map((b) =>
+        b.id === id ? { ...b, ...payload } : b,
+      );
+      persistBookings(updated);
+      maybeCreateInvoiceForBooking({ ...booking, ...payload }, payload.status);
+      toast.success("Booking updated.");
+    } catch (err) {
+      console.warn("PocketBase booking update failed, updating locally:", err);
+      const updated = bookings.map((b) =>
+        b.id === id ? { ...b, ...payload } : b,
+      );
+      persistBookings(updated);
+      maybeCreateInvoiceForBooking({ ...booking, ...payload }, payload.status);
+      toast.success("Booking updated locally.");
+    }
+  };
+
+  const handleUpdateStatus = async (collection, id, status) => {
+    const normalized = normalizeStatus(status);
+    try {
+      await pb.collection(collection).update(id, { status: normalized });
+      if (collection === "appointment_bookings") {
+        const booking = bookings.find((b) => b.id === id);
+        if (booking) maybeCreateInvoiceForBooking(booking, normalized);
+      }
       toast.success("Status updated.");
       fetchBookingsAndQuotes();
     } catch (err) {
       console.warn("PocketBase update failed, updating locally:", err);
       if (collection === "appointment_bookings") {
         const updated = bookings.map((b) =>
-          b.id === id ? { ...b, status } : b,
+          b.id === id ? { ...b, status: normalized } : b,
         );
         setBookings(updated);
         localStorage.setItem(LOCAL_BOOKINGS_STORAGE, JSON.stringify(updated));
+        const booking = updated.find((b) => b.id === id);
+        if (booking) maybeCreateInvoiceForBooking(booking, normalized);
       } else {
-        const updated = quotes.map((q) => (q.id === id ? { ...q, status } : q));
+        const updated = quotes.map((q) =>
+          q.id === id ? { ...q, status: normalized } : q,
+        );
         setQuotes(updated);
         localStorage.setItem(LOCAL_QUOTES_STORAGE, JSON.stringify(updated));
       }
       toast.success("Status updated locally.");
     }
+  };
+
+  const openSendInvoiceForBooking = (booking) => {
+    let inv = getInvoiceForBooking(booking.id);
+    if (!inv) {
+      inv = autoCreateInvoiceForBooking(booking);
+    }
+    if (inv) {
+      setInvoiceToSend(inv);
+      setShowSendInvoice(true);
+    } else {
+      toast.error("Could not find or create an invoice for this booking.");
+    }
+  };
+
+  const handleSendInvoice = (method) => {
+    if (!invoiceToSend) return;
+    const ok = sendInvoiceVia(invoiceToSend, method);
+    if (!ok && method !== "email") {
+      toast.error("Client phone number is required for text or WhatsApp.");
+      return;
+    }
+    toast.success(
+      `Invoice sent via ${method === "email" ? "Email" : method === "sms" ? "Text" : "WhatsApp"}.`,
+    );
+    setShowSendInvoice(false);
+    setInvoiceToSend(null);
   };
 
   const handleDeleteOrder = async (collection, id) => {
@@ -1284,6 +1389,11 @@ const AdminPage = () => {
       return matchesSearch && matchesStatus;
     });
   };
+
+  const calendarBookings = getFilteredBookings().map((b) => ({
+    ...b,
+    status: (b.status || "Pending").toLowerCase(),
+  }));
 
   return (
     <>
@@ -1399,6 +1509,19 @@ const AdminPage = () => {
                 >
                   <FileText size={18} className="flex-shrink-0" />
                   <span>CMS</span>
+                </button>
+              )}
+
+              {hasPermission(currentUser?.role, "canView", "media") && (
+                <button
+                  onClick={() => {
+                    setActiveTab("media");
+                    setSidebarOpen(false);
+                  }}
+                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 ${activeTab === "media" ? "bg-primary text-primary-foreground shadow-sm shadow-primary/20" : "text-muted-foreground hover:bg-muted hover:text-foreground"}`}
+                >
+                  <ImageIcon size={18} className="flex-shrink-0" />
+                  <span>Media Library</span>
                 </button>
               )}
             </nav>
@@ -1655,9 +1778,25 @@ const AdminPage = () => {
                     <option value="Cancelled">Cancelled</option>
                   </select>
                 </div>
+                {ordersTab === "appointments" && (
+                  <div className="flex gap-1 border border-border rounded-lg p-0.5 bg-muted/40">
+                    <button
+                      onClick={() => setBookingsViewMode("list")}
+                      className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${bookingsViewMode === "list" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
+                    >
+                      <List size={14} /> List
+                    </button>
+                    <button
+                      onClick={() => setBookingsViewMode("calendar")}
+                      className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${bookingsViewMode === "calendar" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
+                    >
+                      <LayoutGrid size={14} /> Calendar
+                    </button>
+                  </div>
+                )}
               </div>
 
-              {/* Data tables */}
+              {/* Data tables / calendar */}
               {loading ? (
                 <div className="space-y-3">
                   {Array.from({ length: 4 }).map((_, i) => (
@@ -1668,7 +1807,13 @@ const AdminPage = () => {
                   ))}
                 </div>
               ) : ordersTab === "appointments" ? (
-                getFilteredBookings().length === 0 ? (
+                bookingsViewMode === "calendar" ? (
+                  <AppointmentsCalendar
+                    bookings={calendarBookings}
+                    teamMembers={teamMembers}
+                    onUpdateBooking={handleUpdateBooking}
+                  />
+                ) : getFilteredBookings().length === 0 ? (
                   <div className="text-center py-16 border border-dashed border-border rounded-xl text-muted-foreground text-sm">
                     No matching appointment bookings found.
                   </div>
@@ -1686,6 +1831,9 @@ const AdminPage = () => {
                             </th>
                             <th className="text-left px-4 py-3 font-semibold text-muted-foreground">
                               Preferred Time
+                            </th>
+                            <th className="text-left px-4 py-3 font-semibold text-muted-foreground">
+                              Technician
                             </th>
                             <th className="text-left px-4 py-3 font-semibold text-muted-foreground">
                               Status
@@ -1715,6 +1863,60 @@ const AdminPage = () => {
                               <td className="px-4 py-3.5 text-muted-foreground">
                                 {b.preferred_date} at{" "}
                                 {b.preferred_time || "Anytime"}
+                              </td>
+                              <td className="px-4 py-3.5">
+                                {hasPermission(
+                                  currentUser?.role,
+                                  "canEdit",
+                                  "orders",
+                                ) ? (
+                                  <Select
+                                    value={
+                                      b.assignedTechId
+                                        ? String(b.assignedTechId)
+                                        : "unassigned"
+                                    }
+                                    onValueChange={(techId) => {
+                                      if (techId === "unassigned") {
+                                        handleUpdateBooking(b.id, {
+                                          assignedTechId: null,
+                                          assignedTechName: null,
+                                        });
+                                      } else {
+                                        const tech = teamMembers.find(
+                                          (t) => String(t.id) === techId,
+                                        );
+                                        if (tech) {
+                                          handleUpdateBooking(b.id, {
+                                            assignedTechId: tech.id,
+                                            assignedTechName: tech.name,
+                                          });
+                                        }
+                                      }
+                                    }}
+                                  >
+                                    <SelectTrigger className="h-8 text-xs w-[140px]">
+                                      <SelectValue placeholder="Assign tech" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="unassigned">
+                                        Unassigned
+                                      </SelectItem>
+                                      {teamMembers.map((tech) => (
+                                        <SelectItem
+                                          key={tech.id}
+                                          value={String(tech.id)}
+                                        >
+                                          {tech.name}
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                ) : (
+                                  <span className="text-xs text-muted-foreground">
+                                    {b.assignedTechName || "Unassigned"}
+                                  </span>
+                                )}
                               </td>
                               <td className="px-4 py-3.5">
                                 <span
@@ -2280,6 +2482,13 @@ const AdminPage = () => {
 
           {/* TAB CONTENT: CMS */}
           {activeTab === "cms" && <CMSEditor />}
+
+          {/* TAB CONTENT: MEDIA LIBRARY */}
+          {activeTab === "media" && (
+            <MediaLibraryAdmin
+              canEdit={hasPermission(currentUser?.role, "canEdit", "media")}
+            />
+          )}
         </main>
       </div>
 
@@ -2347,6 +2556,71 @@ const AdminPage = () => {
                     </span>
                   </div>
                   <div className="grid grid-cols-3 border-b border-border/50 py-1.5">
+                    <span className="text-muted-foreground">Technician</span>
+                    <span className="col-span-2">
+                      {hasPermission(
+                        currentUser?.role,
+                        "canEdit",
+                        "orders",
+                      ) ? (
+                        <Select
+                          value={
+                            selectedOrder.assignedTechId
+                              ? String(selectedOrder.assignedTechId)
+                              : "unassigned"
+                          }
+                          onValueChange={(techId) => {
+                            if (techId === "unassigned") {
+                              handleUpdateBooking(selectedOrder.id, {
+                                assignedTechId: null,
+                                assignedTechName: null,
+                              });
+                              setSelectedOrder((prev) => ({
+                                ...prev,
+                                assignedTechId: null,
+                                assignedTechName: null,
+                              }));
+                            } else {
+                              const tech = teamMembers.find(
+                                (t) => String(t.id) === techId,
+                              );
+                              if (tech) {
+                                handleUpdateBooking(selectedOrder.id, {
+                                  assignedTechId: tech.id,
+                                  assignedTechName: tech.name,
+                                });
+                                setSelectedOrder((prev) => ({
+                                  ...prev,
+                                  assignedTechId: tech.id,
+                                  assignedTechName: tech.name,
+                                }));
+                              }
+                            }
+                          }}
+                        >
+                          <SelectTrigger className="h-8 text-xs">
+                            <SelectValue placeholder="Assign technician" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="unassigned">
+                              Unassigned
+                            </SelectItem>
+                            {teamMembers.map((tech) => (
+                              <SelectItem
+                                key={tech.id}
+                                value={String(tech.id)}
+                              >
+                                {tech.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      ) : (
+                        selectedOrder.assignedTechName || "Unassigned"
+                      )}
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-3 border-b border-border/50 py-1.5">
                     <span className="text-muted-foreground">Job Details</span>
                     <span className="col-span-2 whitespace-pre-wrap">
                       {selectedOrder.project_description || "None provided"}
@@ -2379,13 +2653,55 @@ const AdminPage = () => {
                   </span>
                 </span>
               </div>
-              <div className="flex justify-end pt-3">
+              <div className="flex justify-end gap-2 pt-3">
+                {selectedOrder.type === "appointment" &&
+                  normalizeStatus(selectedOrder.status) === "Completed" && (
+                    <Button
+                      variant="outline"
+                      onClick={() =>
+                        openSendInvoiceForBooking(selectedOrder)
+                      }
+                    >
+                      <Send size={14} className="mr-1" /> Send Invoice
+                    </Button>
+                  )}
                 <Button onClick={() => setSelectedOrder(null)}>Close</Button>
               </div>
             </div>
           </DialogContent>
         </Dialog>
       )}
+
+      {/* SEND INVOICE MODAL */}
+      <Dialog open={showSendInvoice} onOpenChange={setShowSendInvoice}>
+        <DialogContent className="max-w-md bg-card border border-border">
+          <DialogHeader>
+            <DialogTitle>Send Invoice</DialogTitle>
+          </DialogHeader>
+          {invoiceToSend && (
+            <div className="space-y-3 py-2">
+              <p className="text-sm text-muted-foreground">
+                Send {invoiceToSend.number} to {invoiceToSend.clientName} — $
+                {(invoiceToSend.total || 0).toFixed(2)}
+              </p>
+              {[
+                { method: "email", label: "Email", icon: Mail },
+                { method: "sms", label: "Text Message", icon: Smartphone },
+                { method: "whatsapp", label: "WhatsApp", icon: MessageSquare },
+              ].map(({ method, label, icon: Icon }) => (
+                <button
+                  key={method}
+                  onClick={() => handleSendInvoice(method)}
+                  className="w-full flex items-center gap-3 p-3 rounded-xl border border-border bg-card hover:bg-muted/50 transition-colors text-left"
+                >
+                  <Icon size={18} className="text-primary" />
+                  <span className="font-medium">{label}</span>
+                </button>
+              ))}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* Input styles */}
       <style>{`

@@ -216,12 +216,22 @@ const HomePage = () => {
                   className="group relative rounded-2xl overflow-hidden cursor-pointer"
                   style={{ minHeight: "340px" }}
                 >
-                  {/* Background image */}
-                  <img
-                    src={svc.image}
-                    alt={svc.title}
-                    className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out"
-                  />
+                  {svc.video ? (
+                    <video
+                      src={svc.video}
+                      className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out"
+                      autoPlay
+                      muted
+                      loop
+                      playsInline
+                    />
+                  ) : (
+                    <img
+                      src={svc.image}
+                      alt={svc.title}
+                      className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out"
+                    />
+                  )}
                   {/* Gradient overlay */}
                   <div
                     className={`absolute inset-0 bg-gradient-to-t ${svc.bg} transition-opacity duration-300 group-hover:opacity-90`}
