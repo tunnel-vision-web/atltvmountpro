@@ -59,7 +59,7 @@ const HeroCarousel = () => {
       try {
         let homeCms;
         try {
-          homeCms = await pb.collection('cms_pages').getFirstListItem('page_id="home"');
+          homeCms = await pb.collection('cms_pages').getFirstListItem('page="home"');
         } catch {
           const stored = localStorage.getItem('atltvmountpro_local_cms');
           if (stored) {
