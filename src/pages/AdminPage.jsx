@@ -993,8 +993,17 @@ const AdminPage = () => {
       const appts = await pb
         .collection("appointment_bookings")
         .getFullList({ sort: "-created" });
-      setBookings(appts);
-      localStorage.setItem(LOCAL_BOOKINGS_STORAGE, JSON.stringify(appts));
+      const normalized = appts.map((a) => ({
+        ...a,
+        name: a.Name || a.name || "",
+        email: a.Email || a.email || "",
+        phone: a.Phone_Number || a.phone || "",
+        preferred_date: a.Preferred_Date || a.preferred_date || "",
+        preferred_time: a.Preferred_Time || a.preferred_time || "",
+        project_description: a.Project_Description || a.project_description || "",
+      }));
+      setBookings(normalized);
+      localStorage.setItem(LOCAL_BOOKINGS_STORAGE, JSON.stringify(normalized));
     } catch (err) {
       console.warn(
         "PocketBase bookings fetch failed, reading localStorage:",

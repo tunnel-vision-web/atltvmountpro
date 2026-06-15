@@ -73,12 +73,31 @@ const AppointmentBookingModal = () => {
       status: "Pending",
     };
 
+    const pbPayload = {
+      Name: formData.name,
+      Email: formData.email,
+      Phone_Number: formData.phone,
+      Preferred_Date: formData.preferred_date,
+      Preferred_Time: formData.preferred_time,
+      Project_Description: formData.project_description || "",
+    };
+
     try {
       const record = await pb.collection("appointment_bookings").create(
-        payload,
+        pbPayload,
         { $autoCancel: false },
       );
-      autoCreateInvoiceForBooking(record);
+      const normalized = {
+        ...record,
+        id: record.id,
+        name: record.Name || record.name || formData.name,
+        email: record.Email || record.email || formData.email,
+        phone: record.Phone_Number || record.phone || formData.phone,
+        preferred_date: record.Preferred_Date || record.preferred_date || formData.preferred_date,
+        preferred_time: record.Preferred_Time || record.preferred_time || formData.preferred_time,
+        project_description: record.Project_Description || record.project_description || formData.project_description,
+      };
+      autoCreateInvoiceForBooking(normalized);
       setSubmitted(true);
     } catch (error) {
       console.warn("Booking submission error, saving locally:", error);
