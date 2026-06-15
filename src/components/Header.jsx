@@ -50,7 +50,7 @@ const Header = () => {
           <Link to="/" className="flex-shrink-0">
             <img
               src="/images/logo/logo.png"
-              alt="ATL TV Mount PRO"
+              alt="Atlanta TV Mount Pro"
               className={`transition-all duration-400 ${isScrolled ? "h-11" : "h-16"}`}
             />
           </Link>

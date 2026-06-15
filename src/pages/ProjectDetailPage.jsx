@@ -16,7 +16,7 @@ const ProjectDetailPage = () => {
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
   usePageTitle(
-    project ? `${project.title} — ATL TV Mount PRO` : "ATL TV Mount PRO",
+    project ? `${project.title} — Atlanta TV Mount Pro` : "Atlanta TV Mount Pro",
   );
 
   useEffect(() => {

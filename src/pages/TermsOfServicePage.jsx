@@ -13,7 +13,7 @@ const Section = ({ title, children }) => (
 );
 
 const TermsOfServicePage = () => {
-  usePageTitle("Terms of Service - ATL TV Mount PRO");
+  usePageTitle("Terms of Service - Atlanta TV Mount Pro");
   return (
     <>
       <div className="py-24 bg-background min-h-screen">
@@ -34,7 +34,7 @@ const TermsOfServicePage = () => {
             <p className="text-muted-foreground mb-10">
               Please read these Terms of Service ("Terms") carefully before
               booking or using any services provided by{" "}
-              <strong className="text-foreground">ATL TV Mount PRO</strong>{" "}
+              <strong className="text-foreground">Atlanta TV Mount Pro</strong>{" "}
               ("Company," "we," "us," or "our"). By scheduling a service,
               submitting a booking request, or using our website, you agree to
               be bound by these Terms.
@@ -44,7 +44,7 @@ const TermsOfServicePage = () => {
 
             <Section title="1. Services Provided">
               <p>
-                ATL TV Mount PRO provides residential and light commercial
+                Atlanta TV Mount Pro provides residential and light commercial
                 handyman services including, but not limited to: TV mounting,
                 drywall repair, interior and exterior painting, carpentry,
                 flooring installation, minor plumbing, and light electrical
@@ -93,7 +93,7 @@ const TermsOfServicePage = () => {
                 scheduling and travel costs.
               </p>
               <p>
-                ATL TV Mount PRO reserves the right to reschedule appointments
+                Atlanta TV Mount Pro reserves the right to reschedule appointments
                 due to technician illness, severe weather, or other
                 circumstances beyond our control. We will notify you as soon as
                 possible and offer the earliest available alternative
@@ -169,7 +169,7 @@ const TermsOfServicePage = () => {
 
             <Section title="7. Limitation of Liability">
               <p>
-                ATL TV Mount PRO carries general liability insurance. In the
+                Atlanta TV Mount Pro carries general liability insurance. In the
                 event of accidental damage caused by our technicians during the
                 course of an approved service, we will work in good faith to
                 repair or compensate for the damage, up to the limits of our
@@ -189,7 +189,7 @@ const TermsOfServicePage = () => {
 
             <Section title="8. Intellectual Property">
               <p>
-                All content on the ATL TV Mount PRO website — including text,
+                All content on the Atlanta TV Mount Pro website — including text,
                 images, logos, and graphics — is the property of ATL TV Mount
                 PRO and may not be reproduced, distributed, or used without
                 prior written permission.
@@ -220,7 +220,7 @@ const TermsOfServicePage = () => {
               </p>
               <div className="mt-3 p-4 bg-muted/50 rounded-xl text-sm space-y-1">
                 <p className="font-semibold text-foreground">
-                  ATL TV Mount PRO
+                  Atlanta TV Mount Pro
                 </p>
                 <p>Atlanta, Georgia</p>
                 <p>

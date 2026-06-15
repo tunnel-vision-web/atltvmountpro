@@ -134,11 +134,14 @@ const ClientDashboard = () => {
     toast.success("Job marked complete.");
   };
 
-  const handleSendInvoice = (method) => {
+  const handleSendInvoice = async (method) => {
     if (!invoiceToSend) return;
-    const ok = sendInvoiceVia(invoiceToSend, method);
-    if (!ok && method !== "email") {
-      toast.error("Client phone number is required for text or WhatsApp.");
+    const ok = await sendInvoiceVia(invoiceToSend, method);
+    if (!ok) {
+      const phone = (invoiceToSend.clientPhone || "").replace(/\D/g, "");
+      if (!phone && method !== "email") {
+        toast.error("Client phone number is required for text or WhatsApp.");
+      }
       return;
     }
     toast.success(

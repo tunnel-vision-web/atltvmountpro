@@ -9,7 +9,7 @@ const ProjectsPage = () => {
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
-  usePageTitle("Our Projects - ATL TV Mount PRO");
+  usePageTitle("Our Projects - Atlanta TV Mount Pro");
 
   useEffect(() => {
     fetch("/api/projects")

@@ -139,7 +139,7 @@ const services = [
 
 const ServicesPage = () => {
   const { openQuoteModal } = useUI();
-  usePageTitle("Our Services - ATL TV Mount PRO");
+  usePageTitle("Our Services - Atlanta TV Mount Pro");
 
   return (
     <>

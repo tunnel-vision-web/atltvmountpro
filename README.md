@@ -1,6 +1,6 @@
-# ATL TV Mount PRO
+# Atlanta TV Mount Pro
 
-React + Vite marketing site for ATL TV Mount PRO.
+React + Vite marketing site for Atlanta TV Mount Pro.
 
 ## Project setup
 

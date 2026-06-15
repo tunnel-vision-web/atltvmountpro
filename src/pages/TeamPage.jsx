@@ -64,7 +64,7 @@ const STATIC_TEAM = [
 const TeamPage = () => {
   const [teamMembers, setTeamMembers] = useState([]);
   const [loading, setLoading] = useState(true);
-  usePageTitle("Our Team - ATL TV Mount PRO");
+  usePageTitle("Our Team - Atlanta TV Mount Pro");
 
   useEffect(() => {
     const loadTeam = async () => {

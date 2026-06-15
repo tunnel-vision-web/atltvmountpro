@@ -5,7 +5,7 @@ const CMS_STORAGE_KEY = "atltvmountpro_cms_data";
 
 export const DEFAULT_CMS_DATA = {
   home: {
-    heroTitle: "ATL TV Mount PRO",
+    heroTitle: "Atlanta TV Mount Pro",
     heroSubtitle: "Professional TV Mounting & Handyman Services in Atlanta",
     heroDescription:
       "Expert TV mounting, drywall repair, painting, and handyman services in Atlanta metro area. Same-day service available.",
@@ -65,13 +65,13 @@ export const DEFAULT_CMS_DATA = {
   },
   about: {
     heroImage: "/images/about/about-hero.jpg",
-    heroTitle: "About ATL TV Mount PRO",
+    heroTitle: "About Atlanta TV Mount Pro",
     heroSubtitle:
       "Your trusted partner for professional handyman services in Atlanta",
     storyParagraphs: [
-      "Founded in 2021, ATL TV Mount PRO started with a simple mission: provide reliable, professional handyman services to the Atlanta community. What began as a TV mounting specialty has grown into a full-service handyman company serving thousands of satisfied customers.",
+      "Founded in 2021, Atlanta TV Mount Pro started with a simple mission: provide reliable, professional handyman services to the Atlanta community. What began as a TV mounting specialty has grown into a full-service handyman company serving thousands of satisfied customers.",
       "Our team of skilled technicians brings years of experience and a commitment to quality workmanship. We take pride in every project, whether it's mounting a TV, repairing drywall, or completing a full room renovation.",
-      "We're fully licensed and insured, and we stand behind our work with a 100% satisfaction guarantee. When you choose ATL TV Mount PRO, you're choosing professionalism, reliability, and expertise.",
+      "We're fully licensed and insured, and we stand behind our work with a 100% satisfaction guarantee. When you choose Atlanta TV Mount Pro, you're choosing professionalism, reliability, and expertise.",
     ],
     stats: [
       { label: "Years experience", value: "5+" },

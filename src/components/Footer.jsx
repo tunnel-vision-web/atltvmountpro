@@ -11,7 +11,7 @@ const Footer = () => {
           <div className="flex flex-col items-center text-center">
             <img
               src="/images/logo/logo.png"
-              alt="ATL TV Mount PRO"
+              alt="Atlanta TV Mount Pro"
               className="h-12 mb-4"
             />
             <p className="text-sm leading-relaxed">

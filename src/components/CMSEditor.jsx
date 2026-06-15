@@ -99,7 +99,7 @@ export default function CMSEditor() {
                   value={formData.heroTitle || ''}
                   onChange={(e) => updateField('heroTitle', e.target.value)}
                   className="input-base w-full"
-                  placeholder="e.g. ATL TV Mount PRO"
+                  placeholder="e.g. Atlanta TV Mount Pro"
                 />
               </div>
               <div>

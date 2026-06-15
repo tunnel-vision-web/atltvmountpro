@@ -68,13 +68,13 @@ const testimonials = [
 ];
 
 const TestimonialsPage = () => {
-  usePageTitle("Testimonials - ATL TV Mount PRO");
+  usePageTitle("Testimonials - Atlanta TV Mount Pro");
   return (
     <>
       <PageHero
         eyebrow="Reviews"
         title="Client Testimonials"
-        subtitle="Real feedback from homeowners who trust ATL TV Mount PRO"
+        subtitle="Real feedback from homeowners who trust Atlanta TV Mount Pro"
         image="/images/pages/page-testimonials.jpg"
         alt="Happy homeowner"
       />

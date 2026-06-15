@@ -53,6 +53,7 @@ import { toast } from "sonner";
 import pb from "@/lib/pocketbaseClient";
 import CMSEditor from "@/components/CMSEditor";
 import FinanceModule from "@/components/FinanceModule";
+import CRMModule from "@/components/CRMModule";
 import MediaLibraryAdmin from "@/components/MediaLibraryAdmin";
 import MediaPickerButton from "@/components/MediaPickerButton";
 import AppointmentsCalendar from "@/components/AppointmentsCalendar";
@@ -95,11 +96,12 @@ const ROLES = {
   Admin: "Admin",
   Moderator: "Moderator",
   Viewer: "Viewer",
+  Accountant: "Accountant",
 };
 
 const PERMISSIONS = {
   [ROLES.Admin]: {
-    canView: ["projects", "orders", "team", "profile", "cms", "finance", "media"],
+    canView: ["projects", "orders", "team", "profile", "cms", "finance", "media", "crm"],
     canEdit: [
       "projects",
       "orders",
@@ -109,6 +111,7 @@ const PERMISSIONS = {
       "users",
       "finance",
       "media",
+      "crm",
     ],
     canDelete: [
       "projects",
@@ -119,6 +122,7 @@ const PERMISSIONS = {
       "users",
       "finance",
       "media",
+      "crm",
     ],
   },
   [ROLES.Moderator]: {
@@ -131,11 +135,49 @@ const PERMISSIONS = {
     canEdit: [],
     canDelete: [],
   },
+  [ROLES.Accountant]: {
+    canView: ["finance"],
+    canEdit: [],
+    canDelete: [],
+  },
 };
 
-function hasPermission(role, action, resource) {
-  if (!role || !PERMISSIONS[role]) return false;
-  return PERMISSIONS[role][action]?.includes(resource) ?? false;
+function hasPermission(roleOrUser, action, resource) {
+  if (!roleOrUser) return false;
+  
+  // If roleOrUser is a string (legacy/direct role check)
+  if (typeof roleOrUser === "string") {
+    if (roleOrUser === ROLES.Admin) return true;
+    return PERMISSIONS[roleOrUser]?.[action]?.includes(resource) ?? false;
+  }
+  
+  // If roleOrUser is a user object
+  const user = roleOrUser;
+  const role = user.role || ROLES.Viewer;
+  
+  // Admins always have all permissions
+  if (role === ROLES.Admin) return true;
+  
+  // Check custom_permissions
+  let customPerms = {};
+  if (user.custom_permissions) {
+    if (typeof user.custom_permissions === "string") {
+      try {
+        customPerms = JSON.parse(user.custom_permissions);
+      } catch (e) {
+        customPerms = {};
+      }
+    } else {
+      customPerms = user.custom_permissions;
+    }
+  }
+  
+  if (customPerms[action]?.includes(resource)) {
+    return true;
+  }
+  
+  // Fallback to role permissions
+  return PERMISSIONS[role]?.[action]?.includes(resource) ?? false;
 }
 
 // ── Login screen ──────────────────────────────────────────────────────────────
@@ -192,7 +234,7 @@ const LoginScreen = ({ onLogin }) => {
       <div className="w-full max-w-sm bg-card border border-border rounded-2xl p-8 shadow-xl">
         <img
           src="/images/logo/logo.png"
-          alt="ATL TV Mount PRO"
+          alt="Atlanta TV Mount Pro"
           className="h-14 mx-auto mb-6"
         />
         <h1 className="text-xl font-bold text-center mb-1">Admin Panel</h1>
@@ -721,6 +763,7 @@ const UserFormDialog = ({ open, onClose, onSaved }) => {
               <option value="Admin">Administrator</option>
               <option value="Moderator">Moderator</option>
               <option value="Viewer">Viewer</option>
+              <option value="Accountant">Accountant</option>
             </select>
           </div>
           <div className="flex justify-end gap-3 pt-2">
@@ -1069,6 +1112,56 @@ const AdminPage = () => {
     }
   }, []);
 
+  const handleTogglePermission = async (user, resource) => {
+    let customPerms = {};
+    if (user.custom_permissions) {
+      if (typeof user.custom_permissions === "string") {
+        try {
+          customPerms = JSON.parse(user.custom_permissions);
+        } catch (e) {
+          customPerms = {};
+        }
+      } else {
+        customPerms = user.custom_permissions;
+      }
+    }
+
+    if (!customPerms.canView) customPerms.canView = [];
+    if (!customPerms.canEdit) customPerms.canEdit = [];
+    if (!customPerms.canDelete) customPerms.canDelete = [];
+
+    if (customPerms.canView.includes(resource)) {
+      customPerms.canView = customPerms.canView.filter((r) => r !== resource);
+      customPerms.canEdit = customPerms.canEdit.filter((r) => r !== resource);
+      customPerms.canDelete = customPerms.canDelete.filter((r) => r !== resource);
+    } else {
+      customPerms.canView.push(resource);
+      customPerms.canEdit.push(resource);
+      customPerms.canDelete.push(resource);
+    }
+
+    try {
+      await pb.collection("users").update(user.id, {
+        custom_permissions: JSON.stringify(customPerms),
+      });
+      toast.success(`Updated custom permissions for ${user.username}`);
+      fetchUsers();
+    } catch (err) {
+      console.warn("Failed to update user permissions in PB, updating locally:", err);
+      const stored = localStorage.getItem(LOCAL_USERS_STORAGE);
+      if (stored) {
+        const list = JSON.parse(stored);
+        const idx = list.findIndex((u) => u.id === user.id);
+        if (idx !== -1) {
+          list[idx].custom_permissions = customPerms;
+          localStorage.setItem(LOCAL_USERS_STORAGE, JSON.stringify(list));
+          toast.success(`Updated custom permissions for ${user.username} (Local Mode)`);
+          fetchUsers();
+        }
+      }
+    }
+  };
+
   // Auto-verify auth on load and whenever PocketBase auth changes
   useEffect(() => {
     const syncAuth = async () => {
@@ -1083,7 +1176,7 @@ const AdminPage = () => {
         // Use the already-stored auth record — avoids a 403 on getOne
         const record = pb.authStore.record;
         const role = record.role || ROLES.Admin;
-        const allowedRoles = [ROLES.Admin, ROLES.Moderator];
+        const allowedRoles = [ROLES.Admin, ROLES.Moderator, ROLES.Accountant];
 
         if (!allowedRoles.includes(role)) {
           pb.authStore.clear();
@@ -1098,6 +1191,7 @@ const AdminPage = () => {
           id: record.id,
           email: record.email,
           role,
+          custom_permissions: record.custom_permissions,
         });
         setAuthed(true);
       } catch {
@@ -1118,6 +1212,25 @@ const AdminPage = () => {
 
     return unsubscribe;
   }, []);
+
+  // Redirect if current activeTab is not allowed
+  useEffect(() => {
+    if (authed && currentUser) {
+      const allowed = [];
+      if (hasPermission(currentUser, "canView", "projects")) allowed.push("projects");
+      if (hasPermission(currentUser, "canView", "orders")) allowed.push("orders");
+      if (hasPermission(currentUser, "canView", "team")) allowed.push("team");
+      if (hasPermission(currentUser, "canView", "crm")) allowed.push("crm");
+      if (hasPermission(currentUser, "canView", "profile")) allowed.push("profile");
+      if (hasPermission(currentUser, "canView", "finance")) allowed.push("finance");
+      if (hasPermission(currentUser, "canView", "cms")) allowed.push("cms");
+      if (hasPermission(currentUser, "canView", "media")) allowed.push("media");
+      
+      if (allowed.length > 0 && !allowed.includes(activeTab)) {
+        setActiveTab(allowed[0]);
+      }
+    }
+  }, [authed, currentUser, activeTab]);
 
   // Load specific tab data
   useEffect(() => {
@@ -1152,7 +1265,7 @@ const AdminPage = () => {
   }, [authed]);
 
   const handleLogin = (user) => {
-    const allowedRoles = [ROLES.Admin, ROLES.Moderator];
+    const allowedRoles = [ROLES.Admin, ROLES.Moderator, ROLES.Accountant];
 
     if (!allowedRoles.includes(user.role)) {
       pb.authStore.clear();
@@ -1296,11 +1409,14 @@ const AdminPage = () => {
     }
   };
 
-  const handleSendInvoice = (method) => {
+  const handleSendInvoice = async (method) => {
     if (!invoiceToSend) return;
-    const ok = sendInvoiceVia(invoiceToSend, method);
-    if (!ok && method !== "email") {
-      toast.error("Client phone number is required for text or WhatsApp.");
+    const ok = await sendInvoiceVia(invoiceToSend, method);
+    if (!ok) {
+      const phone = (invoiceToSend.clientPhone || "").replace(/\D/g, "");
+      if (!phone && method !== "email") {
+        toast.error("Client phone number is required for text or WhatsApp.");
+      }
       return;
     }
     toast.success(
@@ -1433,7 +1549,7 @@ const AdminPage = () => {
           <div className="flex items-center gap-2">
             <img
               src="/images/logo/logo.png"
-              alt="ATL TV Mount PRO"
+              alt="Atlanta TV Mount Pro"
               className="h-9"
             />
             <span className="text-xs bg-primary/20 text-primary px-2 py-0.5 rounded font-medium">
@@ -1457,7 +1573,7 @@ const AdminPage = () => {
             <div className="relative flex items-center justify-center mb-8 pb-4 border-b border-border/50">
               <img
                 src="/images/logo/logo.png"
-                alt="ATL TV Mount PRO"
+                alt="Atlanta TV Mount Pro"
                 className="h-10 mx-auto"
               />
               <button
@@ -1470,40 +1586,59 @@ const AdminPage = () => {
 
             {/* Menu Links with Flat Icons */}
             <nav className="space-y-1.5 flex-1">
-              <button
-                onClick={() => {
-                  setActiveTab("projects");
-                  setSidebarOpen(false);
-                }}
-                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 ${activeTab === "projects" ? "bg-primary text-primary-foreground shadow-sm shadow-primary/20" : "text-muted-foreground hover:bg-muted hover:text-foreground"}`}
-              >
-                <Tv size={18} className="flex-shrink-0" />
-                <span>Projects Showcase</span>
-              </button>
+              {hasPermission(currentUser, "canView", "projects") && (
+                <button
+                  onClick={() => {
+                    setActiveTab("projects");
+                    setSidebarOpen(false);
+                  }}
+                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 ${activeTab === "projects" ? "bg-primary text-primary-foreground shadow-sm shadow-primary/20" : "text-muted-foreground hover:bg-muted hover:text-foreground"}`}
+                >
+                  <Tv size={18} className="flex-shrink-0" />
+                  <span>Projects Showcase</span>
+                </button>
+              )}
 
-              <button
-                onClick={() => {
-                  setActiveTab("orders");
-                  setSidebarOpen(false);
-                }}
-                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 ${activeTab === "orders" ? "bg-primary text-primary-foreground shadow-sm shadow-primary/20" : "text-muted-foreground hover:bg-muted hover:text-foreground"}`}
-              >
-                <ClipboardList size={18} className="flex-shrink-0" />
-                <span>Bookings & Orders</span>
-              </button>
+              {hasPermission(currentUser, "canView", "orders") && (
+                <button
+                  onClick={() => {
+                    setActiveTab("orders");
+                    setSidebarOpen(false);
+                  }}
+                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 ${activeTab === "orders" ? "bg-primary text-primary-foreground shadow-sm shadow-primary/20" : "text-muted-foreground hover:bg-muted hover:text-foreground"}`}
+                >
+                  <ClipboardList size={18} className="flex-shrink-0" />
+                  <span>Bookings & Orders</span>
+                </button>
+              )}
 
-              <button
-                onClick={() => {
-                  setActiveTab("team");
-                  setSidebarOpen(false);
-                }}
-                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 ${activeTab === "team" ? "bg-primary text-primary-foreground shadow-sm shadow-primary/20" : "text-muted-foreground hover:bg-muted hover:text-foreground"}`}
-              >
-                <Users size={18} className="flex-shrink-0" />
-                <span>Team Technicians</span>
-              </button>
+              {hasPermission(currentUser, "canView", "team") && (
+                <button
+                  onClick={() => {
+                    setActiveTab("team");
+                    setSidebarOpen(false);
+                  }}
+                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 ${activeTab === "team" ? "bg-primary text-primary-foreground shadow-sm shadow-primary/20" : "text-muted-foreground hover:bg-muted hover:text-foreground"}`}
+                >
+                  <Users size={18} className="flex-shrink-0" />
+                  <span>Team Technicians</span>
+                </button>
+              )}
 
-              {hasPermission(currentUser?.role, "canView", "profile") && (
+              {hasPermission(currentUser, "canView", "crm") && (
+                <button
+                  onClick={() => {
+                    setActiveTab("crm");
+                    setSidebarOpen(false);
+                  }}
+                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 ${activeTab === "crm" ? "bg-primary text-primary-foreground shadow-sm shadow-primary/20" : "text-muted-foreground hover:bg-muted hover:text-foreground"}`}
+                >
+                  <MessageSquare size={18} className="flex-shrink-0" />
+                  <span>CRM & Blasts</span>
+                </button>
+              )}
+
+              {hasPermission(currentUser, "canView", "profile") && (
                 <button
                   onClick={() => {
                     setActiveTab("profile");
@@ -1516,7 +1651,7 @@ const AdminPage = () => {
                 </button>
               )}
 
-              {hasPermission(currentUser?.role, "canView", "finance") && (
+              {hasPermission(currentUser, "canView", "finance") && (
                 <button
                   onClick={() => {
                     setActiveTab("finance");
@@ -1529,7 +1664,7 @@ const AdminPage = () => {
                 </button>
               )}
 
-              {hasPermission(currentUser?.role, "canView", "cms") && (
+              {hasPermission(currentUser, "canView", "cms") && (
                 <button
                   onClick={() => {
                     setActiveTab("cms");
@@ -1542,7 +1677,7 @@ const AdminPage = () => {
                 </button>
               )}
 
-              {hasPermission(currentUser?.role, "canView", "media") && (
+              {hasPermission(currentUser, "canView", "media") && (
                 <button
                   onClick={() => {
                     setActiveTab("media");
@@ -2455,6 +2590,7 @@ const AdminPage = () => {
                         <tr>
                           <th className="px-4 py-2.5">User</th>
                           <th className="px-4 py-2.5">Role</th>
+                          <th className="px-4 py-2.5">Tab Access Permissions</th>
                           <th className="px-4 py-2.5">Created</th>
                           <th className="px-4 py-2.5 text-right w-16">
                             Action
@@ -2480,12 +2616,54 @@ const AdminPage = () => {
                                 {u.role || "Admin"}
                               </span>
                             </td>
+                            <td className="px-4 py-3">
+                              {u.role === "Admin" ? (
+                                <span className="text-[10px] text-muted-foreground font-semibold italic">Full Administrative Access</span>
+                              ) : (
+                                <div className="flex flex-wrap gap-4">
+                                  {["crm", "finance", "media", "cms"].map((res) => {
+                                    let customPerms = {};
+                                    if (u.custom_permissions) {
+                                      if (typeof u.custom_permissions === "string") {
+                                        try {
+                                          customPerms = JSON.parse(u.custom_permissions);
+                                        } catch (e) {
+                                          customPerms = {};
+                                        }
+                                      } else {
+                                        customPerms = u.custom_permissions;
+                                      }
+                                    }
+                                    const isInherited = hasPermission(u.role, "canView", res);
+                                    const isChecked = customPerms.canView?.includes(res) || isInherited;
+                                    
+                                    return (
+                                      <label key={res} className="flex items-center gap-1.5 cursor-pointer select-none">
+                                        <input
+                                          type="checkbox"
+                                          checked={isChecked}
+                                          disabled={isInherited || !hasPermission(currentUser, "canEdit", "users")}
+                                          onChange={() => handleTogglePermission(u, res)}
+                                          className="rounded border-border text-primary focus:ring-primary h-3.5 w-3.5 bg-muted/40 cursor-pointer"
+                                        />
+                                        <span className={`text-[10px] uppercase font-bold ${
+                                          isInherited ? "text-muted-foreground/50 italic" : "text-foreground"
+                                        }`} title={isInherited ? "Role permission (Inherited)" : "Custom permission"}>
+                                          {res}
+                                          {isInherited && " (R)"}
+                                        </span>
+                                      </label>
+                                    );
+                                  })}
+                                </div>
+                              )}
+                            </td>
                             <td className="px-4 py-3 text-muted-foreground">
                               {new Date(u.created).toLocaleDateString()}
                             </td>
                             <td className="px-4 py-3 text-right">
                               {hasPermission(
-                                currentUser?.role,
+                                currentUser,
                                 "canDelete",
                                 "users",
                               ) && (
@@ -2508,7 +2686,10 @@ const AdminPage = () => {
           )}
 
           {/* TAB CONTENT: FINANCE */}
-          {activeTab === "finance" && <FinanceModule />}
+          {activeTab === "finance" && <FinanceModule currentUser={currentUser} />}
+
+          {/* TAB CONTENT: CRM */}
+          {activeTab === "crm" && <CRMModule />}
 
           {/* TAB CONTENT: CMS */}
           {activeTab === "cms" && <CMSEditor />}

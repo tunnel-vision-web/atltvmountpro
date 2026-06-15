@@ -13,7 +13,7 @@ const Section = ({ title, children }) => (
 );
 
 const PrivacyPolicyPage = () => {
-  usePageTitle("Privacy Policy - ATL TV Mount PRO");
+  usePageTitle("Privacy Policy - Atlanta TV Mount Pro");
   return (
     <>
       <div className="py-24 bg-background min-h-screen">
@@ -32,7 +32,7 @@ const PrivacyPolicyPage = () => {
               1, 2025
             </p>
             <p className="text-muted-foreground mb-10">
-              <strong className="text-foreground">ATL TV Mount PRO</strong>{" "}
+              <strong className="text-foreground">Atlanta TV Mount Pro</strong>{" "}
               ("we," "us," or "our") is committed to protecting your personal
               information. This Privacy Policy explains what information we
               collect, how we use it, and your rights regarding that information
@@ -247,7 +247,7 @@ const PrivacyPolicyPage = () => {
               </p>
               <div className="mt-3 p-4 bg-muted/50 rounded-xl text-sm space-y-1">
                 <p className="font-semibold text-foreground">
-                  ATL TV Mount PRO
+                  Atlanta TV Mount Pro
                 </p>
                 <p>Atlanta, Georgia</p>
                 <p>

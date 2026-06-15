@@ -22,6 +22,7 @@ import ProjectsPage from "./pages/ProjectsPage";
 import ProjectDetailPage from "./pages/ProjectDetailPage";
 import ClientDashboard from "./pages/ClientDashboard";
 import AdminPage from "./pages/AdminPage";
+import VerifyOptinPage from "./pages/VerifyOptinPage";
 
 function App() {
   React.useEffect(() => {
@@ -79,6 +80,10 @@ function App() {
                       <Route
                         path="/terms-of-service"
                         element={<TermsOfServicePage />}
+                      />
+                      <Route
+                        path="/verify-optin"
+                        element={<VerifyOptinPage />}
                       />
                     </Routes>
                   </main>

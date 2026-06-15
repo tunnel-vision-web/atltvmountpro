@@ -1,3 +1,8 @@
+import React from "react";
+import pb from "./pocketbaseClient";
+import { toast } from "sonner";
+import { ExternalLink } from "lucide-react";
+
 export const INVOICE_STORAGE_KEY = "atltv_invoices";
 export const CLIENT_DIRECTORY_KEY = "atltv_client_directory";
 
@@ -105,6 +110,11 @@ export function autoCreateInvoiceForBooking(booking, options = {}) {
     phone: booking.phone,
   });
 
+  const subtotal = Number(estimatedTotal) || 0;
+  const taxRate = 0.07;
+  const tax = subtotal * taxRate;
+  const total = subtotal + tax;
+
   const invoice = {
     id: "inv_" + Date.now() + "_" + Math.random().toString(36).substr(2, 6),
     number: generateInvoiceNumber(),
@@ -122,7 +132,9 @@ export function autoCreateInvoiceForBooking(booking, options = {}) {
       },
     ],
     notes: booking.project_description || "",
-    total: Number(estimatedTotal) || 0,
+    subtotal: subtotal,
+    tax: tax,
+    total: total,
     status: "draft",
     created: new Date().toISOString(),
     jobDate,
@@ -150,10 +162,15 @@ export function updateInvoice(id, updates) {
   if (idx === -1) return null;
   all[idx] = { ...all[idx], ...updates };
   if (updates.items) {
-    all[idx].total = updates.items.reduce(
+    const subtotal = updates.items.reduce(
       (sum, item) => sum + (item.quantity || 0) * (item.rate || 0),
       0,
     );
+    const tax = subtotal * 0.07;
+    const total = subtotal + tax;
+    all[idx].subtotal = subtotal;
+    all[idx].tax = tax;
+    all[idx].total = total;
   }
   saveInvoices(all);
   return all[idx];
@@ -163,13 +180,73 @@ export function buildInvoiceMessage(invoice) {
   const due = invoice.dueDate
     ? new Date(invoice.dueDate).toLocaleDateString()
     : "Upon receipt";
-  return `Hi ${invoice.clientName},\n\nPlease find your invoice from ATL TV Mount PRO.\n\nInvoice: ${invoice.number}\nAmount: $${(invoice.total || 0).toFixed(2)}\nJob Date: ${invoice.jobDate ? new Date(invoice.jobDate).toLocaleDateString() : "TBD"}\nDue: ${due}\n\nThank you,\nATL TV Mount PRO\n770-374-3203`;
+  return `Hi ${invoice.clientName},\n\nPlease find your invoice from Atlanta TV Mount Pro.\n\nInvoice: ${invoice.number}\nAmount: $${(invoice.total || 0).toFixed(2)}\nJob Date: ${invoice.jobDate ? new Date(invoice.jobDate).toLocaleDateString() : "TBD"}\nDue: ${due}\n\nThank you,\nAtlanta TV Mount Pro\n770-374-3203`;
 }
 
-export function sendInvoiceVia(invoice, method) {
+export async function sendInvoiceVia(invoice, method) {
   if (!invoice) return false;
+
+  // 1. Fetch client from PocketBase
+  let optInStatus = "Pending";
+  let doubleOptInToken = "";
+  let clientRecord = null;
+
+  try {
+    const list = await pb.collection("clients").getList(1, 1, {
+      filter: `email = "${invoice.clientEmail}"`
+    });
+    if (list.items.length > 0) {
+      clientRecord = list.items[0];
+      optInStatus = clientRecord.OptIn_Status || "Pending";
+      doubleOptInToken = clientRecord.DoubleOptIn_Token || "";
+    } else {
+      optInStatus = "Pending";
+    }
+  } catch (err) {
+    console.warn("Failed to query PocketBase for client opt-in status, fallback to local:", err);
+    try {
+      const stored = localStorage.getItem("atltvmountpro_local_clients");
+      if (stored) {
+        const clients = JSON.parse(stored);
+        const match = clients.find(c => c.email?.toLowerCase() === invoice.clientEmail?.toLowerCase());
+        if (match) {
+          optInStatus = match.OptIn_Status || "Pending";
+          doubleOptInToken = match.DoubleOptIn_Token || "";
+        }
+      }
+    } catch {}
+  }
+
+  // 2. Block if status is not 'Confirmed'
+  if (optInStatus !== "Confirmed") {
+    const token = doubleOptInToken || Math.random().toString(36).substr(2, 12);
+    const verifyLink = `${window.location.origin}/verify-optin?token=${token}&email=${encodeURIComponent(invoice.clientEmail)}`;
+    
+    // Save token if not exists and we found a client record
+    if (clientRecord && !doubleOptInToken) {
+      pb.collection("clients").update(clientRecord.id, { DoubleOptIn_Token: token }).catch(console.error);
+    }
+
+    toast.error(
+      React.createElement("div", { className: "flex flex-col gap-1.5 text-left" },
+        React.createElement("span", { className: "font-bold text-xs" }, "Dispatch Blocked: Client Not Opted-In"),
+        React.createElement("span", { className: "text-[10px] text-muted-foreground" }, 
+          "Anti-spam laws require double opt-in verification before sending invoices."
+        ),
+        React.createElement("a", { 
+          href: verifyLink, 
+          target: "_blank", 
+          rel: "noreferrer",
+          className: "text-xs text-primary underline font-bold mt-1 flex items-center gap-0.5 hover:text-primary/80"
+        }, "Send Double Opt-In Invite ", React.createElement(ExternalLink, { size: 10 }))
+      ),
+      { duration: 8000 }
+    );
+    return false;
+  }
+
   const subject = encodeURIComponent(
-    `Invoice ${invoice.number} from ATL TV Mount PRO`,
+    `Invoice ${invoice.number} from Atlanta TV Mount Pro`,
   );
   const body = encodeURIComponent(buildInvoiceMessage(invoice));
   const phone = (invoice.clientPhone || "").replace(/\D/g, "");

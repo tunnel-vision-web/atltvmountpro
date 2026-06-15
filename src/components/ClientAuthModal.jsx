@@ -29,6 +29,7 @@ const ClientAuthModal = () => {
     phone: "",
     password: "",
     confirmPassword: "",
+    preferredChannel: "Email",
   });
 
   React.useEffect(() => {
@@ -48,6 +49,7 @@ const ClientAuthModal = () => {
           phone: "",
           password: "",
           confirmPassword: "",
+          preferredChannel: "Email",
         });
         setShowPassword(false);
       }, 300);
@@ -85,6 +87,7 @@ const ClientAuthModal = () => {
         name: form.name,
         phone: form.phone,
         type: accountType,
+        preferredChannel: form.preferredChannel,
       });
       closeAuthModal();
     } catch (err) {
@@ -113,7 +116,7 @@ const ClientAuthModal = () => {
           <DialogDescription className="text-sm mt-0.5">
             {mode === "login" &&
               "Sign in to track your jobs and manage invoices."}
-            {mode === "signup" && "Join ATL TV Mount PRO to get started."}
+            {mode === "signup" && "Join Atlanta TV Mount Pro to get started."}
             {mode === "chooseType" &&
               "Select the account type that best describes you."}
             {mode === "signupForm" &&
@@ -258,6 +261,20 @@ const ClientAuthModal = () => {
                   onChange={(e) => updateForm("phone", e.target.value)}
                   placeholder="(555) 123-4567"
                 />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="su-channel">Preferred Contact Channel</Label>
+                <select
+                  id="su-channel"
+                  value={form.preferredChannel || "Email"}
+                  onChange={(e) => updateForm("preferredChannel", e.target.value)}
+                  className="w-full bg-muted border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
+                  required
+                >
+                  <option value="Email">Email</option>
+                  <option value="SMS">SMS</option>
+                  <option value="WhatsApp">WhatsApp</option>
+                </select>
               </div>
               <div className="space-y-1.5 relative">
                 <Label htmlFor="su-password">Password</Label>

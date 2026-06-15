@@ -35,9 +35,9 @@ const AboutPage = () => {
     cmsAbout?.storyParagraphs?.length > 0
       ? cmsAbout.storyParagraphs
       : [
-          "Founded in 2021, ATL TV Mount PRO started with a simple mission: provide reliable, professional handyman services to the Atlanta community. What began as a TV mounting specialty has grown into a full-service handyman company serving thousands of satisfied customers.",
+          "Founded in 2021, Atlanta TV Mount Pro started with a simple mission: provide reliable, professional handyman services to the Atlanta community. What began as a TV mounting specialty has grown into a full-service handyman company serving thousands of satisfied customers.",
           "Our team of skilled technicians brings years of experience and a commitment to quality workmanship. We take pride in every project, whether it's mounting a TV, repairing drywall, or completing a full room renovation.",
-          "We're fully licensed and insured, and we stand behind our work with a 100% satisfaction guarantee. When you choose ATL TV Mount PRO, you're choosing professionalism, reliability, and expertise.",
+          "We're fully licensed and insured, and we stand behind our work with a 100% satisfaction guarantee. When you choose Atlanta TV Mount Pro, you're choosing professionalism, reliability, and expertise.",
         ];
 
   const whyChooseUs =
@@ -58,13 +58,13 @@ const AboutPage = () => {
           },
         ];
 
-  usePageTitle("About Us - ATL TV Mount PRO");
+  usePageTitle("About Us - Atlanta TV Mount Pro");
 
   return (
     <>
       <PageHero
         eyebrow="About Us"
-        title={cmsAbout?.heroTitle || "About ATL TV Mount PRO"}
+        title={cmsAbout?.heroTitle || "About Atlanta TV Mount Pro"}
         subtitle={
           cmsAbout?.heroSubtitle ||
           "Your trusted partner for professional handyman services in Atlanta"

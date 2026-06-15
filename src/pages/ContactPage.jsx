@@ -22,7 +22,7 @@ const ContactPage = () => {
     message: "",
   });
   const [loading, setLoading] = useState(false);
-  usePageTitle("Contact Us - ATL TV Mount PRO");
+  usePageTitle("Contact Us - Atlanta TV Mount Pro");
 
   const { data: cmsContact } = useCMS("contact");
 

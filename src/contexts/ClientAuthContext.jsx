@@ -107,8 +107,11 @@ export const ClientAuthProvider = ({ children }) => {
     }
   };
 
-  const signup = async ({ email, password, name, phone, type }) => {
+  const signup = async ({ email, password, name, phone, type, preferredChannel }) => {
     const role = type === 'tech' ? 'technician' : 'customer';
+    const channel = preferredChannel || 'Email';
+    const token = Math.random().toString(36).substr(2, 9) + Math.random().toString(36).substr(2, 9);
+    
     try {
       const record = await pb.collection('clients').create({
         email,
@@ -118,21 +121,24 @@ export const ClientAuthProvider = ({ children }) => {
         Phone_Number: phone,
         Role: role,
         Type: role,
+        OptIn_Status: 'Pending',
+        OptIn_Channel: channel,
+        DoubleOptIn_Token: token,
       });
-      const authData = await pb.collection('clients').authWithPassword(email, password);
-      const u = {
-        id: record.id,
-        email: authData.record.email,
-        name: authData.record.Name || name,
-        role: authData.record.Role || role,
-        type: authData.record.Type || role,
-        phone: authData.record.Phone_Number || phone || '',
-        token: authData.token,
-      };
-      setUser(u);
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(u));
-      toast.success('Account created successfully.');
-      return u;
+
+      const verifyUrl = `${window.location.origin}/verify-optin?token=${token}&email=${encodeURIComponent(email)}`;
+      console.log("Client Double Opt-In Verification URL:", verifyUrl);
+
+      toast.success('Registration successful!', {
+        description: `Verification link sent via ${channel}. Click below to verify:`,
+        action: {
+          label: 'Verify Opt-In',
+          onClick: () => window.open(verifyUrl, '_blank')
+        },
+        duration: 15000
+      });
+
+      return record;
     } catch (err) {
       const localUsers = getLocalUsers();
       if (localUsers.some((u) => u.email === email)) {
@@ -146,15 +152,25 @@ export const ClientAuthProvider = ({ children }) => {
         role,
         type: role,
         phone: phone || '',
+        OptIn_Status: 'Pending',
+        OptIn_Channel: channel,
+        DoubleOptIn_Token: token,
         created: new Date().toISOString(),
       };
       saveLocalUser(newUser);
-      const u = { ...newUser };
-      delete u.password;
-      setUser(u);
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(u));
-      toast.success('Account created locally (demo mode).');
-      return u;
+
+      const verifyUrl = `${window.location.origin}/verify-optin?token=${token}&email=${encodeURIComponent(email)}`;
+      console.log("Local Double Opt-In Verification URL:", verifyUrl);
+
+      toast.success('Account created locally (demo mode).', {
+        description: `Verification link sent via ${channel}. Click below to verify:`,
+        action: {
+          label: 'Verify Opt-In',
+          onClick: () => window.open(verifyUrl, '_blank')
+        },
+        duration: 15000
+      });
+      return newUser;
     }
   };
 

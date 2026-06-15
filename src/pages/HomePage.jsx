@@ -176,7 +176,7 @@ const HomePage = () => {
         ];
 
   usePageTitle(
-    "ATL TV Mount PRO - Professional TV Mounting & Handyman Services in Atlanta",
+    "Atlanta TV Mount Pro - Professional TV Mounting & Handyman Services in Atlanta",
   );
 
   return (

@@ -1,4 +1,4 @@
-# ATL TV Mount PRO — Image Reference Guide
+# Atlanta TV Mount Pro — Image Reference Guide
 
 All images are stored locally under `public/images/` and served from the root
 path `/images/...`.  To replace any image, drop your file into the folder shown
