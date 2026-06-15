@@ -63,6 +63,13 @@ export default defineConfig({
     strictPort: true,
     host: "0.0.0.0",
     allowedHosts: true,
+    proxy: {
+      "/hcgi/platform": {
+        target: "http://127.0.0.1:8090",
+        changeOrigin: true,
+        rewrite: (p) => p.replace(/^\/hcgi\/platform/, ""),
+      },
+    },
     fs: {
       strict: true,
     },
