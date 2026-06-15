@@ -1,12 +1,13 @@
-import React, { useEffect, useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
-import { Helmet } from 'react-helmet';
-import { motion } from 'framer-motion';
-import { MapPin, ChevronLeft, CheckCircle2 } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import ProjectCarousel from '@/components/ProjectCarousel';
-import { useUI } from '@/contexts/UIContext';
+import React, { useEffect, useState } from "react";
+import { useParams, Link } from "react-router-dom";
+import usePageTitle from "@/hooks/usePageTitle";
+import DUMMY_PROJECTS from "@/data/dummyProjects";
+import { motion } from "framer-motion";
+import { MapPin, ChevronLeft, CheckCircle2 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import ProjectCarousel from "@/components/ProjectCarousel";
+import { useUI } from "@/contexts/UIContext";
 
 const ProjectDetailPage = () => {
   const { id } = useParams();
@@ -14,24 +15,47 @@ const ProjectDetailPage = () => {
   const [project, setProject] = useState(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
+  usePageTitle(
+    project ? `${project.title} — ATL TV Mount PRO` : "ATL TV Mount PRO",
+  );
 
   useEffect(() => {
     setLoading(true);
+    // Check demo projects first (no API needed)
+    const demoMatch = DUMMY_PROJECTS.find((p) => p.id === id);
+    if (demoMatch) {
+      setProject(demoMatch);
+      setLoading(false);
+      return;
+    }
     fetch(`/api/projects/${id}`)
       .then((r) => {
-        if (r.status === 404) { setNotFound(true); setLoading(false); return null; }
+        if (r.status === 404) {
+          setNotFound(true);
+          setLoading(false);
+          return null;
+        }
         return r.json();
       })
       .then((data) => {
-        if (data) { setProject(data); setLoading(false); }
+        if (data) {
+          setProject(data);
+          setLoading(false);
+        }
       })
-      .catch(() => { setNotFound(true); setLoading(false); });
+      .catch(() => {
+        setNotFound(true);
+        setLoading(false);
+      });
   }, [id]);
 
   if (loading) {
     return (
       <div className="pt-28 pb-20 flex flex-col items-center gap-4">
-        <div className="w-full bg-muted" style={{ height: 'min(65vh, 620px)' }} />
+        <div
+          className="w-full bg-muted"
+          style={{ height: "min(65vh, 620px)" }}
+        />
         <div className="max-w-[800px] w-full px-4 mt-8 space-y-4">
           <div className="h-8 bg-muted animate-pulse rounded w-2/3" />
           <div className="h-4 bg-muted animate-pulse rounded w-1/3" />
@@ -54,11 +78,6 @@ const ProjectDetailPage = () => {
 
   return (
     <>
-      <Helmet>
-        <title>{project.title} — ATL TV Mount PRO</title>
-        <meta name="description" content={project.description.slice(0, 155)} />
-      </Helmet>
-
       {/* Carousel (full-width, sits behind the fixed header) */}
       <div className="pt-20">
         <ProjectCarousel images={project.images} title={project.title} />
@@ -82,7 +101,9 @@ const ProjectDetailPage = () => {
             </Link>
 
             {/* Title & location */}
-            <h1 className="text-3xl md:text-4xl font-bold mb-3">{project.title}</h1>
+            <h1 className="text-3xl md:text-4xl font-bold mb-3">
+              {project.title}
+            </h1>
             <div className="flex items-center gap-1.5 text-muted-foreground mb-8">
               <MapPin size={15} className="text-primary" />
               <span className="text-sm">{project.location}</span>
@@ -98,7 +119,10 @@ const ProjectDetailPage = () => {
               <h2 className="font-semibold text-lg mb-4">Services Provided</h2>
               <div className="flex flex-wrap gap-2">
                 {project.services.map((s, i) => (
-                  <div key={i} className="flex items-center gap-1.5 bg-primary/10 text-primary px-3 py-1.5 rounded-lg text-sm font-medium">
+                  <div
+                    key={i}
+                    className="flex items-center gap-1.5 bg-primary/10 text-primary px-3 py-1.5 rounded-lg text-sm font-medium"
+                  >
                     <CheckCircle2 size={14} />
                     {s}
                   </div>

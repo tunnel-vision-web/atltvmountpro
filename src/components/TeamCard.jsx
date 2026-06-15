@@ -1,9 +1,11 @@
+import React from "react";
+import { motion } from "framer-motion";
+import { Card, CardContent } from "@/components/ui/card";
 
-import React from 'react';
-import { motion } from 'framer-motion';
-import { Card, CardContent } from '@/components/ui/card';
+const PHOTO_FALLBACK =
+  "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=400&q=80";
 
-const TeamCard = ({ photo, name, bio, skills, index }) => {
+const TeamCard = ({ photo, photoFallback, name, bio, skills, index }) => {
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -16,10 +18,16 @@ const TeamCard = ({ photo, name, bio, skills, index }) => {
             src={photo}
             alt={name}
             className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
+            onError={(e) => {
+              e.target.onerror = null;
+              e.target.src = photoFallback || PHOTO_FALLBACK;
+            }}
           />
         </div>
         <CardContent className="p-6">
-          <h3 className="text-xl font-semibold mb-2 text-card-foreground">{name}</h3>
+          <h3 className="text-xl font-semibold mb-2 text-card-foreground">
+            {name}
+          </h3>
           <p className="text-muted-foreground mb-4 leading-relaxed">{bio}</p>
           <div className="flex flex-wrap gap-2">
             {skills.map((skill, i) => (

@@ -1,18 +1,20 @@
-import React, { useEffect, useState } from 'react';
-import { Helmet } from 'react-helmet';
-import { motion } from 'framer-motion';
-import ProjectCard from '@/components/ProjectCard';
-import PageHero from '@/components/PageHero';
+import React, { useEffect, useState } from "react";
+import usePageTitle from "@/hooks/usePageTitle";
+import { motion } from "framer-motion";
+import ProjectCard from "@/components/ProjectCard";
+import PageHero from "@/components/PageHero";
+import DUMMY_PROJECTS from "@/data/dummyProjects";
 
 const ProjectsPage = () => {
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  usePageTitle("Our Projects - ATL TV Mount PRO");
 
   useEffect(() => {
-    fetch('/api/projects')
+    fetch("/api/projects")
       .then((r) => {
-        if (!r.ok) throw new Error('Failed to load');
+        if (!r.ok) throw new Error("Failed to load");
         return r.json();
       })
       .then((data) => {
@@ -27,19 +29,11 @@ const ProjectsPage = () => {
 
   return (
     <>
-      <Helmet>
-        <title>Our Projects — ATL TV Mount PRO</title>
-        <meta
-          name="description"
-          content="See our completed TV mounting and handyman projects across the Atlanta metro area."
-        />
-      </Helmet>
-
       <PageHero
         eyebrow="Our Work"
         title="Featured Projects"
         subtitle="A showcase of professional TV mounting and handyman work across the Atlanta metro area."
-        image="https://images.unsplash.com/photo-1503387762-592deb58ef4e?w=1920&q=80"
+        image="/images/pages/page-projects.jpg"
         alt="Professional project work"
       />
 
@@ -49,7 +43,10 @@ const ProjectsPage = () => {
           {loading && (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {Array.from({ length: 6 }).map((_, i) => (
-                <div key={i} className="rounded-xl overflow-hidden border border-border bg-card">
+                <div
+                  key={i}
+                  className="rounded-xl overflow-hidden border border-border bg-card"
+                >
                   <div className="h-56 bg-muted animate-pulse" />
                   <div className="p-5 space-y-3">
                     <div className="h-4 bg-muted animate-pulse rounded w-3/4" />
@@ -65,15 +62,11 @@ const ProjectsPage = () => {
             </div>
           )}
 
-          {error && (
-            <div className="text-center py-16 text-muted-foreground">
-              Could not load projects. Please try again.
-            </div>
-          )}
-
-          {!loading && !error && projects.length === 0 && (
-            <div className="text-center py-16 text-muted-foreground">
-              No projects yet. Check back soon!
+          {(error || (!loading && !error && projects.length === 0)) && (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {DUMMY_PROJECTS.map((project, i) => (
+                <ProjectCard key={project.id} project={project} index={i} />
+              ))}
             </div>
           )}
 

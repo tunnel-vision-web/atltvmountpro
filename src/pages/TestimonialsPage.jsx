@@ -1,86 +1,81 @@
-
-import React from 'react';
-import { Helmet } from 'react-helmet';
-import { motion } from 'framer-motion';
-import TestimonialCard from '@/components/TestimonialCard';
-import PageHero from '@/components/PageHero';
+import React from "react";
+import usePageTitle from "@/hooks/usePageTitle";
+import { motion } from "framer-motion";
+import TestimonialCard from "@/components/TestimonialCard";
+import PageHero from "@/components/PageHero";
 
 const testimonials = [
   {
-    name: 'Marcus Chen',
-    service: 'TV Mounting',
+    name: "Marcus Chen",
+    service: "TV Mounting",
     rating: 5,
-    text: 'Mounted my 75-inch TV perfectly. Clean cable management and finished in under 2 hours. Very professional and respectful of my home.',
+    text: "Mounted my 75-inch TV perfectly. Clean cable management and finished in under 2 hours. Very professional and respectful of my home.",
   },
   {
-    name: 'Priya Desai',
-    service: 'Drywall Repair',
+    name: "Priya Desai",
+    service: "Drywall Repair",
     rating: 5,
-    text: 'Fixed multiple holes from old shelving. You can\'t even tell there was damage. The texture matching was perfect.',
+    text: "Fixed multiple holes from old shelving. You can't even tell there was damage. The texture matching was perfect.",
   },
   {
-    name: 'James Wilson',
-    service: 'Painting',
+    name: "James Wilson",
+    service: "Painting",
     rating: 5,
-    text: 'Repainted our living room and hallway. Professional finish and stayed on budget. They protected all our furniture and cleaned up completely.',
+    text: "Repainted our living room and hallway. Professional finish and stayed on budget. They protected all our furniture and cleaned up completely.",
   },
   {
-    name: 'Sofia Martinez',
-    service: 'Carpentry',
+    name: "Sofia Martinez",
+    service: "Carpentry",
     rating: 5,
-    text: 'Built custom shelving for our home office. Exactly what we needed and the measurements were perfect. Very satisfied with the craftsmanship.',
+    text: "Built custom shelving for our home office. Exactly what we needed and the measurements were perfect. Very satisfied with the craftsmanship.",
   },
   {
-    name: 'David Kim',
-    service: 'Flooring',
+    name: "David Kim",
+    service: "Flooring",
     rating: 5,
-    text: 'Installed laminate flooring in two bedrooms. Fast, clean, and looks amazing. They finished ahead of schedule.',
+    text: "Installed laminate flooring in two bedrooms. Fast, clean, and looks amazing. They finished ahead of schedule.",
   },
   {
-    name: 'Rachel Thompson',
-    service: 'TV Mounting',
+    name: "Rachel Thompson",
+    service: "TV Mounting",
     rating: 5,
-    text: 'Excellent service from start to finish. They helped me choose the right mount and the installation was flawless.',
+    text: "Excellent service from start to finish. They helped me choose the right mount and the installation was flawless.",
   },
   {
-    name: 'Michael Brown',
-    service: 'Plumbing',
+    name: "Michael Brown",
+    service: "Plumbing",
     rating: 5,
-    text: 'Fixed a leaky faucet and installed a new toilet. Quick, professional, and reasonably priced. Highly recommend.',
+    text: "Fixed a leaky faucet and installed a new toilet. Quick, professional, and reasonably priced. Highly recommend.",
   },
   {
-    name: 'Lisa Anderson',
-    service: 'Light Electrical',
+    name: "Lisa Anderson",
+    service: "Light Electrical",
     rating: 5,
-    text: 'Installed new outlets and light fixtures in our kitchen. Everything works perfectly and looks great.',
+    text: "Installed new outlets and light fixtures in our kitchen. Everything works perfectly and looks great.",
   },
   {
-    name: 'Carlos Ramirez',
-    service: 'Drywall Repair',
+    name: "Carlos Ramirez",
+    service: "Drywall Repair",
     rating: 5,
-    text: 'Repaired water damage in our ceiling. The repair is invisible and they matched the texture perfectly.',
+    text: "Repaired water damage in our ceiling. The repair is invisible and they matched the texture perfectly.",
   },
   {
-    name: 'Emma Davis',
-    service: 'Painting',
+    name: "Emma Davis",
+    service: "Painting",
     rating: 5,
-    text: 'Painted our entire first floor. The color consultation was helpful and the results exceeded our expectations.',
+    text: "Painted our entire first floor. The color consultation was helpful and the results exceeded our expectations.",
   },
 ];
 
 const TestimonialsPage = () => {
+  usePageTitle("Testimonials - ATL TV Mount PRO");
   return (
     <>
-      <Helmet>
-        <title>Testimonials - ATL TV Mount PRO</title>
-        <meta name="description" content="Read reviews from satisfied customers of ATL TV Mount PRO. See why Atlanta homeowners trust us for TV mounting, drywall repair, painting, and more." />
-      </Helmet>
-
       <PageHero
         eyebrow="Reviews"
         title="Client Testimonials"
         subtitle="Real feedback from homeowners who trust ATL TV Mount PRO"
-        image="https://images.unsplash.com/photo-1560518883-ce09059eeffa?w=1920&q=80"
+        image="/images/pages/page-testimonials.jpg"
         alt="Happy homeowner"
       />
 

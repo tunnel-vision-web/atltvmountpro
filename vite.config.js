@@ -1,6 +1,7 @@
 import path from 'node:path';
 import react from '@vitejs/plugin-react';
 import { createLogger, defineConfig } from 'vite';
+import tailwindcss from '@tailwindcss/vite';
 import inlineEditPlugin from './plugins/visual-editor/vite-plugin-react-inline-editor.js';
 import editModeDevPlugin from './plugins/visual-editor/vite-plugin-edit-mode.js';
 import selectionModePlugin from './plugins/selection-mode/vite-plugin-selection-mode.js';
@@ -292,6 +293,7 @@ export default defineConfig({
 	plugins: [
 		...(isDev ? [inlineEditPlugin(), editModeDevPlugin(), selectionModePlugin(), iframeRouteRestorationPlugin(), pocketbaseAuthPlugin()] : []),
 		react(),
+		tailwindcss(),
 		addTransformIndexHtml
 	],
 	server: {
@@ -306,6 +308,13 @@ export default defineConfig({
 			'.app-preview.com',
 			'.app-preview.io',
 		],
+		proxy: {
+			'/hcgi/platform': {
+				target: 'http://127.0.0.1:8090',
+				changeOrigin: true,
+				rewrite: (p) => p.replace(/^\/hcgi\/platform/, ''),
+			},
+		},
 		fs: {
 			strict: true,
 			allow: [

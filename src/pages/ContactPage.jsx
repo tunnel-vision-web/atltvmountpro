@@ -1,91 +1,81 @@
+import React, { useState } from "react";
+import usePageTitle from "@/hooks/usePageTitle";
+import { motion } from "framer-motion";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Phone, MapPin, Clock } from "lucide-react";
+import pb from "@/lib/pocketbaseClient";
+import { toast } from "sonner";
+import PageHero from "@/components/PageHero";
+import { useCMS } from "@/hooks/useCMS";
 
-import React, { useState } from 'react';
-import { Helmet } from 'react-helmet';
-import { motion } from 'framer-motion';
-import { Card, CardContent } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Phone, MapPin, Clock } from 'lucide-react';
-import pb from '@/lib/pocketbaseClient';
-import { toast } from 'sonner';
-import PageHero from '@/components/PageHero';
 
-const DEFAULT_CONTACT = {
-    hours: 'Monday - Saturday: 8:00 AM - 6:00 PM\nSunday: Closed',
-    address: 'Atlanta metro area and throughout Georgia',
-    phone: '770-374-3203',
-  };
 
 const ContactPage = () => {
   const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    phone: '',
-    message: '',
+    name: "",
+    email: "",
+    phone: "",
+    message: "",
   });
   const [loading, setLoading] = useState(false);
-  const [cmsData, setCmsData] = useState(DEFAULT_CONTACT);
+  usePageTitle("Contact Us - ATL TV Mount PRO");
 
-  useEffect(() => {
-    const loadCms = async () => {
-      try {
-        let contactCms;
-        let homeCms;
-        try {
-          contactCms = await pb.collection('cms_pages').getFirstListItem('page_id="contact"');
-          homeCms = await pb.collection('cms_pages').getFirstListItem('page_id="home"');
-        } catch {
-          const stored = localStorage.getItem('atltvmountpro_local_cms');
-          if (stored) {
-            const parsed = JSON.parse(stored);
-            contactCms = parsed.contact;
-            homeCms = parsed.home;
-          }
-        }
-        
-        setCmsData({
-          hours: contactCms?.hours || DEFAULT_CONTACT.hours,
-          address: contactCms?.address || DEFAULT_CONTACT.address,
-          phone: homeCms?.business_phone || DEFAULT_CONTACT.phone,
-        });
-      } catch (err) {
-        console.warn('ContactPage CMS load error:', err);
-      }
-    };
-    loadCms();
-  }, []);
+  const { data: cmsContact } = useCMS("contact");
+
+  const contactInfo = {
+    phone: cmsContact?.phone || "770-374-3203",
+    serviceArea:
+      cmsContact?.serviceArea || "Atlanta metro area and throughout Georgia",
+    hours:
+      cmsContact?.hours ||
+      "Monday - Saturday: 8:00 AM - 6:00 PM\nSunday: Closed",
+    address: cmsContact?.address || "Atlanta, GA",
+    mapEmbed:
+      cmsContact?.mapEmbed ||
+      "https://www.openstreetmap.org/export/embed.html?bbox=-84.4882%2C33.6490%2C-84.2882%2C33.8490&layer=mapnik&marker=33.7490%2C-84.3882",
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
-    if (!formData.name || !formData.email || !formData.phone || !formData.message) {
-      toast.error('Please fill in all fields');
+
+    if (
+      !formData.name ||
+      !formData.email ||
+      !formData.phone ||
+      !formData.message
+    ) {
+      toast.error("Please fill in all fields");
       return;
     }
 
     setLoading(true);
 
     try {
-      await pb.collection('quote_inquiries').create({
-        name: formData.name,
-        email: formData.email,
-        phone: formData.phone,
-        service_type: 'TV mounting',
-        project_details: formData.message,
-      }, { $autoCancel: false });
+      await pb.collection("quote_inquiries").create(
+        {
+          name: formData.name,
+          email: formData.email,
+          phone: formData.phone,
+          service_type: "TV mounting",
+          project_details: formData.message,
+        },
+        { $autoCancel: false },
+      );
 
-      toast.success('Message sent successfully');
+      toast.success("Message sent successfully");
       setFormData({
-        name: '',
-        email: '',
-        phone: '',
-        message: '',
+        name: "",
+        email: "",
+        phone: "",
+        message: "",
       });
     } catch (error) {
-      console.error('Contact form error:', error);
-      toast.error('Failed to send message. Please try again.');
+      console.error("Contact form error:", error);
+      toast.error("Failed to send message. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -93,16 +83,14 @@ const ContactPage = () => {
 
   return (
     <>
-      <Helmet>
-        <title>Contact Us - ATL TV Mount PRO</title>
-        <meta name="description" content="Contact ATL TV Mount PRO for professional handyman services in Atlanta. Call 770-374-3203 or fill out our contact form for a free quote." />
-      </Helmet>
-
       <PageHero
         eyebrow="Get In Touch"
-        title="Contact Us"
-        subtitle="Get in touch for a free quote or to schedule your service"
-        image="https://images.unsplash.com/photo-1486325212027-8081e485255e?w=1920&q=80"
+        title={cmsContact?.heroTitle || "Contact Us"}
+        subtitle={
+          cmsContact?.heroSubtitle ||
+          "Get in touch for a free quote or to schedule your service"
+        }
+        image={cmsContact?.heroImage || "/images/pages/page-contact.jpg"}
         alt="Atlanta cityscape"
       />
 
@@ -123,7 +111,9 @@ const ContactPage = () => {
                       <Input
                         id="contact-name"
                         value={formData.name}
-                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                        onChange={(e) =>
+                          setFormData({ ...formData, name: e.target.value })
+                        }
                         required
                         className="text-gray-900"
                         placeholder="Your name"
@@ -135,7 +125,9 @@ const ContactPage = () => {
                         id="contact-email"
                         type="email"
                         value={formData.email}
-                        onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                        onChange={(e) =>
+                          setFormData({ ...formData, email: e.target.value })
+                        }
                         required
                         className="text-gray-900"
                         placeholder="your@email.com"
@@ -147,7 +139,9 @@ const ContactPage = () => {
                         id="contact-phone"
                         type="tel"
                         value={formData.phone}
-                        onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                        onChange={(e) =>
+                          setFormData({ ...formData, phone: e.target.value })
+                        }
                         required
                         className="text-gray-900"
                         placeholder="(555) 123-4567"
@@ -158,7 +152,9 @@ const ContactPage = () => {
                       <Textarea
                         id="contact-message"
                         value={formData.message}
-                        onChange={(e) => setFormData({ ...formData, message: e.target.value })}
+                        onChange={(e) =>
+                          setFormData({ ...formData, message: e.target.value })
+                        }
                         required
                         className="text-gray-900"
                         placeholder="Tell us about your project..."
@@ -170,7 +166,7 @@ const ContactPage = () => {
                       className="w-full bg-primary hover:bg-primary/90 text-primary-foreground transition-all duration-200 active:scale-[0.98]"
                       disabled={loading}
                     >
-                      {loading ? 'Sending...' : 'Send message'}
+                      {loading ? "Sending..." : "Send message"}
                     </Button>
                   </form>
                 </CardContent>
@@ -191,8 +187,11 @@ const ContactPage = () => {
                     </div>
                     <div>
                       <h3 className="font-semibold mb-1">Phone</h3>
-                      <a href={`tel:${cmsData.phone}`} className="text-muted-foreground hover:text-primary transition-colors duration-200">
-                        {cmsData.phone}
+                      <a
+                        href={`tel:${contactInfo.phone}`}
+                        className="text-muted-foreground hover:text-primary transition-colors duration-200"
+                      >
+                        {contactInfo.phone}
                       </a>
                     </div>
                   </div>
@@ -207,8 +206,8 @@ const ContactPage = () => {
                     </div>
                     <div>
                       <h3 className="font-semibold mb-1">Service area</h3>
-                      <p className="text-muted-foreground whitespace-pre-wrap">
-                        {cmsData.address}
+                      <p className="text-muted-foreground">
+                        {contactInfo.serviceArea}
                       </p>
                     </div>
                   </div>
@@ -223,8 +222,8 @@ const ContactPage = () => {
                     </div>
                     <div>
                       <h3 className="font-semibold mb-1">Hours</h3>
-                      <p className="text-muted-foreground whitespace-pre-wrap">
-                        {cmsData.hours}
+                      <p className="text-muted-foreground whitespace-pre-line">
+                        {contactInfo.hours}
                       </p>
                     </div>
                   </div>
@@ -233,7 +232,7 @@ const ContactPage = () => {
 
               <div className="rounded-2xl overflow-hidden shadow-lg h-[300px]">
                 <iframe
-                  src="https://www.openstreetmap.org/export/embed.html?bbox=-84.4882%2C33.6490%2C-84.2882%2C33.8490&layer=mapnik&marker=33.7490%2C-84.3882"
+                  src={contactInfo.mapEmbed}
                   width="100%"
                   height="100%"
                   style={{ border: 0 }}

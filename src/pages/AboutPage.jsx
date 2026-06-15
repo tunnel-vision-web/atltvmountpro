@@ -1,72 +1,75 @@
-
-import React from 'react';
-import { Helmet } from 'react-helmet';
-import { motion } from 'framer-motion';
-import { Award, Clock, Shield, Users } from 'lucide-react';
-import { Card, CardContent } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { useUI } from '@/contexts/UIContext';
-import PageHero from '@/components/PageHero';
+import React from "react";
+import usePageTitle from "@/hooks/usePageTitle";
+import { motion } from "framer-motion";
+import { Award, Clock, Shield, Users } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { useUI } from "@/contexts/UIContext";
+import PageHero from "@/components/PageHero";
+import { useCMS } from "@/hooks/useCMS";
 
 const stats = [
-  { icon: Clock, label: 'Years experience', value: '5+' },
-  { icon: Users, label: 'Installations completed', value: '1,000+' },
-  { icon: Award, label: 'Satisfaction rate', value: '98.7%' },
-  { icon: Shield, label: 'Licensed & insured', value: 'Yes' },
+  { icon: Clock, label: "Years experience", value: "5+" },
+  { icon: Users, label: "Installations completed", value: "1,000+" },
+  { icon: Award, label: "Satisfaction rate", value: "98.7%" },
+  { icon: Shield, label: "Licensed & insured", value: "Yes" },
 ];
 
-import pb from '@/lib/pocketbaseClient';
 
-const DEFAULT_ABOUT = {
-  story_title: 'Our story',
-  story_content: 'Founded in 2021, ATL TV Mount PRO started with a simple mission: provide reliable, professional handyman services to the Atlanta community. What began as a TV mounting specialty has grown into a full-service handyman company serving thousands of satisfied customers.\n\nOur team of skilled technicians brings years of experience and a commitment to quality workmanship. We take pride in every project, whether it\'s mounting a TV, repairing drywall, or completing a full room renovation.\n\nWe\'re fully licensed and insured, and we stand behind our work with a 100% satisfaction guarantee. When you choose ATL TV Mount PRO, you\'re choosing professionalism, reliability, and expertise.',
-  hero_image: 'https://images.unsplash.com/photo-1581858726788-75bc0f6a952d?w=1920&q=80',
-};
 
 const AboutPage = () => {
   const { openBookingModal } = useUI();
-  const [cmsData, setCmsData] = React.useState(DEFAULT_ABOUT);
+  const { data: cmsAbout } = useCMS("about");
 
-  React.useEffect(() => {
-    const loadCms = async () => {
-      try {
-        let record;
-        try {
-          record = await pb.collection('cms_pages').getFirstListItem('page_id="about"');
-        } catch {
-          const stored = localStorage.getItem('atltvmountpro_local_cms');
-          if (stored) {
-            record = JSON.parse(stored).about;
-          }
-        }
-        if (record) {
-          setCmsData({
-            story_title: record.story_title || DEFAULT_ABOUT.story_title,
-            story_content: record.story_content || DEFAULT_ABOUT.story_content,
-            hero_image: record.hero_image || DEFAULT_ABOUT.hero_image,
-          });
-        }
-      } catch (err) {
-        console.warn('AboutPage CMS load error:', err);
-      }
-    };
-    loadCms();
-  }, []);
+  const stats =
+    cmsAbout?.stats?.length > 0
+      ? cmsAbout.stats
+      : [
+          { icon: Clock, label: "Years experience", value: "5+" },
+          { icon: Users, label: "Installations completed", value: "1,000+" },
+          { icon: Award, label: "Satisfaction rate", value: "98.7%" },
+          { icon: Shield, label: "Licensed & insured", value: "Yes" },
+        ];
 
-  const paragraphs = cmsData.story_content.split('\n\n').filter(Boolean);
+  const storyParagraphs =
+    cmsAbout?.storyParagraphs?.length > 0
+      ? cmsAbout.storyParagraphs
+      : [
+          "Founded in 2021, ATL TV Mount PRO started with a simple mission: provide reliable, professional handyman services to the Atlanta community. What began as a TV mounting specialty has grown into a full-service handyman company serving thousands of satisfied customers.",
+          "Our team of skilled technicians brings years of experience and a commitment to quality workmanship. We take pride in every project, whether it's mounting a TV, repairing drywall, or completing a full room renovation.",
+          "We're fully licensed and insured, and we stand behind our work with a 100% satisfaction guarantee. When you choose ATL TV Mount PRO, you're choosing professionalism, reliability, and expertise.",
+        ];
+
+  const whyChooseUs =
+    cmsAbout?.whyChooseUs?.length > 0
+      ? cmsAbout.whyChooseUs
+      : [
+          {
+            title: "Professional credentials",
+            description: "Fully licensed and insured for your peace of mind",
+          },
+          {
+            title: "Same-day service",
+            description: "Available with $40 rush fee, subject to availability",
+          },
+          {
+            title: "Quality guarantee",
+            description: "100% satisfaction guarantee on all work",
+          },
+        ];
+
+  usePageTitle("About Us - ATL TV Mount PRO");
 
   return (
     <>
-      <Helmet>
-        <title>About Us - ATL TV Mount PRO</title>
-        <meta name="description" content="Learn about ATL TV Mount PRO - 5+ years of professional handyman services in Atlanta with 1,000+ installations completed. Licensed, insured, and trusted." />
-      </Helmet>
-
       <PageHero
         eyebrow="About Us"
-        title="About ATL TV Mount PRO"
-        subtitle="Your trusted partner for professional handyman services in Atlanta"
-        image={cmsData.hero_image}
+        title={cmsAbout?.heroTitle || "About ATL TV Mount PRO"}
+        subtitle={
+          cmsAbout?.heroSubtitle ||
+          "Your trusted partner for professional handyman services in Atlanta"
+        }
+        image={cmsAbout?.heroImage || "/images/about/about-hero.jpg"}
         alt="Professional handyman at work"
       />
 
@@ -79,9 +82,14 @@ const AboutPage = () => {
               transition={{ duration: 0.5, delay: 0.2 }}
             >
               <img
-                src={cmsData.hero_image}
+                src={cmsAbout?.heroImage || "/images/about/about-hero.jpg"}
                 alt="Professional handyman at work"
                 className="rounded-2xl shadow-lg w-full object-cover max-h-[450px]"
+                onError={(e) => {
+                  e.target.onerror = null;
+                  e.target.src =
+                    "https://images.unsplash.com/photo-1581858726788-75bc0f6a952d?w=900&q=80";
+                }}
               />
             </motion.div>
             <motion.div
@@ -89,10 +97,13 @@ const AboutPage = () => {
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.5, delay: 0.2 }}
             >
-              <h2 className="text-3xl font-bold mb-4">{cmsData.story_title}</h2>
-              {paragraphs.map((p, idx) => (
-                <p key={idx} className="text-muted-foreground leading-relaxed mb-4">
-                  {p}
+              <h2 className="text-3xl font-bold mb-4">{cmsAbout?.storyTitle || cmsAbout?.story_title || "Our story"}</h2>
+              {storyParagraphs.map((para, idx) => (
+                <p
+                  key={idx}
+                  className="text-muted-foreground leading-relaxed mb-4"
+                >
+                  {para}
                 </p>
               ))}
             </motion.div>
@@ -108,10 +119,14 @@ const AboutPage = () => {
               >
                 <Card className="text-center bg-card border-border">
                   <CardContent className="p-6">
-                    <div className="mb-4 p-3 bg-primary/10 rounded-xl w-fit mx-auto">
-                      <stat.icon className="w-8 h-8 text-primary" />
-                    </div>
-                    <p className="text-3xl font-bold mb-2 text-card-foreground">{stat.value}</p>
+                    {stat.icon && (
+                      <div className="mb-4 p-3 bg-primary/10 rounded-xl w-fit mx-auto">
+                        <stat.icon className="w-8 h-8 text-primary" />
+                      </div>
+                    )}
+                    <p className="text-3xl font-bold mb-2 text-card-foreground">
+                      {stat.value}
+                    </p>
                     <p className="text-muted-foreground">{stat.label}</p>
                   </CardContent>
                 </Card>
@@ -127,24 +142,14 @@ const AboutPage = () => {
           >
             <h2 className="text-3xl font-bold mb-4">Why choose us?</h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
-              <div>
-                <h3 className="text-xl font-semibold mb-2">Professional credentials</h3>
-                <p className="text-primary-foreground/90">
-                  Fully licensed and insured for your peace of mind
-                </p>
-              </div>
-              <div>
-                <h3 className="text-xl font-semibold mb-2">Same-day service</h3>
-                <p className="text-primary-foreground/90">
-                  Available with $40 rush fee, subject to availability
-                </p>
-              </div>
-              <div>
-                <h3 className="text-xl font-semibold mb-2">Quality guarantee</h3>
-                <p className="text-primary-foreground/90">
-                  100% satisfaction guarantee on all work
-                </p>
-              </div>
+              {whyChooseUs.map((item, idx) => (
+                <div key={idx}>
+                  <h3 className="text-xl font-semibold mb-2">{item.title}</h3>
+                  <p className="text-primary-foreground/90">
+                    {item.description}
+                  </p>
+                </div>
+              ))}
             </div>
             <Button
               onClick={openBookingModal}

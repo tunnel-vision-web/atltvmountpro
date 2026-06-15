@@ -1,7 +1,6 @@
-
-import React from 'react';
-import { Link } from 'react-router-dom';
-import { Facebook, Instagram, Twitter } from 'lucide-react';
+import React from "react";
+import { Link } from "react-router-dom";
+import { Globe, Phone, Mail } from "lucide-react";
 
 const Footer = () => {
   return (
@@ -9,15 +8,15 @@ const Footer = () => {
       <div className="max-w-[1140px] mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           {/* Brand */}
-          <div>
+          <div className="flex flex-col items-center text-center">
             <img
-              src="https://horizons-cdn.hostinger.com/10e32518-3a0b-422d-a971-66d579a3db35/47c7080c79518d5a6d915f8a78db18d6.png"
+              src="/images/logo/logo.png"
               alt="ATL TV Mount PRO"
               className="h-12 mb-4"
             />
             <p className="text-sm leading-relaxed">
-              Professional TV mounting and handyman services in the Atlanta metro area
-              and throughout Georgia.
+              Professional TV mounting and handyman services in the Atlanta
+              metro area and throughout Georgia.
             </p>
           </div>
 
@@ -25,19 +24,34 @@ const Footer = () => {
           <div>
             <span className="font-semibold mb-4 block">Quick Links</span>
             <nav className="flex flex-col gap-2">
-              <Link to="/" className="text-sm hover:text-primary transition-colors duration-200">
+              <Link
+                to="/"
+                className="text-sm hover:text-primary transition-colors duration-200"
+              >
                 Home
               </Link>
-              <Link to="/services" className="text-sm hover:text-primary transition-colors duration-200">
+              <Link
+                to="/services"
+                className="text-sm hover:text-primary transition-colors duration-200"
+              >
                 Services
               </Link>
-              <Link to="/about" className="text-sm hover:text-primary transition-colors duration-200">
+              <Link
+                to="/about"
+                className="text-sm hover:text-primary transition-colors duration-200"
+              >
                 About
               </Link>
-              <Link to="/testimonials" className="text-sm hover:text-primary transition-colors duration-200">
+              <Link
+                to="/testimonials"
+                className="text-sm hover:text-primary transition-colors duration-200"
+              >
                 Testimonials
               </Link>
-              <Link to="/contact" className="text-sm hover:text-primary transition-colors duration-200">
+              <Link
+                to="/contact"
+                className="text-sm hover:text-primary transition-colors duration-200"
+              >
                 Contact
               </Link>
             </nav>
@@ -48,7 +62,7 @@ const Footer = () => {
             <span className="font-semibold mb-4 block">Contact</span>
             <div className="space-y-2 text-sm">
               <p>
-                Phone:{' '}
+                Phone:{" "}
                 <a
                   href="tel:770-374-3203"
                   className="hover:text-primary transition-colors duration-200"
@@ -57,28 +71,28 @@ const Footer = () => {
                 </a>
               </p>
               <p>Service area: Atlanta metro area and Georgia</p>
-              <p>Hours: Mon–Sat 8:00 AM – 6:00 PM</p>
+              <p>Hours: Mon–Sat 8:00 AM – 7:00 PM</p>
               <div className="flex gap-4 mt-4">
                 <a
-                  href="#"
+                  href="/"
                   className="hover:text-primary transition-colors duration-200"
-                  aria-label="Facebook"
+                  aria-label="Website"
                 >
-                  <Facebook className="w-5 h-5" />
+                  <Globe className="w-5 h-5" />
                 </a>
                 <a
-                  href="#"
+                  href="tel:770-374-3203"
                   className="hover:text-primary transition-colors duration-200"
-                  aria-label="Instagram"
+                  aria-label="Phone"
                 >
-                  <Instagram className="w-5 h-5" />
+                  <Phone className="w-5 h-5" />
                 </a>
                 <a
-                  href="#"
+                  href="mailto:info@atltvmountpro.com"
                   className="hover:text-primary transition-colors duration-200"
-                  aria-label="Twitter"
+                  aria-label="Email"
                 >
-                  <Twitter className="w-5 h-5" />
+                  <Mail className="w-5 h-5" />
                 </a>
               </div>
             </div>
@@ -87,7 +101,9 @@ const Footer = () => {
 
         {/* Bottom bar */}
         <div className="border-t border-border mt-8 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
-          <p className="text-sm">© 2025 ATL TV Mount PRO. All rights reserved.</p>
+          <p className="text-sm">
+            © 2025 Atlanta TV Mount PRO. All rights reserved.
+          </p>
           <div className="flex gap-6 text-sm">
             <Link
               to="/privacy-policy"

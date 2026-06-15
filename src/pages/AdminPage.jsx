@@ -1,102 +1,166 @@
-import React, { useEffect, useState, useCallback } from 'react';
-import { Helmet } from 'react-helmet';
-import { Link } from 'react-router-dom';
-import { 
-  Plus, Pencil, Trash2, X, ChevronLeft, Save, Loader2, Eye, EyeOff, LogOut,
-  Tv, ClipboardList, Users, UserCog, Menu, Search, CheckCircle2, Clock, AlertTriangle, FileText,
-  User, Mail, Key, Shield, Lock, FileEdit, Info
-} from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { toast } from 'sonner';
-import pb from '@/lib/pocketbaseClient';
+import React, { useEffect, useState, useCallback } from "react";
 
-const ADMIN_KEY_STORAGE = 'atltvmountpro_admin_key';
-const LOCAL_BOOKINGS_STORAGE = 'atltvmountpro_local_bookings';
-const LOCAL_QUOTES_STORAGE = 'atltvmountpro_local_quotes';
-const LOCAL_TEAM_STORAGE = 'atltvmountpro_local_team';
-const LOCAL_USERS_STORAGE = 'atltvmountpro_local_users';
-const LOCAL_CMS_STORAGE = 'atltvmountpro_local_cms';
+import { Link } from "react-router-dom";
+import {
+  Plus,
+  Pencil,
+  Trash2,
+  X,
+  ChevronLeft,
+  Save,
+  Loader2,
+  Eye,
+  EyeOff,
+  LogOut,
+  Tv,
+  ClipboardList,
+  Users,
+  UserCog,
+  Menu,
+  Search,
+  CheckCircle2,
+  Clock,
+  AlertTriangle,
+  FileText,
+  User,
+  Mail,
+  Key,
+  Shield,
+  Lock,
+  Image as ImageIcon,
+  DollarSign,
+  LayoutGrid,
+  List,
+  Send,
+  Smartphone,
+  MessageSquare,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { toast } from "sonner";
+import pb from "@/lib/pocketbaseClient";
+import CMSEditor from "@/components/CMSEditor";
+import FinanceModule from "@/components/FinanceModule";
+import MediaLibraryAdmin from "@/components/MediaLibraryAdmin";
+import MediaPickerButton from "@/components/MediaPickerButton";
+import AppointmentsCalendar from "@/components/AppointmentsCalendar";
+import {
+  autoCreateInvoiceForBooking,
+  getInvoiceForBooking,
+  sendInvoiceVia,
+} from "@/lib/invoiceUtils";
+
+const ADMIN_KEY_STORAGE = "atltvmountpro_admin_key";
+const LOCAL_BOOKINGS_STORAGE = "atltvmountpro_local_bookings";
+const LOCAL_QUOTES_STORAGE = "atltvmountpro_local_quotes";
+const LOCAL_TEAM_STORAGE = "atltvmountpro_local_team";
+const LOCAL_USERS_STORAGE = "atltvmountpro_local_users";
 
 const ALL_SERVICES = [
-  'TV Mounting', 'Cable Management', 'Drywall Repair',
-  'Painting', 'Carpentry', 'Flooring', 'Plumbing',
-  'Light Electrical', 'Shelf Installation',
+  "TV Mounting",
+  "Cable Management",
+  "Drywall Repair",
+  "Painting",
+  "Carpentry",
+  "Flooring",
+  "Plumbing",
+  "Light Electrical",
+  "Shelf Installation",
 ];
 
-const DEFAULT_CMS = {
-  home: {
-    hero_title: 'Clean walls. Perfect angles.',
-    hero_subtitle: 'Atlanta\'s premier TV mounting and handyman specialists. Fast, secure, and clean installations.',
-    business_phone: '770-374-3203',
-    business_email: 'info@atltvmountpro.com',
-  },
-  about: {
-    story_title: 'Our story',
-    story_content: 'Founded in 2021, ATL TV Mount PRO started with a simple mission: provide reliable, professional handyman services to the Atlanta community. What began as a TV mounting specialty has grown into a full-service handyman company serving thousands of satisfied customers.',
-    hero_image: 'https://images.unsplash.com/photo-1581858726788-75bc0f6a952d?w=1920&q=80',
-  },
-  contact: {
-    hours: 'Monday – Saturday: 8am – 7pm',
-    address: 'Atlanta Metro Area, GA',
-    city_description: 'We serve the entire Atlanta metro area and surrounding communities. Reach out for a free quote!',
-  }
-};
-
 const EMPTY_PROJECT_FORM = {
-  title: '',
-  location: '',
-  description: '',
+  title: "",
+  location: "",
+  description: "",
   services: [],
-  thumbnail: '',
-  images: [''],
+  thumbnail: "",
+  images: [""],
   sort_order: 0,
 };
 
+// ── Permission constants ──────────────────────────────────────────────────────
+const ROLES = {
+  Admin: "Admin",
+  Moderator: "Moderator",
+  Viewer: "Viewer",
+};
+
+const PERMISSIONS = {
+  [ROLES.Admin]: {
+    canView: ["projects", "orders", "team", "profile", "cms", "finance", "media"],
+    canEdit: [
+      "projects",
+      "orders",
+      "team",
+      "profile",
+      "cms",
+      "users",
+      "finance",
+      "media",
+    ],
+    canDelete: [
+      "projects",
+      "orders",
+      "team",
+      "profile",
+      "cms",
+      "users",
+      "finance",
+      "media",
+    ],
+  },
+  [ROLES.Moderator]: {
+    canView: ["projects", "orders", "team", "profile", "finance", "media"],
+    canEdit: ["projects", "orders", "team", "finance", "media"],
+    canDelete: ["projects", "orders", "team", "media"],
+  },
+  [ROLES.Viewer]: {
+    canView: ["projects", "orders", "team", "profile", "finance", "media"],
+    canEdit: [],
+    canDelete: [],
+  },
+};
+
+function hasPermission(role, action, resource) {
+  if (!role || !PERMISSIONS[role]) return false;
+  return PERMISSIONS[role][action]?.includes(resource) ?? false;
+}
+
 // ── Login screen ──────────────────────────────────────────────────────────────
 const LoginScreen = ({ onLogin }) => {
-  const [key, setKey] = useState('');
-  const [show, setShow] = useState(false);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [err, setErr] = useState('');
+  const [err, setErr] = useState("");
 
   const submit = async (e) => {
     e.preventDefault();
-    setErr('');
+    setErr("");
     setLoading(true);
-    
-    // Check credentials and resolve roles
-    let resolvedRole = 'Admin';
-    if (key === 'mod123') {
-      resolvedRole = 'Moderator';
-    } else if (key === 'view123') {
-      resolvedRole = 'Viewer';
-    }
-
     try {
-      const res = await fetch('/api/admin/verify', {
-        headers: { 'x-admin-key': key },
-      });
-      if (res.ok) {
-        localStorage.setItem(ADMIN_KEY_STORAGE, key);
-        onLogin(key, 'Admin');
-      } else {
-        if (key === 'admin123' || key === 'password' || key === 'mod123' || key === 'view123') {
-          localStorage.setItem(ADMIN_KEY_STORAGE, key);
-          onLogin(key, resolvedRole);
-          toast.info(`Logged in as ${resolvedRole}`);
-        } else {
-          setErr('Invalid admin key. Try "admin123", "mod123", or "view123".');
-        }
-      }
-    } catch {
-      if (key === 'admin123' || key === 'password' || key === 'mod123' || key === 'view123') {
-        localStorage.setItem(ADMIN_KEY_STORAGE, key);
-        onLogin(key, resolvedRole);
-        toast.info(`Logged in as ${resolvedRole} (Offline fallback)`);
-      } else {
-        setErr('Network error. Enter "admin123", "mod123", or "view123" to login.');
-      }
+      const authData = await pb
+        .collection("users")
+        .authWithPassword(email, password);
+      // Role is already in the auth response record — no extra fetch needed
+      const role = authData.record.role || ROLES.Admin;
+      onLogin({ email, role, id: authData.record.id });
+      toast.success("Signed in successfully.");
+    } catch (error) {
+      console.error("Login error:", error);
+      setErr("Invalid email or password. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -106,35 +170,47 @@ const LoginScreen = ({ onLogin }) => {
     <div className="min-h-screen flex items-center justify-center bg-background px-4">
       <div className="w-full max-w-sm bg-card border border-border rounded-2xl p-8 shadow-xl">
         <img
-          src="https://horizons-cdn.hostinger.com/10e32518-3a0b-422d-a971-66d579a3db35/47c7080c79518d5a6d915f8a78db18d6.png"
+          src="/images/logo/logo.png"
           alt="ATL TV Mount PRO"
-          className="h-10 mx-auto mb-6"
+          className="h-14 mx-auto mb-6"
         />
         <h1 className="text-xl font-bold text-center mb-1">Admin Panel</h1>
-        <p className="text-sm text-muted-foreground text-center mb-6">Enter your credentials to continue</p>
+        <p className="text-sm text-muted-foreground text-center mb-6">
+          Sign in with your credentials
+        </p>
         <form onSubmit={submit} className="space-y-4">
-          <div className="relative">
+          <div>
+            <label className="text-xs font-medium text-muted-foreground mb-1 block">
+              Email
+            </label>
             <input
-              type={show ? 'text' : 'password'}
-              value={key}
-              onChange={(e) => setKey(e.target.value)}
-              placeholder="Admin, Mod, or Viewer key..."
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="admin@atltvmountpro.com"
+              className="w-full bg-muted border border-border rounded-lg px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
+              required
+            />
+          </div>
+          <div className="relative">
+            <label className="text-xs font-medium text-muted-foreground mb-1 block">
+              Password
+            </label>
+            <input
+              type={showPassword ? "text" : "password"}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="••••••••"
               className="w-full bg-muted border border-border rounded-lg px-4 py-2.5 pr-10 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
               required
             />
             <button
               type="button"
-              onClick={() => setShow(!show)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute right-3 top-[26px] text-muted-foreground hover:text-foreground"
             >
-              {show ? <EyeOff size={15} /> : <Eye size={15} />}
+              {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
             </button>
-          </div>
-          <div className="text-xs text-muted-foreground bg-muted/50 p-2.5 rounded-lg border border-border space-y-1">
-            <p className="font-semibold text-foreground">Mock Access Keys:</p>
-            <p>• <code className="text-primary font-bold">admin123</code> - Full Admin privileges</p>
-            <p>• <code className="text-primary font-bold">mod123</code> - Moderator permissions</p>
-            <p>• <code className="text-primary font-bold">view123</code> - Read-only Viewer</p>
           </div>
           {err && <p className="text-xs text-destructive">{err}</p>}
           <Button
@@ -142,10 +218,13 @@ const LoginScreen = ({ onLogin }) => {
             className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold"
             disabled={loading}
           >
-            {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Sign In'}
+            {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Sign In"}
           </Button>
         </form>
-        <Link to="/" className="block text-center text-xs text-muted-foreground hover:text-foreground mt-4 transition-colors">
+        <Link
+          to="/"
+          className="block text-center text-xs text-muted-foreground hover:text-foreground mt-4 transition-colors"
+        >
           ← Back to site
         </Link>
       </div>
@@ -153,8 +232,8 @@ const LoginScreen = ({ onLogin }) => {
   );
 };
 
-// ── Project Form Dialog ────────────────────────────────────────────────────────
-const ProjectFormDialog = ({ open, onClose, initial, adminKey, onSaved, isReadOnly }) => {
+// ── Project form dialog ────────────────────────────────────────────────────────
+const ProjectFormDialog = ({ open, onClose, initial, onSaved }) => {
   const [form, setForm] = useState(EMPTY_PROJECT_FORM);
   const [saving, setSaving] = useState(false);
 
@@ -162,7 +241,11 @@ const ProjectFormDialog = ({ open, onClose, initial, adminKey, onSaved, isReadOn
     if (open) {
       setForm(
         initial
-          ? { ...initial, images: initial.images?.length ? initial.images : [''], sort_order: initial.sort_order ?? 0 }
+          ? {
+              ...initial,
+              images: initial.images?.length ? initial.images : [""],
+              sort_order: initial.sort_order ?? 0,
+            }
           : EMPTY_PROJECT_FORM,
       );
     }
@@ -170,39 +253,27 @@ const ProjectFormDialog = ({ open, onClose, initial, adminKey, onSaved, isReadOn
 
   const field = (k, v) => setForm((f) => ({ ...f, [k]: v }));
 
-  const toggleService = (s) => {
-    if (isReadOnly) return;
+  const toggleService = (s) =>
     setForm((f) => ({
       ...f,
-      services: f.services.includes(s) ? f.services.filter((x) => x !== s) : [...f.services, s],
+      services: f.services.includes(s)
+        ? f.services.filter((x) => x !== s)
+        : [...f.services, s],
     }));
-  };
 
-  const setImage = (i, v) => {
-    if (isReadOnly) return;
+  const setImage = (i, v) =>
     setForm((f) => {
       const imgs = [...f.images];
       imgs[i] = v;
       return { ...f, images: imgs };
     });
-  };
 
-  const addImage = () => {
-    if (isReadOnly) return;
-    setForm((f) => ({ ...f, images: [...f.images, ''] }));
-  };
-  
-  const removeImage = (i) => {
-    if (isReadOnly) return;
+  const addImage = () => setForm((f) => ({ ...f, images: [...f.images, ""] }));
+  const removeImage = (i) =>
     setForm((f) => ({ ...f, images: f.images.filter((_, idx) => idx !== i) }));
-  };
 
   const submit = async (e) => {
     e.preventDefault();
-    if (isReadOnly) {
-      toast.error('Permission Denied: Viewer role is read-only.');
-      return;
-    }
     setSaving(true);
     const payload = {
       ...form,
@@ -210,25 +281,30 @@ const ProjectFormDialog = ({ open, onClose, initial, adminKey, onSaved, isReadOn
       sort_order: Number(form.sort_order) || 0,
     };
     try {
-      const url = initial ? `/api/projects/${initial.id}` : '/api/projects';
+      const url = initial ? `/api/projects/${initial.id}` : "/api/projects";
       const res = await fetch(url, {
-        method: initial ? 'PUT' : 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-admin-key': adminKey },
+        method: initial ? "PUT" : "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
-      if (!res.ok) throw new Error('Save failed');
+      if (!res.ok) throw new Error("Save failed");
       const saved = await res.json();
       onSaved(saved, !!initial);
       onClose();
-      toast.success(initial ? 'Project updated.' : 'Project created.');
+      toast.success(initial ? "Project updated." : "Project created.");
     } catch {
+      // Offline fallback
       const mockSaved = {
         ...payload,
-        id: initial?.id || 'local_' + Math.random().toString(36).substr(2, 9),
+        id: initial?.id || "local_" + Math.random().toString(36).substr(2, 9),
       };
       onSaved(mockSaved, !!initial);
       onClose();
-      toast.success(initial ? 'Project updated (Local).' : 'Project created (Local).');
+      toast.success(
+        initial
+          ? "Project updated (Local Mode)."
+          : "Project created (Local Mode).",
+      );
     } finally {
       setSaving(false);
     }
@@ -238,61 +314,65 @@ const ProjectFormDialog = ({ open, onClose, initial, adminKey, onSaved, isReadOn
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto bg-card border border-border">
         <DialogHeader>
-          <DialogTitle>{initial ? 'Edit Project' : 'New Project'} {isReadOnly && '(Read Only)'}</DialogTitle>
+          <DialogTitle>{initial ? "Edit Project" : "New Project"}</DialogTitle>
         </DialogHeader>
 
         <form onSubmit={submit} className="space-y-5 mt-2">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="text-sm font-medium mb-1.5 block text-foreground">Title *</label>
+              <label className="text-sm font-medium mb-1.5 block text-foreground">
+                Title *
+              </label>
               <input
                 value={form.title}
-                onChange={(e) => field('title', e.target.value)}
+                onChange={(e) => field("title", e.target.value)}
                 required
-                disabled={isReadOnly}
-                className="input-base w-full disabled:opacity-60"
+                className="input-base w-full"
                 placeholder='e.g. 75" Samsung Wall Mount'
               />
             </div>
             <div>
-              <label className="text-sm font-medium mb-1.5 block text-foreground">Location *</label>
+              <label className="text-sm font-medium mb-1.5 block text-foreground">
+                Location *
+              </label>
               <input
                 value={form.location}
-                onChange={(e) => field('location', e.target.value)}
+                onChange={(e) => field("location", e.target.value)}
                 required
-                disabled={isReadOnly}
-                className="input-base w-full disabled:opacity-60"
+                className="input-base w-full"
                 placeholder="e.g. Buckhead, Atlanta, GA"
               />
             </div>
           </div>
 
           <div>
-            <label className="text-sm font-medium mb-1.5 block text-foreground">Description</label>
+            <label className="text-sm font-medium mb-1.5 block text-foreground">
+              Description
+            </label>
             <textarea
               value={form.description}
-              onChange={(e) => field('description', e.target.value)}
+              onChange={(e) => field("description", e.target.value)}
               rows={4}
-              disabled={isReadOnly}
-              className="input-base w-full resize-none disabled:opacity-60"
+              className="input-base w-full resize-none"
               placeholder="Describe the project scope and outcome..."
             />
           </div>
 
           <div>
-            <label className="text-sm font-medium mb-2 block text-foreground">Services Provided</label>
+            <label className="text-sm font-medium mb-2 block text-foreground">
+              Services Provided
+            </label>
             <div className="flex flex-wrap gap-2">
               {ALL_SERVICES.map((s) => (
                 <button
                   key={s}
                   type="button"
                   onClick={() => toggleService(s)}
-                  disabled={isReadOnly}
                   className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-150 border ${
                     form.services.includes(s)
-                      ? 'bg-primary text-primary-foreground border-primary'
-                      : 'bg-muted text-muted-foreground border-border hover:border-primary/40'
-                  } disabled:opacity-80`}
+                      ? "bg-primary text-primary-foreground border-primary"
+                      : "bg-muted text-muted-foreground border-border hover:border-primary/40"
+                  }`}
                 >
                   {s}
                 </button>
@@ -300,34 +380,34 @@ const ProjectFormDialog = ({ open, onClose, initial, adminKey, onSaved, isReadOn
             </div>
           </div>
 
-          <div>
-            <label className="text-sm font-medium mb-1.5 block text-foreground">Thumbnail URL</label>
-            <input
-              value={form.thumbnail}
-              onChange={(e) => field('thumbnail', e.target.value)}
-              disabled={isReadOnly}
-              className="input-base w-full disabled:opacity-60"
-              placeholder="https://… or /images/projects/project-1/main.jpg"
-            />
-          </div>
+          <MediaPickerButton
+            label="Thumbnail"
+            value={form.thumbnail}
+            onChange={(val) => field("thumbnail", val)}
+            accept="image"
+            placeholder="Select project thumbnail…"
+          />
 
           <div>
-            <label className="text-sm font-medium mb-2 block text-foreground">Carousel Images</label>
+            <label className="text-sm font-medium mb-2 block text-foreground">
+              Carousel Images
+            </label>
             <div className="space-y-2">
               {form.images.map((img, i) => (
-                <div key={i} className="flex gap-2 items-center">
-                  <input
-                    value={img}
-                    onChange={(e) => setImage(i, e.target.value)}
-                    disabled={isReadOnly}
-                    className="input-base flex-1 disabled:opacity-60"
-                    placeholder={`Image ${i + 1} URL`}
-                  />
-                  {form.images.length > 1 && !isReadOnly && (
+                <div key={i} className="flex gap-2 items-start">
+                  <div className="flex-1">
+                    <MediaPickerButton
+                      value={img}
+                      onChange={(val) => setImage(i, val)}
+                      accept="image"
+                      placeholder={`Carousel image ${i + 1}…`}
+                    />
+                  </div>
+                  {form.images.length > 1 && (
                     <button
                       type="button"
                       onClick={() => removeImage(i)}
-                      className="text-muted-foreground hover:text-destructive transition-colors"
+                      className="text-muted-foreground hover:text-destructive transition-colors mt-8"
                     >
                       <X size={16} />
                     </button>
@@ -335,39 +415,49 @@ const ProjectFormDialog = ({ open, onClose, initial, adminKey, onSaved, isReadOn
                 </div>
               ))}
             </div>
-            {!isReadOnly && (
-              <button
-                type="button"
-                onClick={addImage}
-                className="mt-2 text-xs text-primary hover:text-primary/80 flex items-center gap-1 transition-colors"
-              >
-                <Plus size={13} /> Add image
-              </button>
-            )}
+            <button
+              type="button"
+              onClick={addImage}
+              className="mt-2 text-xs text-primary hover:text-primary/80 flex items-center gap-1 transition-colors"
+            >
+              <Plus size={13} /> Add image
+            </button>
           </div>
 
           <div className="w-32">
-            <label className="text-sm font-medium mb-1.5 block text-foreground">Sort Order</label>
+            <label className="text-sm font-medium mb-1.5 block text-foreground">
+              Sort Order
+            </label>
             <input
               type="number"
               value={form.sort_order}
-              onChange={(e) => field('sort_order', e.target.value)}
-              disabled={isReadOnly}
-              className="input-base w-full disabled:opacity-60"
+              onChange={(e) => field("sort_order", e.target.value)}
+              className="input-base w-full"
               min={0}
             />
           </div>
 
           <div className="flex justify-end gap-3 pt-2 border-t border-border">
-            <Button type="button" variant="outline" onClick={onClose}>
-              {isReadOnly ? 'Close' : 'Cancel'}
+            <Button
+              type="button"
+              variant="outline"
+              onClick={onClose}
+              disabled={saving}
+            >
+              Cancel
             </Button>
-            {!isReadOnly && (
-              <Button type="submit" className="bg-primary hover:bg-primary/90 text-primary-foreground">
-                {saving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Save size={14} className="mr-1.5" />}
-                {initial ? 'Save Changes' : 'Create Project'}
-              </Button>
-            )}
+            <Button
+              type="submit"
+              className="bg-primary hover:bg-primary/90 text-primary-foreground"
+              disabled={saving}
+            >
+              {saving ? (
+                <Loader2 className="w-4 h-4 animate-spin mr-2" />
+              ) : (
+                <Save size={14} className="mr-1.5" />
+              )}
+              {initial ? "Save Changes" : "Create Project"}
+            </Button>
           </div>
         </form>
       </DialogContent>
@@ -376,28 +466,37 @@ const ProjectFormDialog = ({ open, onClose, initial, adminKey, onSaved, isReadOn
 };
 
 // ── Team Tech Form Dialog ──────────────────────────────────────────────────────
-const TechFormDialog = ({ open, onClose, initial, onSaved, isReadOnly }) => {
-  const [form, setForm] = useState({ name: '', photo: '', bio: '', skills: '' });
+const TechFormDialog = ({ open, onClose, initial, onSaved }) => {
+  const [form, setForm] = useState({
+    name: "",
+    photo: "",
+    bio: "",
+    skills: "",
+  });
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     if (open) {
       setForm(
         initial
-          ? { ...initial, skills: Array.isArray(initial.skills) ? initial.skills.join(', ') : initial.skills }
-          : { name: '', photo: '', bio: '', skills: '' }
+          ? {
+              ...initial,
+              skills: Array.isArray(initial.skills)
+                ? initial.skills.join(", ")
+                : initial.skills,
+            }
+          : { name: "", photo: "", bio: "", skills: "" },
       );
     }
   }, [open, initial]);
 
   const submit = async (e) => {
     e.preventDefault();
-    if (isReadOnly) {
-      toast.error('Permission Denied: Viewer role is read-only.');
-      return;
-    }
     setSaving(true);
-    const skillsArray = form.skills.split(',').map((s) => s.trim()).filter(Boolean);
+    const skillsArray = form.skills
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
     const payload = {
       name: form.name,
       photo: form.photo,
@@ -407,22 +506,29 @@ const TechFormDialog = ({ open, onClose, initial, onSaved, isReadOnly }) => {
 
     try {
       let savedRecord;
-      if (initial?.id && !initial.id.startsWith('local_')) {
-        savedRecord = await pb.collection('team_members').update(initial.id, payload);
+      if (initial?.id && !initial.id.startsWith("local_")) {
+        savedRecord = await pb
+          .collection("team_members")
+          .update(initial.id, payload);
       } else {
-        savedRecord = await pb.collection('team_members').create(payload);
+        savedRecord = await pb.collection("team_members").create(payload);
       }
       onSaved(savedRecord, !!initial);
       onClose();
-      toast.success(initial ? 'Technician updated.' : 'Technician added.');
-    } catch {
+      toast.success(initial ? "Technician updated." : "Technician added.");
+    } catch (err) {
+      console.warn("PocketBase save failed, using local storage update:", err);
       const mockRecord = {
         ...payload,
-        id: initial?.id || 'local_' + Math.random().toString(36).substr(2, 9),
+        id: initial?.id || "local_" + Math.random().toString(36).substr(2, 9),
       };
       onSaved(mockRecord, !!initial);
       onClose();
-      toast.success(initial ? 'Technician updated (Local).' : 'Technician added (Local).');
+      toast.success(
+        initial
+          ? "Technician updated (Local Mode)."
+          : "Technician added (Local Mode).",
+      );
     } finally {
       setSaving(false);
     }
@@ -432,62 +538,69 @@ const TechFormDialog = ({ open, onClose, initial, onSaved, isReadOnly }) => {
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="max-w-md bg-card border border-border">
         <DialogHeader>
-          <DialogTitle>{initial ? 'Edit Tech Details' : 'Add New Technician'} {isReadOnly && '(Read Only)'}</DialogTitle>
+          <DialogTitle>
+            {initial ? "Edit Tech Details" : "Add New Technician"}
+          </DialogTitle>
         </DialogHeader>
         <form onSubmit={submit} className="space-y-4 mt-2">
           <div>
-            <label className="text-sm font-medium mb-1 block">Full Name *</label>
+            <label className="text-sm font-medium mb-1 block">
+              Full Name *
+            </label>
             <input
               value={form.name}
               onChange={(e) => setForm({ ...form, name: e.target.value })}
               required
-              disabled={isReadOnly}
-              className="input-base w-full disabled:opacity-60"
+              className="input-base w-full"
               placeholder="e.g. Marcus Thompson"
             />
           </div>
-          <div>
-            <label className="text-sm font-medium mb-1 block">Photo URL</label>
-            <input
-              value={form.photo}
-              onChange={(e) => setForm({ ...form, photo: e.target.value })}
-              disabled={isReadOnly}
-              className="input-base w-full disabled:opacity-60"
-              placeholder="e.g. https://images.unsplash.com/photo-..."
-            />
-          </div>
+          <MediaPickerButton
+            label="Profile Photo"
+            value={form.photo}
+            onChange={(val) => setForm({ ...form, photo: val })}
+            accept="image"
+            placeholder="Select technician photo…"
+          />
           <div>
             <label className="text-sm font-medium mb-1 block">Bio *</label>
             <textarea
               value={form.bio}
               onChange={(e) => setForm({ ...form, bio: e.target.value })}
               required
-              disabled={isReadOnly}
               rows={3}
-              className="input-base w-full resize-none disabled:opacity-60"
+              className="input-base w-full resize-none"
               placeholder="A brief bio of the technician..."
             />
           </div>
           <div>
-            <label className="text-sm font-medium mb-1 block">Skills (Comma-separated)</label>
+            <label className="text-sm font-medium mb-1 block">
+              Skills (Comma-separated)
+            </label>
             <input
               value={form.skills}
               onChange={(e) => setForm({ ...form, skills: e.target.value })}
-              disabled={isReadOnly}
-              className="input-base w-full disabled:opacity-60"
+              className="input-base w-full"
               placeholder="TV Mounting, Cable Management, Drywall Repair"
             />
           </div>
           <div className="flex justify-end gap-3 pt-2">
-            <Button type="button" variant="outline" onClick={onClose}>
-              {isReadOnly ? 'Close' : 'Cancel'}
+            <Button
+              type="button"
+              variant="outline"
+              onClick={onClose}
+              disabled={saving}
+            >
+              Cancel
             </Button>
-            {!isReadOnly && (
-              <Button type="submit" disabled={saving}>
-                {saving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Save size={14} className="mr-1.5" />}
-                Save Tech
-              </Button>
-            )}
+            <Button type="submit" disabled={saving}>
+              {saving ? (
+                <Loader2 className="w-4 h-4 animate-spin mr-2" />
+              ) : (
+                <Save size={14} className="mr-1.5" />
+              )}
+              Save Tech
+            </Button>
           </div>
         </form>
       </DialogContent>
@@ -497,7 +610,12 @@ const TechFormDialog = ({ open, onClose, initial, onSaved, isReadOnly }) => {
 
 // ── User Form Dialog ──────────────────────────────────────────────────────────
 const UserFormDialog = ({ open, onClose, onSaved }) => {
-  const [form, setForm] = useState({ username: '', email: '', password: '', role: 'Admin' });
+  const [form, setForm] = useState({
+    username: "",
+    email: "",
+    password: "",
+    role: "Admin",
+  });
   const [saving, setSaving] = useState(false);
 
   const submit = async (e) => {
@@ -511,13 +629,14 @@ const UserFormDialog = ({ open, onClose, onSaved }) => {
         passwordConfirm: form.password,
         role: form.role,
       };
-      const savedUser = await pb.collection('users').create(payload);
+      const savedUser = await pb.collection("users").create(payload);
       onSaved(savedUser);
       onClose();
-      toast.success('Admin user created successfully.');
-    } catch {
+      toast.success("Admin user created successfully.");
+    } catch (err) {
+      console.warn("PocketBase user creation failed, saving locally:", err);
       const mockUser = {
-        id: 'local_' + Math.random().toString(36).substr(2, 9),
+        id: "local_" + Math.random().toString(36).substr(2, 9),
         username: form.username,
         email: form.email,
         role: form.role,
@@ -525,10 +644,10 @@ const UserFormDialog = ({ open, onClose, onSaved }) => {
       };
       onSaved(mockUser);
       onClose();
-      toast.success('User created locally.');
+      toast.success("User created locally.");
     } finally {
       setSaving(false);
-      setForm({ username: '', email: '', password: '', role: 'Admin' });
+      setForm({ username: "", email: "", password: "", role: "Admin" });
     }
   };
 
@@ -536,7 +655,7 @@ const UserFormDialog = ({ open, onClose, onSaved }) => {
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="max-w-md bg-card border border-border">
         <DialogHeader>
-          <DialogTitle>Add New Authorized User</DialogTitle>
+          <DialogTitle>Add Admin User</DialogTitle>
         </DialogHeader>
         <form onSubmit={submit} className="space-y-4 mt-2">
           <div>
@@ -572,23 +691,32 @@ const UserFormDialog = ({ open, onClose, onSaved }) => {
             />
           </div>
           <div>
-            <label className="text-sm font-medium mb-1 block">Access Role / Permissions *</label>
+            <label className="text-sm font-medium mb-1 block">Role</label>
             <select
               value={form.role}
               onChange={(e) => setForm({ ...form, role: e.target.value })}
               className="input-base w-full bg-muted"
             >
-              <option value="Admin">Admin (Full Read/Write/Settings)</option>
-              <option value="Moderator">Moderator (Read/Write Content, No Settings)</option>
-              <option value="Viewer">Viewer (Read Only access)</option>
+              <option value="Admin">Administrator</option>
+              <option value="Moderator">Moderator</option>
+              <option value="Viewer">Viewer</option>
             </select>
           </div>
           <div className="flex justify-end gap-3 pt-2">
-            <Button type="button" variant="outline" onClick={onClose} disabled={saving}>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={onClose}
+              disabled={saving}
+            >
               Cancel
             </Button>
             <Button type="submit" disabled={saving}>
-              {saving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Plus size={14} className="mr-1.5" />}
+              {saving ? (
+                <Loader2 className="w-4 h-4 animate-spin mr-2" />
+              ) : (
+                <Plus size={14} className="mr-1.5" />
+              )}
               Create User
             </Button>
           </div>
@@ -598,16 +726,188 @@ const UserFormDialog = ({ open, onClose, onSaved }) => {
   );
 };
 
+// ── Admin demo seed data (used when PocketBase collections are empty) ──────────
+const ADMIN_DEMO_BOOKINGS = [
+  {
+    id: "demo_b1",
+    name: "Sarah Johnson",
+    email: "sarah.j@email.com",
+    phone: "(404) 555-0101",
+    service_type: "TV Mounting",
+    preferred_date: "2026-06-20",
+    preferred_time: "10:00 AM",
+    project_description: "65-inch TV above the fireplace, standard drywall.",
+    status: "Pending",
+    created: "2026-06-10T10:30:00Z",
+  },
+  {
+    id: "demo_b2",
+    name: "David Martinez",
+    email: "d.martinez@gmail.com",
+    phone: "(678) 555-0234",
+    service_type: "Drywall Repair",
+    preferred_date: "2026-06-22",
+    preferred_time: "9:00 AM",
+    project_description:
+      "Several holes in living room from old shelving removal.",
+    status: "Confirmed",
+    created: "2026-06-11T08:15:00Z",
+  },
+  {
+    id: "demo_b3",
+    name: "Priya Nair",
+    email: "priya.n@email.com",
+    phone: "(770) 555-0345",
+    service_type: "Painting",
+    preferred_date: "2026-06-25",
+    preferred_time: "8:00 AM",
+    project_description:
+      "Full repaint of master bedroom and en-suite bathroom.",
+    status: "Pending",
+    created: "2026-06-12T13:00:00Z",
+  },
+  {
+    id: "demo_b4",
+    name: "James Wilson",
+    email: "jwilson@email.com",
+    phone: "(404) 555-0456",
+    service_type: "Flooring",
+    preferred_date: "2026-07-01",
+    preferred_time: "9:00 AM",
+    project_description: "Laminate flooring in two bedrooms, ~400 sq ft.",
+    status: "Completed",
+    created: "2026-06-05T09:00:00Z",
+  },
+  {
+    id: "demo_b5",
+    name: "Lisa Thompson",
+    email: "l.thompson@email.com",
+    phone: "(678) 555-0567",
+    service_type: "Light Electrical",
+    preferred_date: "2026-06-28",
+    preferred_time: "1:00 PM",
+    project_description: "Install 3 new outlets and replace 2 light fixtures.",
+    status: "Confirmed",
+    created: "2026-06-13T15:30:00Z",
+  },
+];
+
+const ADMIN_DEMO_QUOTES = [
+  {
+    id: "demo_q1",
+    name: "Michael Chen",
+    email: "mchen@email.com",
+    phone: "(770) 555-0312",
+    service_type: "TV Mounting",
+    project_details:
+      "75-inch TV on brick wall, in-wall cable concealment needed.",
+    estimated_quote: 275,
+    status: "Pending",
+    created: "2026-06-09T14:00:00Z",
+  },
+  {
+    id: "demo_q2",
+    name: "Angela Ross",
+    email: "angela.r@gmail.com",
+    phone: "(404) 555-0678",
+    service_type: "Carpentry",
+    project_details:
+      "Custom floating shelves in home office — 3 shelves, 6ft wide.",
+    estimated_quote: 390,
+    status: "Confirmed",
+    created: "2026-06-10T11:20:00Z",
+  },
+  {
+    id: "demo_q3",
+    name: "Robert Kim",
+    email: "rkim@email.com",
+    phone: "(678) 555-0789",
+    service_type: "Drywall Repair",
+    project_details: "Water-damaged ceiling section ~4x4ft in master bedroom.",
+    estimated_quote: 220,
+    status: "Pending",
+    created: "2026-06-11T16:45:00Z",
+  },
+  {
+    id: "demo_q4",
+    name: "Nicole Foster",
+    email: "nfoster@email.com",
+    phone: "(770) 555-0890",
+    service_type: "Painting",
+    project_details:
+      "Entire first floor (living room + hallway + dining room), ~1,100 sq ft.",
+    estimated_quote: 815,
+    status: "Completed",
+    created: "2026-06-03T10:00:00Z",
+  },
+];
+
+const ADMIN_DEMO_TEAM = [
+  {
+    id: "demo_t1",
+    name: "Marcus Thompson",
+    photo:
+      "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&q=80",
+    bio: "Lead technician with 8 years of experience in TV mounting and home theater.",
+    skills: ["TV Mounting", "Cable Management", "Home Theater"],
+    created: "2024-01-01T00:00:00Z",
+  },
+  {
+    id: "demo_t2",
+    name: "James Rodriguez",
+    photo:
+      "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400&q=80",
+    bio: "Senior tech specializing in drywall repair and professional painting.",
+    skills: ["Drywall Repair", "Painting", "Texture Matching"],
+    created: "2024-01-02T00:00:00Z",
+  },
+  {
+    id: "demo_t3",
+    name: "Kevin Patel",
+    photo:
+      "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=400&q=80",
+    bio: "Experienced in custom carpentry builds and precision flooring.",
+    skills: ["Carpentry", "Flooring", "Custom Shelving"],
+    created: "2024-01-03T00:00:00Z",
+  },
+  {
+    id: "demo_t4",
+    name: "Andre Williams",
+    photo:
+      "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=400&q=80",
+    bio: "Certified in fixture installation, plumbing, and light electrical work.",
+    skills: ["Plumbing", "Light Electrical", "Fixture Installation"],
+    created: "2024-01-04T00:00:00Z",
+  },
+  {
+    id: "demo_t5",
+    name: "Darius Jackson",
+    photo:
+      "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=400&q=80",
+    bio: "Versatile handyman for complex multi-trade jobs and same-day calls.",
+    skills: ["TV Mounting", "Drywall Repair", "Carpentry", "Same-Day Service"],
+    created: "2024-01-05T00:00:00Z",
+  },
+  {
+    id: "demo_t6",
+    name: "Carlos Mendez",
+    photo:
+      "https://images.unsplash.com/photo-1560250097-0dc05ae561e0?w=400&q=80",
+    bio: "Flooring and painting specialist with showroom-quality finishes.",
+    skills: ["Flooring", "Painting", "Surface Prep", "Color Consultation"],
+    created: "2024-01-06T00:00:00Z",
+  },
+];
+
+const LOCAL_PROJECTS_STORAGE = "atltvmountpro_local_projects";
+
 // ── Main Admin Panel ──────────────────────────────────────────────────────────
 const AdminPage = () => {
-  const [adminKey, setAdminKey] = useState(() => localStorage.getItem(ADMIN_KEY_STORAGE) ?? '');
+  const [currentUser, setCurrentUser] = useState(null);
   const [authed, setAuthed] = useState(false);
-  const [checking, setChecking] = useState(!!adminKey);
+  const [checking, setChecking] = useState(true);
   const [loading, setLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState('projects');
-
-  // RBAC permissions state
-  const [currentUserRole, setCurrentUserRole] = useState('Admin');
+  const [activeTab, setActiveTab] = useState("projects");
 
   // Sidebar navigation toggler for mobile
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -619,12 +919,15 @@ const AdminPage = () => {
   const [deletingProject, setDeletingProject] = useState(null);
 
   // Orders / Bookings state
-  const [ordersTab, setOrdersTab] = useState('appointments');
+  const [ordersTab, setOrdersTab] = useState("appointments");
+  const [bookingsViewMode, setBookingsViewMode] = useState("list");
   const [bookings, setBookings] = useState([]);
   const [quotes, setQuotes] = useState([]);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState('All');
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState("All");
   const [selectedOrder, setSelectedOrder] = useState(null);
+  const [showSendInvoice, setShowSendInvoice] = useState(false);
+  const [invoiceToSend, setInvoiceToSend] = useState(null);
 
   // Team state
   const [teamMembers, setTeamMembers] = useState([]);
@@ -633,46 +936,32 @@ const AdminPage = () => {
 
   // User & Profile State
   const [profileData, setProfileData] = useState({
-    name: 'ATL Admin',
-    email: 'info@atltvmountpro.com',
-    avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&h=200&fit=crop',
+    name: "ATL Admin",
+    email: "info@atltvmountpro.com",
+    avatar: "/images/admin/admin-avatar.jpg",
+    role: "Lead Administrator",
   });
   const [users, setUsers] = useState([]);
   const [userDialogOpen, setUserDialogOpen] = useState(false);
   const [isEditingProfile, setIsEditingProfile] = useState(false);
-
-  // CMS state
-  const [cmsData, setCmsData] = useState(DEFAULT_CMS);
-  const [cmsPageTab, setCmsPageTab] = useState('home');
-  const [savingCms, setSavingCms] = useState(false);
-
-  // Helper check for role write actions
-  const checkPermission = (action) => {
-    if (currentUserRole === 'Admin') return true;
-    if (currentUserRole === 'Moderator') {
-      if (['write_projects', 'write_orders', 'write_team'].includes(action)) return true;
-    }
-    toast.error(`Permission Denied: Your role (${currentUserRole}) is not authorized for this action.`);
-    return false;
-  };
-
-  const isReadOnly = (tab) => {
-    if (currentUserRole === 'Viewer') return true;
-    if (currentUserRole === 'Moderator' && ['profile', 'cms'].includes(tab)) return true;
-    return false;
-  };
 
   // --- Fetch methods ---
 
   const fetchProjects = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch('/api/projects');
+      const res = await fetch("/api/projects");
       if (res.ok) {
-        setProjects(await res.json());
+        const data = await res.json();
+        setProjects(data);
+        localStorage.setItem(LOCAL_PROJECTS_STORAGE, JSON.stringify(data));
+      } else {
+        throw new Error("Not ok");
       }
     } catch {
-      setProjects([]);
+      // Fallback to localStorage
+      const stored = localStorage.getItem(LOCAL_PROJECTS_STORAGE);
+      setProjects(stored ? JSON.parse(stored) : []);
     }
     setLoading(false);
   }, []);
@@ -680,19 +969,31 @@ const AdminPage = () => {
   const fetchBookingsAndQuotes = useCallback(async () => {
     setLoading(true);
     try {
-      const appts = await pb.collection('appointment_bookings').getFullList({ sort: '-created' });
+      const appts = await pb
+        .collection("appointment_bookings")
+        .getFullList({ sort: "-created" });
       setBookings(appts);
       localStorage.setItem(LOCAL_BOOKINGS_STORAGE, JSON.stringify(appts));
     } catch (err) {
+      console.warn(
+        "PocketBase bookings fetch failed, reading localStorage:",
+        err,
+      );
       const stored = localStorage.getItem(LOCAL_BOOKINGS_STORAGE);
       setBookings(stored ? JSON.parse(stored) : []);
     }
 
     try {
-      const qts = await pb.collection('quote_inquiries').getFullList({ sort: '-created' });
+      const qts = await pb
+        .collection("quote_inquiries")
+        .getFullList({ sort: "-created" });
       setQuotes(qts);
       localStorage.setItem(LOCAL_QUOTES_STORAGE, JSON.stringify(qts));
     } catch (err) {
+      console.warn(
+        "PocketBase quotes fetch failed, reading localStorage:",
+        err,
+      );
       const stored = localStorage.getItem(LOCAL_QUOTES_STORAGE);
       setQuotes(stored ? JSON.parse(stored) : []);
     }
@@ -702,10 +1003,13 @@ const AdminPage = () => {
   const fetchTeam = useCallback(async () => {
     setLoading(true);
     try {
-      const team = await pb.collection('team_members').getFullList({ sort: 'created' });
+      const team = await pb
+        .collection("team_members")
+        .getFullList({ sort: "created" });
       setTeamMembers(team);
       localStorage.setItem(LOCAL_TEAM_STORAGE, JSON.stringify(team));
     } catch (err) {
+      console.warn("PocketBase team fetch failed, reading localStorage:", err);
       const stored = localStorage.getItem(LOCAL_TEAM_STORAGE);
       setTeamMembers(stored ? JSON.parse(stored) : []);
     }
@@ -714,152 +1018,276 @@ const AdminPage = () => {
 
   const fetchUsers = useCallback(async () => {
     try {
-      const userList = await pb.collection('users').getFullList();
+      const userList = await pb.collection("users").getFullList();
       setUsers(userList);
       localStorage.setItem(LOCAL_USERS_STORAGE, JSON.stringify(userList));
     } catch (err) {
       const stored = localStorage.getItem(LOCAL_USERS_STORAGE);
-      setUsers(stored ? JSON.parse(stored) : [
-        { id: 'local_1', username: 'atladmin', email: 'info@atltvmountpro.com', role: 'Admin', created: new Date().toISOString() },
-        { id: 'local_2', username: 'atlmod', email: 'mod@atltvmountpro.com', role: 'Moderator', created: new Date().toISOString() },
-        { id: 'local_3', username: 'atlview', email: 'view@atltvmountpro.com', role: 'Viewer', created: new Date().toISOString() }
-      ]);
+      setUsers(
+        stored
+          ? JSON.parse(stored)
+          : [
+              {
+                id: "local_1",
+                username: "atladmin",
+                email: "info@atltvmountpro.com",
+                role: "Admin",
+                created: new Date().toISOString(),
+              },
+            ],
+      );
     }
   }, []);
 
-  const fetchCmsData = useCallback(async () => {
-    try {
-      const homeRecord = await pb.collection('cms_pages').getFirstListItem('page_id="home"');
-      const aboutRecord = await pb.collection('cms_pages').getFirstListItem('page_id="about"');
-      const contactRecord = await pb.collection('cms_pages').getFirstListItem('page_id="contact"');
-      
-      const remoteCms = {
-        home: homeRecord,
-        about: aboutRecord,
-        contact: contactRecord
-      };
-      setCmsData(remoteCms);
-      localStorage.setItem(LOCAL_CMS_STORAGE, JSON.stringify(remoteCms));
-    } catch (err) {
-      const stored = localStorage.getItem(LOCAL_CMS_STORAGE);
-      setCmsData(stored ? JSON.parse(stored) : DEFAULT_CMS);
-    }
-  }, []);
-
-  // Auto-verify stored key on load
+  // Auto-verify auth on load and whenever PocketBase auth changes
   useEffect(() => {
-    if (!adminKey) { setChecking(false); return; }
-    
-    // Resolve active mock credentials
-    let initialRole = 'Admin';
-    if (adminKey === 'mod123') initialRole = 'Moderator';
-    else if (adminKey === 'view123') initialRole = 'Viewer';
-    setCurrentUserRole(initialRole);
+    const syncAuth = async () => {
+      if (!pb.authStore.isValid || !pb.authStore.record?.id) {
+        setCurrentUser(null);
+        setAuthed(false);
+        setChecking(false);
+        return;
+      }
 
-    fetch('/api/admin/verify', { headers: { 'x-admin-key': adminKey } })
-      .then((r) => {
-        if (r.ok) { 
-          setAuthed(true); 
-          fetchProjects();
-        } else {
-          if (adminKey === 'admin123' || adminKey === 'password' || adminKey === 'mod123' || adminKey === 'view123') {
-            setAuthed(true);
-            fetchProjects();
-          } else {
-            localStorage.removeItem(ADMIN_KEY_STORAGE); 
-            setAdminKey(''); 
-          }
+      try {
+        // Use the already-stored auth record — avoids a 403 on getOne
+        const record = pb.authStore.record;
+        const role = record.role || ROLES.Admin;
+        const allowedRoles = [ROLES.Admin, ROLES.Moderator];
+
+        if (!allowedRoles.includes(role)) {
+          pb.authStore.clear();
+          setCurrentUser(null);
+          setAuthed(false);
+          toast.error("Your account does not have admin access.");
+          setChecking(false);
+          return;
         }
-      })
-      .catch(() => {
-        if (adminKey === 'admin123' || adminKey === 'password' || adminKey === 'mod123' || adminKey === 'view123') {
-          setAuthed(true);
-          fetchProjects();
-        }
-      })
-      .finally(() => setChecking(false));
-  }, [adminKey, fetchProjects]);
+
+        setCurrentUser({
+          id: record.id,
+          email: record.email,
+          role,
+        });
+        setAuthed(true);
+      } catch {
+        pb.authStore.clear();
+        setCurrentUser(null);
+        setAuthed(false);
+      } finally {
+        setChecking(false);
+      }
+    };
+
+    syncAuth();
+
+    const unsubscribe = pb.authStore.onChange(() => {
+      setChecking(true);
+      syncAuth();
+    });
+
+    return unsubscribe;
+  }, []);
 
   // Load specific tab data
   useEffect(() => {
     if (!authed) return;
-    if (activeTab === 'projects') fetchProjects();
-    if (activeTab === 'orders') fetchBookingsAndQuotes();
-    if (activeTab === 'team') fetchTeam();
-    if (activeTab === 'profile') fetchUsers();
-    if (activeTab === 'cms') fetchCmsData();
-  }, [activeTab, authed, fetchProjects, fetchBookingsAndQuotes, fetchTeam, fetchUsers, fetchCmsData]);
+    if (activeTab === "projects") fetchProjects();
+    if (activeTab === "orders") {
+      fetchBookingsAndQuotes();
+      fetchTeam();
+    }
+    if (activeTab === "team") fetchTeam();
+    if (activeTab === "profile") fetchUsers();
+  }, [
+    activeTab,
+    authed,
+    fetchProjects,
+    fetchBookingsAndQuotes,
+    fetchTeam,
+    fetchUsers,
+  ]);
 
-  const handleLogin = (key, resolvedRole) => {
-    setAdminKey(key);
-    setCurrentUserRole(resolvedRole);
+  // Seed demo data into localStorage if collections are empty
+  useEffect(() => {
+    if (!authed) return;
+    const seedIfEmpty = (key, data) => {
+      if (!localStorage.getItem(key)) {
+        localStorage.setItem(key, JSON.stringify(data));
+      }
+    };
+    seedIfEmpty(LOCAL_BOOKINGS_STORAGE, ADMIN_DEMO_BOOKINGS);
+    seedIfEmpty(LOCAL_QUOTES_STORAGE, ADMIN_DEMO_QUOTES);
+    seedIfEmpty(LOCAL_TEAM_STORAGE, ADMIN_DEMO_TEAM);
+  }, [authed]);
+
+  const handleLogin = (user) => {
+    const allowedRoles = [ROLES.Admin, ROLES.Moderator];
+
+    if (!allowedRoles.includes(user.role)) {
+      pb.authStore.clear();
+      setCurrentUser(null);
+      setAuthed(false);
+      toast.error("Your account does not have admin access.");
+      return;
+    }
+
+    setCurrentUser(user);
     setAuthed(true);
   };
 
   const handleLogout = () => {
-    localStorage.removeItem(ADMIN_KEY_STORAGE);
-    setAdminKey('');
+    pb.authStore.clear();
+    setCurrentUser(null);
     setAuthed(false);
+    toast.success("Signed out.");
   };
 
   // --- Project callbacks ---
   const handleProjectSaved = (saved, isUpdate) => {
-    setProjects((prev) =>
-      isUpdate ? prev.map((p) => (p.id === saved.id ? saved : p)) : [saved, ...prev],
-    );
+    setProjects((prev) => {
+      const updated = isUpdate
+        ? prev.map((p) => (p.id === saved.id ? saved : p))
+        : [saved, ...prev];
+      localStorage.setItem(LOCAL_PROJECTS_STORAGE, JSON.stringify(updated));
+      return updated;
+    });
   };
 
   const handleProjectDelete = async (id) => {
-    if (!checkPermission('write_projects')) return;
     setDeletingProject(id);
     try {
       const res = await fetch(`/api/projects/${id}`, {
-        method: 'DELETE',
-        headers: { 'x-admin-key': adminKey },
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
       });
       if (res.ok) {
         setProjects((prev) => prev.filter((p) => p.id !== id));
-        toast.success('Project deleted.');
+        toast.success("Project deleted.");
       } else {
-        toast.error('Delete failed.');
+        toast.error("Delete failed.");
       }
     } catch {
+      // Local fallback
       setProjects((prev) => prev.filter((p) => p.id !== id));
-      toast.success('Project deleted locally.');
+      toast.success("Project deleted locally.");
     } finally {
       setDeletingProject(null);
     }
   };
 
   // --- Booking / Quote callbacks ---
-  const handleUpdateStatus = async (collection, id, status) => {
-    if (!checkPermission('write_orders')) return;
-    try {
-      await pb.collection(collection).update(id, { status });
-      toast.success('Status updated.');
-      fetchBookingsAndQuotes();
-    } catch (err) {
-      if (collection === 'appointment_bookings') {
-        const updated = bookings.map((b) => (b.id === id ? { ...b, status } : b));
-        setBookings(updated);
-        localStorage.setItem(LOCAL_BOOKINGS_STORAGE, JSON.stringify(updated));
-      } else {
-        const updated = quotes.map((q) => (q.id === id ? { ...q, status } : q));
-        setQuotes(updated);
-        localStorage.setItem(LOCAL_QUOTES_STORAGE, JSON.stringify(updated));
-      }
-      toast.success('Status updated locally.');
+  const normalizeStatus = (status) => {
+    if (!status) return "Pending";
+    const s = String(status).toLowerCase();
+    return s.charAt(0).toUpperCase() + s.slice(1);
+  };
+
+  const persistBookings = (updated) => {
+    setBookings(updated);
+    localStorage.setItem(LOCAL_BOOKINGS_STORAGE, JSON.stringify(updated));
+  };
+
+  const maybeCreateInvoiceForBooking = (booking, status) => {
+    const normalized = normalizeStatus(status);
+    if (normalized === "Pending" || normalized === "Confirmed") {
+      const inv = autoCreateInvoiceForBooking(booking);
+      if (inv) toast.success(`Draft invoice ${inv.number} created.`);
     }
   };
 
-  const handleDeleteOrder = async (collection, id) => {
-    if (!checkPermission('write_orders')) return;
+  const handleUpdateBooking = async (id, updates) => {
+    const payload = { ...updates };
+    if (payload.status) payload.status = normalizeStatus(payload.status);
+
+    const booking = bookings.find((b) => b.id === id);
+    if (!booking) return;
+
     try {
-      await pb.collection(collection).delete(id);
-      toast.success('Booking deleted.');
+      await pb.collection("appointment_bookings").update(id, payload);
+      const updated = bookings.map((b) =>
+        b.id === id ? { ...b, ...payload } : b,
+      );
+      persistBookings(updated);
+      maybeCreateInvoiceForBooking({ ...booking, ...payload }, payload.status);
+      toast.success("Booking updated.");
+    } catch (err) {
+      console.warn("PocketBase booking update failed, updating locally:", err);
+      const updated = bookings.map((b) =>
+        b.id === id ? { ...b, ...payload } : b,
+      );
+      persistBookings(updated);
+      maybeCreateInvoiceForBooking({ ...booking, ...payload }, payload.status);
+      toast.success("Booking updated locally.");
+    }
+  };
+
+  const handleUpdateStatus = async (collection, id, status) => {
+    const normalized = normalizeStatus(status);
+    try {
+      await pb.collection(collection).update(id, { status: normalized });
+      if (collection === "appointment_bookings") {
+        const booking = bookings.find((b) => b.id === id);
+        if (booking) maybeCreateInvoiceForBooking(booking, normalized);
+      }
+      toast.success("Status updated.");
       fetchBookingsAndQuotes();
     } catch (err) {
-      if (collection === 'appointment_bookings') {
+      console.warn("PocketBase update failed, updating locally:", err);
+      if (collection === "appointment_bookings") {
+        const updated = bookings.map((b) =>
+          b.id === id ? { ...b, status: normalized } : b,
+        );
+        setBookings(updated);
+        localStorage.setItem(LOCAL_BOOKINGS_STORAGE, JSON.stringify(updated));
+        const booking = updated.find((b) => b.id === id);
+        if (booking) maybeCreateInvoiceForBooking(booking, normalized);
+      } else {
+        const updated = quotes.map((q) =>
+          q.id === id ? { ...q, status: normalized } : q,
+        );
+        setQuotes(updated);
+        localStorage.setItem(LOCAL_QUOTES_STORAGE, JSON.stringify(updated));
+      }
+      toast.success("Status updated locally.");
+    }
+  };
+
+  const openSendInvoiceForBooking = (booking) => {
+    let inv = getInvoiceForBooking(booking.id);
+    if (!inv) {
+      inv = autoCreateInvoiceForBooking(booking);
+    }
+    if (inv) {
+      setInvoiceToSend(inv);
+      setShowSendInvoice(true);
+    } else {
+      toast.error("Could not find or create an invoice for this booking.");
+    }
+  };
+
+  const handleSendInvoice = (method) => {
+    if (!invoiceToSend) return;
+    const ok = sendInvoiceVia(invoiceToSend, method);
+    if (!ok && method !== "email") {
+      toast.error("Client phone number is required for text or WhatsApp.");
+      return;
+    }
+    toast.success(
+      `Invoice sent via ${method === "email" ? "Email" : method === "sms" ? "Text" : "WhatsApp"}.`,
+    );
+    setShowSendInvoice(false);
+    setInvoiceToSend(null);
+  };
+
+  const handleDeleteOrder = async (collection, id) => {
+    try {
+      await pb.collection(collection).delete(id);
+      toast.success("Booking deleted.");
+      fetchBookingsAndQuotes();
+    } catch (err) {
+      console.warn("PocketBase delete failed, deleting locally:", err);
+      if (collection === "appointment_bookings") {
         const updated = bookings.filter((b) => b.id !== id);
         setBookings(updated);
         localStorage.setItem(LOCAL_BOOKINGS_STORAGE, JSON.stringify(updated));
@@ -868,110 +1296,63 @@ const AdminPage = () => {
         setQuotes(updated);
         localStorage.setItem(LOCAL_QUOTES_STORAGE, JSON.stringify(updated));
       }
-      toast.success('Booking deleted locally.');
+      toast.success("Booking deleted locally.");
     }
   };
 
   // --- Team callbacks ---
   const handleTechSaved = (saved, isUpdate) => {
-    const updatedList = isUpdate 
-      ? teamMembers.map((t) => (t.id === saved.id ? saved : t)) 
+    const updatedList = isUpdate
+      ? teamMembers.map((t) => (t.id === saved.id ? saved : t))
       : [...teamMembers, saved];
     setTeamMembers(updatedList);
     localStorage.setItem(LOCAL_TEAM_STORAGE, JSON.stringify(updatedList));
   };
 
   const handleDeleteTech = async (id) => {
-    if (!checkPermission('write_team')) return;
     try {
-      await pb.collection('team_members').delete(id);
-      toast.success('Technician deleted.');
+      await pb.collection("team_members").delete(id);
+      toast.success("Technician deleted.");
       fetchTeam();
     } catch (err) {
       const updated = teamMembers.filter((t) => t.id !== id);
       setTeamMembers(updated);
       localStorage.setItem(LOCAL_TEAM_STORAGE, JSON.stringify(updated));
-      toast.success('Technician deleted locally.');
+      toast.success("Technician deleted locally.");
     }
   };
 
   // --- Profile / User callbacks ---
   const handleUserSaved = (saved) => {
-    if (currentUserRole !== 'Admin') return;
     const updated = [...users, saved];
     setUsers(updated);
     localStorage.setItem(LOCAL_USERS_STORAGE, JSON.stringify(updated));
   };
 
   const handleDeleteUser = async (id) => {
-    if (currentUserRole !== 'Admin') {
-      toast.error('Permission Denied: User Management is Admin only.');
-      return;
-    }
     try {
-      await pb.collection('users').delete(id);
-      toast.success('User deleted.');
+      await pb.collection("users").delete(id);
+      toast.success("User deleted.");
       fetchUsers();
     } catch (err) {
       const updated = users.filter((u) => u.id !== id);
       setUsers(updated);
       localStorage.setItem(LOCAL_USERS_STORAGE, JSON.stringify(updated));
-      toast.success('User deleted locally.');
+      toast.success("User deleted locally.");
     }
   };
 
   const handleUpdateProfile = (e) => {
     e.preventDefault();
     setIsEditingProfile(false);
-    toast.success('Profile updated.');
+    toast.success("Profile updated.");
   };
 
   const handleChangeAdminKey = (newKey) => {
     if (!newKey) return;
     localStorage.setItem(ADMIN_KEY_STORAGE, newKey);
     setAdminKey(newKey);
-    toast.success('Admin access key updated locally.');
-  };
-
-  // --- CMS Save handlers ---
-  const handleSaveCMS = async (e) => {
-    e.preventDefault();
-    if (currentUserRole !== 'Admin') {
-      toast.error('Permission Denied: Only Admins can modify CMS layouts.');
-      return;
-    }
-    setSavingCms(true);
-    try {
-      const pageData = cmsData[cmsPageTab];
-      let updatedRecord;
-      try {
-        const existing = await pb.collection('cms_pages').getFirstListItem(`page_id="${cmsPageTab}"`);
-        updatedRecord = await pb.collection('cms_pages').update(existing.id, pageData);
-      } catch {
-        updatedRecord = await pb.collection('cms_pages').create({ ...pageData, page_id: cmsPageTab });
-      }
-
-      const updatedCms = { ...cmsData, [cmsPageTab]: updatedRecord };
-      setCmsData(updatedCms);
-      localStorage.setItem(LOCAL_CMS_STORAGE, JSON.stringify(updatedCms));
-      toast.success(`${cmsPageTab.toUpperCase()} content saved.`);
-    } catch (err) {
-      console.warn('PocketBase CMS save failed, writing locally:', err);
-      localStorage.setItem(LOCAL_CMS_STORAGE, JSON.stringify(cmsData));
-      toast.success(`${cmsPageTab.toUpperCase()} content saved locally.`);
-    } finally {
-      setSavingCms(false);
-    }
-  };
-
-  const handleCmsFieldChange = (field, value) => {
-    setCmsData({
-      ...cmsData,
-      [cmsPageTab]: {
-        ...cmsData[cmsPageTab],
-        [field]: value
-      }
-    });
+    toast.success("Admin access key updated locally.");
   };
 
   if (checking) {
@@ -991,7 +1372,8 @@ const AdminPage = () => {
         b.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         b.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         b.phone?.includes(searchQuery);
-      const matchesStatus = statusFilter === 'All' || (b.status || 'Pending') === statusFilter;
+      const matchesStatus =
+        statusFilter === "All" || (b.status || "Pending") === statusFilter;
       return matchesSearch && matchesStatus;
     });
   };
@@ -1002,28 +1384,33 @@ const AdminPage = () => {
         q.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         q.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         q.phone?.includes(searchQuery);
-      const matchesStatus = statusFilter === 'All' || (q.status || 'Pending') === statusFilter;
+      const matchesStatus =
+        statusFilter === "All" || (q.status || "Pending") === statusFilter;
       return matchesSearch && matchesStatus;
     });
   };
 
+  const calendarBookings = getFilteredBookings().map((b) => ({
+    ...b,
+    status: (b.status || "Pending").toLowerCase(),
+  }));
+
   return (
     <>
-      <Helmet><title>Admin Dashboard — ATL TV Mount PRO</title></Helmet>
-
       <div className="min-h-screen bg-background flex flex-col md:flex-row">
-        
         {/* MOBILE HEADER */}
         <header className="md:hidden sticky top-0 z-40 bg-card border-b border-border px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <img
-              src="https://horizons-cdn.hostinger.com/10e32518-3a0b-422d-a971-66d579a3db35/47c7080c79518d5a6d915f8a78db18d6.png"
+              src="/images/logo/logo.png"
               alt="ATL TV Mount PRO"
-              className="h-6"
+              className="h-9"
             />
-            <span className="text-xs bg-primary/20 text-primary px-2 py-0.5 rounded font-semibold capitalize">{currentUserRole}</span>
+            <span className="text-xs bg-primary/20 text-primary px-2 py-0.5 rounded font-medium">
+              Admin
+            </span>
           </div>
-          <button 
+          <button
             onClick={() => setSidebarOpen(!sidebarOpen)}
             className="p-1.5 rounded-lg border border-border text-foreground hover:bg-muted"
           >
@@ -1032,92 +1419,126 @@ const AdminPage = () => {
         </header>
 
         {/* SIDE NAVIGATION PANEL */}
-        <aside className={`fixed md:sticky top-0 z-50 h-screen w-64 bg-card border-r border-border flex flex-col justify-between transition-transform duration-300 md:translate-x-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`}>
+        <aside
+          className={`fixed md:sticky top-0 z-50 h-screen w-64 bg-card border-r border-border flex flex-col justify-between transition-transform duration-300 md:translate-x-0 ${sidebarOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"}`}
+        >
           <div className="p-5 flex-1 flex flex-col">
-            
             {/* Sidebar Branding */}
-            <div className="flex items-center justify-between mb-8 pb-4 border-b border-border/50">
-              <div className="flex items-center gap-2.5">
-                <img
-                  src="https://horizons-cdn.hostinger.com/10e32518-3a0b-422d-a971-66d579a3db35/47c7080c79518d5a6d915f8a78db18d6.png"
-                  alt="ATL TV Mount PRO"
-                  className="h-7"
-                />
-                <span className="text-[10px] uppercase tracking-wider font-semibold text-primary bg-primary/10 px-1.5 py-0.5 rounded">Pro</span>
-              </div>
-              <button 
+            <div className="relative flex items-center justify-center mb-8 pb-4 border-b border-border/50">
+              <img
+                src="/images/logo/logo.png"
+                alt="ATL TV Mount PRO"
+                className="h-10 mx-auto"
+              />
+              <button
                 onClick={() => setSidebarOpen(false)}
-                className="md:hidden text-muted-foreground hover:text-foreground"
+                className="md:hidden text-muted-foreground hover:text-foreground absolute right-0"
               >
                 <X size={18} />
               </button>
             </div>
 
-            {/* User Profile Summary */}
-            <div className="mb-6 bg-muted/50 border border-border rounded-xl p-3.5 flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-primary/20 border border-primary flex items-center justify-center font-bold text-primary">
-                {currentUserRole[0]}
-              </div>
-              <div className="space-y-0.5">
-                <p className="text-xs font-bold text-foreground capitalize">{currentUserRole} Access</p>
-                <p className="text-[10px] text-muted-foreground">ATL Tech Center</p>
-              </div>
-            </div>
-
             {/* Menu Links with Flat Icons */}
             <nav className="space-y-1.5 flex-1">
               <button
-                onClick={() => { setActiveTab('projects'); setSidebarOpen(false); }}
-                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 ${activeTab === 'projects' ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:bg-muted hover:text-foreground'}`}
+                onClick={() => {
+                  setActiveTab("projects");
+                  setSidebarOpen(false);
+                }}
+                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 ${activeTab === "projects" ? "bg-primary text-primary-foreground shadow-sm shadow-primary/20" : "text-muted-foreground hover:bg-muted hover:text-foreground"}`}
               >
                 <Tv size={18} className="flex-shrink-0" />
                 <span>Projects Showcase</span>
               </button>
 
               <button
-                onClick={() => { setActiveTab('orders'); setSidebarOpen(false); }}
-                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 ${activeTab === 'orders' ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:bg-muted hover:text-foreground'}`}
+                onClick={() => {
+                  setActiveTab("orders");
+                  setSidebarOpen(false);
+                }}
+                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 ${activeTab === "orders" ? "bg-primary text-primary-foreground shadow-sm shadow-primary/20" : "text-muted-foreground hover:bg-muted hover:text-foreground"}`}
               >
                 <ClipboardList size={18} className="flex-shrink-0" />
                 <span>Bookings & Orders</span>
               </button>
 
               <button
-                onClick={() => { setActiveTab('team'); setSidebarOpen(false); }}
-                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 ${activeTab === 'team' ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:bg-muted hover:text-foreground'}`}
+                onClick={() => {
+                  setActiveTab("team");
+                  setSidebarOpen(false);
+                }}
+                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 ${activeTab === "team" ? "bg-primary text-primary-foreground shadow-sm shadow-primary/20" : "text-muted-foreground hover:bg-muted hover:text-foreground"}`}
               >
                 <Users size={18} className="flex-shrink-0" />
                 <span>Team Technicians</span>
               </button>
 
-              <button
-                onClick={() => { setActiveTab('cms'); setSidebarOpen(false); }}
-                className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 ${activeTab === 'cms' ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:bg-muted hover:text-foreground'}`}
-              >
-                <div className="flex items-center gap-3">
-                  <FileText size={18} className="flex-shrink-0" />
-                  <span>CMS Page Content</span>
-                </div>
-                {currentUserRole !== 'Admin' && <Lock size={12} className="opacity-60" />}
-              </button>
-
-              <button
-                onClick={() => { setActiveTab('profile'); setSidebarOpen(false); }}
-                className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 ${activeTab === 'profile' ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:bg-muted hover:text-foreground'}`}
-              >
-                <div className="flex items-center gap-3">
+              {hasPermission(currentUser?.role, "canView", "profile") && (
+                <button
+                  onClick={() => {
+                    setActiveTab("profile");
+                    setSidebarOpen(false);
+                  }}
+                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 ${activeTab === "profile" ? "bg-primary text-primary-foreground shadow-sm shadow-primary/20" : "text-muted-foreground hover:bg-muted hover:text-foreground"}`}
+                >
                   <UserCog size={18} className="flex-shrink-0" />
                   <span>Profile & Users</span>
-                </div>
-                {currentUserRole !== 'Admin' && <Lock size={12} className="opacity-60" />}
-              </button>
+                </button>
+              )}
+
+              {hasPermission(currentUser?.role, "canView", "finance") && (
+                <button
+                  onClick={() => {
+                    setActiveTab("finance");
+                    setSidebarOpen(false);
+                  }}
+                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 ${activeTab === "finance" ? "bg-primary text-primary-foreground shadow-sm shadow-primary/20" : "text-muted-foreground hover:bg-muted hover:text-foreground"}`}
+                >
+                  <DollarSign size={18} className="flex-shrink-0" />
+                  <span>Finance</span>
+                </button>
+              )}
+
+              {hasPermission(currentUser?.role, "canView", "cms") && (
+                <button
+                  onClick={() => {
+                    setActiveTab("cms");
+                    setSidebarOpen(false);
+                  }}
+                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 ${activeTab === "cms" ? "bg-primary text-primary-foreground shadow-sm shadow-primary/20" : "text-muted-foreground hover:bg-muted hover:text-foreground"}`}
+                >
+                  <FileText size={18} className="flex-shrink-0" />
+                  <span>CMS</span>
+                </button>
+              )}
+
+              {hasPermission(currentUser?.role, "canView", "media") && (
+                <button
+                  onClick={() => {
+                    setActiveTab("media");
+                    setSidebarOpen(false);
+                  }}
+                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 ${activeTab === "media" ? "bg-primary text-primary-foreground shadow-sm shadow-primary/20" : "text-muted-foreground hover:bg-muted hover:text-foreground"}`}
+                >
+                  <ImageIcon size={18} className="flex-shrink-0" />
+                  <span>Media Library</span>
+                </button>
+              )}
             </nav>
           </div>
 
           {/* Footer of Sidebar */}
           <div className="p-4 border-t border-border bg-muted/40 flex flex-col gap-2">
-            <Link 
-              to="/" 
+            {currentUser?.role && (
+              <div className="flex items-center justify-center gap-1.5 py-1.5 px-3 bg-card border border-border rounded-lg">
+                <Shield size={12} className="text-primary" />
+                <span className="text-xs font-semibold text-foreground">
+                  {currentUser.role}
+                </span>
+              </div>
+            )}
+            <Link
+              to="/"
               className="flex items-center justify-center gap-1.5 py-2 px-3 border border-border rounded-lg text-xs text-muted-foreground hover:text-foreground hover:bg-card transition-all"
             >
               <ChevronLeft size={13} />
@@ -1135,50 +1556,64 @@ const AdminPage = () => {
 
         {/* MAIN DISPLAY CONTENT */}
         <main className="flex-1 min-h-screen px-4 sm:px-6 lg:px-8 py-8 md:py-10 max-w-[1200px] w-full">
-          
+          {currentUser?.role === ROLES.Viewer && (
+            <div className="mb-4 flex items-center gap-2 bg-yellow-500/10 text-yellow-600 border border-yellow-500/20 rounded-lg px-4 py-2.5 text-sm">
+              <Lock size={14} />
+              <span>
+                You are viewing in <strong>read-only mode</strong>. Contact an
+                administrator for editing access.
+              </span>
+            </div>
+          )}
+
           {/* TAB CONTENT: PROJECTS */}
-          {activeTab === 'projects' && (
+          {activeTab === "projects" && (
             <div className="space-y-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <h1 className="text-2xl font-bold tracking-tight text-foreground">Showcase Projects</h1>
+                  <h1 className="text-2xl font-bold tracking-tight text-foreground">
+                    Showcase Projects
+                  </h1>
                   <p className="text-sm text-muted-foreground mt-1">
-                    Manage the customer projects that are visible on your main website.
+                    Manage the customer projects that are visible on your main
+                    website.
                   </p>
                 </div>
-                <Button
-                  onClick={() => {
-                    if (isReadOnly('projects')) {
-                      toast.error('Permission Denied: Viewers cannot create projects.');
-                      return;
-                    }
-                    setEditingProject(null); 
-                    setProjectDialogOpen(true);
-                  }}
-                  className="bg-primary hover:bg-primary/90 text-primary-foreground"
-                >
-                  <Plus size={15} className="mr-1.5" />
-                  New Project
-                </Button>
+                {hasPermission(currentUser?.role, "canEdit", "projects") && (
+                  <Button
+                    onClick={() => {
+                      setEditingProject(null);
+                      setProjectDialogOpen(true);
+                    }}
+                    className="bg-primary hover:bg-primary/90 text-primary-foreground"
+                  >
+                    <Plus size={15} className="mr-1.5" />
+                    New Project
+                  </Button>
+                )}
               </div>
 
               {loading ? (
                 <div className="space-y-3">
                   {Array.from({ length: 4 }).map((_, i) => (
-                    <div key={i} className="h-16 bg-muted animate-pulse rounded-xl" />
+                    <div
+                      key={i}
+                      className="h-16 bg-muted animate-pulse rounded-xl"
+                    />
                   ))}
                 </div>
               ) : projects.length === 0 ? (
                 <div className="text-center py-20 border border-dashed border-border rounded-2xl text-muted-foreground">
                   <p className="mb-4 text-sm">No projects created yet.</p>
-                  {!isReadOnly('projects') && (
-                    <Button
-                      onClick={() => { setEditingProject(null); setProjectDialogOpen(true); }}
-                      variant="outline"
-                    >
-                      Add your first project
-                    </Button>
-                  )}
+                  <Button
+                    onClick={() => {
+                      setEditingProject(null);
+                      setProjectDialogOpen(true);
+                    }}
+                    variant="outline"
+                  >
+                    Add your first project
+                  </Button>
                 </div>
               ) : (
                 <div className="rounded-xl border border-border overflow-hidden bg-card">
@@ -1186,16 +1621,29 @@ const AdminPage = () => {
                     <table className="w-full text-sm">
                       <thead className="bg-muted/50 border-b border-border">
                         <tr>
-                          <th className="text-left px-4 py-3 font-semibold text-muted-foreground w-20">Thumb</th>
-                          <th className="text-left px-4 py-3 font-semibold text-muted-foreground">Title</th>
-                          <th className="text-left px-4 py-3 font-semibold text-muted-foreground hidden sm:table-cell">Location</th>
-                          <th className="text-left px-4 py-3 font-semibold text-muted-foreground hidden lg:table-cell">Services</th>
-                          <th className="text-right px-4 py-3 font-semibold text-muted-foreground w-24">Actions</th>
+                          <th className="text-left px-4 py-3 font-semibold text-muted-foreground w-20">
+                            Thumb
+                          </th>
+                          <th className="text-left px-4 py-3 font-semibold text-muted-foreground">
+                            Title
+                          </th>
+                          <th className="text-left px-4 py-3 font-semibold text-muted-foreground hidden sm:table-cell">
+                            Location
+                          </th>
+                          <th className="text-left px-4 py-3 font-semibold text-muted-foreground hidden lg:table-cell">
+                            Services
+                          </th>
+                          <th className="text-right px-4 py-3 font-semibold text-muted-foreground w-24">
+                            Actions
+                          </th>
                         </tr>
                       </thead>
                       <tbody>
                         {projects.map((project, i) => (
-                          <tr key={project.id || i} className="border-b border-border last:border-0 hover:bg-muted/20">
+                          <tr
+                            key={project.id || i}
+                            className="border-b border-border last:border-0 hover:bg-muted/20"
+                          >
                             <td className="px-4 py-3.5">
                               {project.thumbnail ? (
                                 <img
@@ -1207,12 +1655,19 @@ const AdminPage = () => {
                                 <div className="w-12 h-8 bg-muted rounded-md" />
                               )}
                             </td>
-                            <td className="px-4 py-3.5 font-medium text-foreground">{project.title}</td>
-                            <td className="px-4 py-3.5 text-muted-foreground hidden sm:table-cell">{project.location}</td>
+                            <td className="px-4 py-3.5 font-medium text-foreground">
+                              {project.title}
+                            </td>
+                            <td className="px-4 py-3.5 text-muted-foreground hidden sm:table-cell">
+                              {project.location}
+                            </td>
                             <td className="px-4 py-3.5 hidden lg:table-cell">
                               <div className="flex flex-wrap gap-1">
                                 {project.services?.slice(0, 3).map((s, si) => (
-                                  <span key={si} className="text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded-full font-medium">
+                                  <span
+                                    key={si}
+                                    className="text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded-full font-medium"
+                                  >
                                     {s}
                                   </span>
                                 ))}
@@ -1220,23 +1675,38 @@ const AdminPage = () => {
                             </td>
                             <td className="px-4 py-3.5 text-right">
                               <div className="flex items-center gap-1 justify-end">
-                                <button
-                                  onClick={() => {
-                                    setEditingProject(project); 
-                                    setProjectDialogOpen(true);
-                                  }}
-                                  className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted"
-                                >
-                                  {isReadOnly('projects') ? <Eye size={14} /> : <Pencil size={14} />}
-                                </button>
-                                {!isReadOnly('projects') && (
+                                {hasPermission(
+                                  currentUser?.role,
+                                  "canEdit",
+                                  "projects",
+                                ) && (
                                   <button
-                                    onClick={() => handleProjectDelete(project.id)}
+                                    onClick={() => {
+                                      setEditingProject(project);
+                                      setProjectDialogOpen(true);
+                                    }}
+                                    className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted"
+                                  >
+                                    <Pencil size={14} />
+                                  </button>
+                                )}
+                                {hasPermission(
+                                  currentUser?.role,
+                                  "canDelete",
+                                  "projects",
+                                ) && (
+                                  <button
+                                    onClick={() =>
+                                      handleProjectDelete(project.id)
+                                    }
                                     disabled={deletingProject === project.id}
                                     className="p-1.5 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/15"
                                   >
                                     {deletingProject === project.id ? (
-                                      <Loader2 size={14} className="animate-spin" />
+                                      <Loader2
+                                        size={14}
+                                        className="animate-spin"
+                                      />
                                     ) : (
                                       <Trash2 size={14} />
                                     )}
@@ -1255,26 +1725,29 @@ const AdminPage = () => {
           )}
 
           {/* TAB CONTENT: ORDERS & BOOKINGS */}
-          {activeTab === 'orders' && (
+          {activeTab === "orders" && (
             <div className="space-y-6">
               <div>
-                <h1 className="text-2xl font-bold tracking-tight text-foreground">Orders & Bookings</h1>
+                <h1 className="text-2xl font-bold tracking-tight text-foreground">
+                  Orders & Bookings
+                </h1>
                 <p className="text-sm text-muted-foreground mt-1">
-                  Track and manage appointments booked online or inquiries from the quote estimator.
+                  Track and manage appointments booked online or inquiries from
+                  the quote estimator.
                 </p>
               </div>
 
               {/* Section Sub-tabs */}
               <div className="flex gap-2 border-b border-border pb-3">
                 <button
-                  onClick={() => setOrdersTab('appointments')}
-                  className={`px-4 py-2 text-sm font-semibold rounded-lg transition-all ${ordersTab === 'appointments' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground hover:bg-muted'}`}
+                  onClick={() => setOrdersTab("appointments")}
+                  className={`px-4 py-2 text-sm font-semibold rounded-lg transition-all ${ordersTab === "appointments" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground hover:bg-muted"}`}
                 >
                   Appointment Bookings ({bookings.length})
                 </button>
                 <button
-                  onClick={() => setOrdersTab('quotes')}
-                  className={`px-4 py-2 text-sm font-semibold rounded-lg transition-all ${ordersTab === 'quotes' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground hover:bg-muted'}`}
+                  onClick={() => setOrdersTab("quotes")}
+                  className={`px-4 py-2 text-sm font-semibold rounded-lg transition-all ${ordersTab === "quotes" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground hover:bg-muted"}`}
                 >
                   Quote Inquiries ({quotes.length})
                 </button>
@@ -1305,17 +1778,42 @@ const AdminPage = () => {
                     <option value="Cancelled">Cancelled</option>
                   </select>
                 </div>
+                {ordersTab === "appointments" && (
+                  <div className="flex gap-1 border border-border rounded-lg p-0.5 bg-muted/40">
+                    <button
+                      onClick={() => setBookingsViewMode("list")}
+                      className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${bookingsViewMode === "list" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
+                    >
+                      <List size={14} /> List
+                    </button>
+                    <button
+                      onClick={() => setBookingsViewMode("calendar")}
+                      className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${bookingsViewMode === "calendar" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
+                    >
+                      <LayoutGrid size={14} /> Calendar
+                    </button>
+                  </div>
+                )}
               </div>
 
-              {/* Data tables */}
+              {/* Data tables / calendar */}
               {loading ? (
                 <div className="space-y-3">
                   {Array.from({ length: 4 }).map((_, i) => (
-                    <div key={i} className="h-16 bg-muted animate-pulse rounded-xl" />
+                    <div
+                      key={i}
+                      className="h-16 bg-muted animate-pulse rounded-xl"
+                    />
                   ))}
                 </div>
-              ) : ordersTab === 'appointments' ? (
-                getFilteredBookings().length === 0 ? (
+              ) : ordersTab === "appointments" ? (
+                bookingsViewMode === "calendar" ? (
+                  <AppointmentsCalendar
+                    bookings={calendarBookings}
+                    teamMembers={teamMembers}
+                    onUpdateBooking={handleUpdateBooking}
+                  />
+                ) : getFilteredBookings().length === 0 ? (
                   <div className="text-center py-16 border border-dashed border-border rounded-xl text-muted-foreground text-sm">
                     No matching appointment bookings found.
                   </div>
@@ -1325,66 +1823,183 @@ const AdminPage = () => {
                       <table className="w-full text-sm">
                         <thead className="bg-muted/50 border-b border-border">
                           <tr>
-                            <th className="text-left px-4 py-3 font-semibold text-muted-foreground">Customer</th>
-                            <th className="text-left px-4 py-3 font-semibold text-muted-foreground">Service</th>
-                            <th className="text-left px-4 py-3 font-semibold text-muted-foreground">Preferred Time</th>
-                            <th className="text-left px-4 py-3 font-semibold text-muted-foreground">Status</th>
-                            <th className="text-right px-4 py-3 font-semibold text-muted-foreground w-36">Actions</th>
+                            <th className="text-left px-4 py-3 font-semibold text-muted-foreground">
+                              Customer
+                            </th>
+                            <th className="text-left px-4 py-3 font-semibold text-muted-foreground">
+                              Service
+                            </th>
+                            <th className="text-left px-4 py-3 font-semibold text-muted-foreground">
+                              Preferred Time
+                            </th>
+                            <th className="text-left px-4 py-3 font-semibold text-muted-foreground">
+                              Technician
+                            </th>
+                            <th className="text-left px-4 py-3 font-semibold text-muted-foreground">
+                              Status
+                            </th>
+                            <th className="text-right px-4 py-3 font-semibold text-muted-foreground w-36">
+                              Actions
+                            </th>
                           </tr>
                         </thead>
                         <tbody>
                           {getFilteredBookings().map((b) => (
-                            <tr key={b.id} className="border-b border-border last:border-0 hover:bg-muted/20">
+                            <tr
+                              key={b.id}
+                              className="border-b border-border last:border-0 hover:bg-muted/20"
+                            >
                               <td className="px-4 py-3.5">
-                                <div className="font-semibold text-foreground">{b.name}</div>
-                                <div className="text-xs text-muted-foreground">{b.email} • {b.phone}</div>
+                                <div className="font-semibold text-foreground">
+                                  {b.name}
+                                </div>
+                                <div className="text-xs text-muted-foreground">
+                                  {b.email} • {b.phone}
+                                </div>
                               </td>
-                              <td className="px-4 py-3.5 capitalize font-medium">{b.service_type}</td>
+                              <td className="px-4 py-3.5 capitalize font-medium">
+                                {b.service_type}
+                              </td>
                               <td className="px-4 py-3.5 text-muted-foreground">
-                                {b.preferred_date} at {b.preferred_time || 'Anytime'}
+                                {b.preferred_date} at{" "}
+                                {b.preferred_time || "Anytime"}
                               </td>
                               <td className="px-4 py-3.5">
-                                <span className={`inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full ${
-                                  (b.status || 'Pending') === 'Confirmed' ? 'bg-green-500/10 text-green-500' :
-                                  (b.status || 'Pending') === 'Completed' ? 'bg-blue-500/10 text-blue-500' :
-                                  (b.status || 'Pending') === 'Cancelled' ? 'bg-red-500/10 text-red-500' :
-                                  'bg-yellow-500/10 text-yellow-500'
-                                }`}>
-                                  {(b.status || 'Pending') === 'Confirmed' ? <CheckCircle2 size={10} /> :
-                                   (b.status || 'Pending') === 'Pending' ? <Clock size={10} /> :
-                                   <AlertTriangle size={10} />}
-                                  {b.status || 'Pending'}
+                                {hasPermission(
+                                  currentUser?.role,
+                                  "canEdit",
+                                  "orders",
+                                ) ? (
+                                  <Select
+                                    value={
+                                      b.assignedTechId
+                                        ? String(b.assignedTechId)
+                                        : "unassigned"
+                                    }
+                                    onValueChange={(techId) => {
+                                      if (techId === "unassigned") {
+                                        handleUpdateBooking(b.id, {
+                                          assignedTechId: null,
+                                          assignedTechName: null,
+                                        });
+                                      } else {
+                                        const tech = teamMembers.find(
+                                          (t) => String(t.id) === techId,
+                                        );
+                                        if (tech) {
+                                          handleUpdateBooking(b.id, {
+                                            assignedTechId: tech.id,
+                                            assignedTechName: tech.name,
+                                          });
+                                        }
+                                      }
+                                    }}
+                                  >
+                                    <SelectTrigger className="h-8 text-xs w-[140px]">
+                                      <SelectValue placeholder="Assign tech" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="unassigned">
+                                        Unassigned
+                                      </SelectItem>
+                                      {teamMembers.map((tech) => (
+                                        <SelectItem
+                                          key={tech.id}
+                                          value={String(tech.id)}
+                                        >
+                                          {tech.name}
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                ) : (
+                                  <span className="text-xs text-muted-foreground">
+                                    {b.assignedTechName || "Unassigned"}
+                                  </span>
+                                )}
+                              </td>
+                              <td className="px-4 py-3.5">
+                                <span
+                                  className={`inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full ${
+                                    (b.status || "Pending") === "Confirmed"
+                                      ? "bg-green-500/10 text-green-500"
+                                      : (b.status || "Pending") === "Completed"
+                                        ? "bg-blue-500/10 text-blue-500"
+                                        : (b.status || "Pending") ===
+                                            "Cancelled"
+                                          ? "bg-red-500/10 text-red-500"
+                                          : "bg-yellow-500/10 text-yellow-500"
+                                  }`}
+                                >
+                                  {(b.status || "Pending") === "Confirmed" ? (
+                                    <CheckCircle2 size={10} />
+                                  ) : (b.status || "Pending") === "Pending" ? (
+                                    <Clock size={10} />
+                                  ) : (
+                                    <AlertTriangle size={10} />
+                                  )}
+                                  {b.status || "Pending"}
                                 </span>
                               </td>
                               <td className="px-4 py-3.5 text-right">
                                 <div className="flex items-center gap-1 justify-end">
                                   <button
-                                    onClick={() => setSelectedOrder({ ...b, type: 'appointment' })}
+                                    onClick={() =>
+                                      setSelectedOrder({
+                                        ...b,
+                                        type: "appointment",
+                                      })
+                                    }
                                     className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted"
                                     title="View Details"
                                   >
                                     <Eye size={14} />
                                   </button>
-                                  {!isReadOnly('orders') && (
-                                    <>
-                                      <select
-                                        value={b.status || 'Pending'}
-                                        onChange={(e) => handleUpdateStatus('appointment_bookings', b.id, e.target.value)}
-                                        className="text-xs bg-muted border border-border rounded p-1"
-                                      >
-                                        <option value="Pending">Pending</option>
-                                        <option value="Confirmed">Confirm</option>
-                                        <option value="Completed">Complete</option>
-                                        <option value="Cancelled">Cancel</option>
-                                      </select>
-                                      <button
-                                        onClick={() => handleDeleteOrder('appointment_bookings', b.id)}
-                                        className="p-1.5 rounded-lg text-muted-foreground hover:text-destructive"
-                                        title="Delete"
-                                      >
-                                        <Trash2 size={14} />
-                                      </button>
-                                    </>
+                                  {hasPermission(
+                                    currentUser?.role,
+                                    "canEdit",
+                                    "orders",
+                                  ) ? (
+                                    <select
+                                      value={b.status || "Pending"}
+                                      onChange={(e) =>
+                                        handleUpdateStatus(
+                                          "appointment_bookings",
+                                          b.id,
+                                          e.target.value,
+                                        )
+                                      }
+                                      className="text-xs bg-muted border border-border rounded p-1"
+                                    >
+                                      <option value="Pending">Pending</option>
+                                      <option value="Confirmed">Confirm</option>
+                                      <option value="Completed">
+                                        Complete
+                                      </option>
+                                      <option value="Cancelled">Cancel</option>
+                                    </select>
+                                  ) : (
+                                    <span className="text-xs bg-muted border border-border rounded px-2 py-1">
+                                      {b.status || "Pending"}
+                                    </span>
+                                  )}
+                                  {hasPermission(
+                                    currentUser?.role,
+                                    "canDelete",
+                                    "orders",
+                                  ) && (
+                                    <button
+                                      onClick={() =>
+                                        handleDeleteOrder(
+                                          "appointment_bookings",
+                                          b.id,
+                                        )
+                                      }
+                                      className="p-1.5 rounded-lg text-muted-foreground hover:text-destructive"
+                                      title="Delete"
+                                    >
+                                      <Trash2 size={14} />
+                                    </button>
                                   )}
                                 </div>
                               </td>
@@ -1395,166 +2010,246 @@ const AdminPage = () => {
                     </div>
                   </div>
                 )
+              ) : getFilteredQuotes().length === 0 ? (
+                <div className="text-center py-16 border border-dashed border-border rounded-xl text-muted-foreground text-sm">
+                  No matching quote inquiries found.
+                </div>
               ) : (
-                getFilteredQuotes().length === 0 ? (
-                  <div className="text-center py-16 border border-dashed border-border rounded-xl text-muted-foreground text-sm">
-                    No matching quote inquiries found.
-                  </div>
-                ) : (
-                  <div className="rounded-xl border border-border overflow-hidden bg-card">
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-sm">
-                        <thead className="bg-muted/50 border-b border-border">
-                          <tr>
-                            <th className="text-left px-4 py-3 font-semibold text-muted-foreground">Customer</th>
-                            <th className="text-left px-4 py-3 font-semibold text-muted-foreground">Estimated Quote</th>
-                            <th className="text-left px-4 py-3 font-semibold text-muted-foreground">Service Required</th>
-                            <th className="text-left px-4 py-3 font-semibold text-muted-foreground">Status</th>
-                            <th className="text-right px-4 py-3 font-semibold text-muted-foreground w-36">Actions</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {getFilteredQuotes().map((q) => (
-                            <tr key={q.id} className="border-b border-border last:border-0 hover:bg-muted/20">
-                              <td className="px-4 py-3.5">
-                                <div className="font-semibold text-foreground">{q.name}</div>
-                                <div className="text-xs text-muted-foreground">{q.email} • {q.phone}</div>
-                              </td>
-                              <td className="px-4 py-3.5 font-bold text-primary">
-                                ${q.estimated_quote}
-                              </td>
-                              <td className="px-4 py-3.5 capitalize font-medium">{q.service_type}</td>
-                              <td className="px-4 py-3.5">
-                                <span className={`inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full ${
-                                  (q.status || 'Pending') === 'Confirmed' ? 'bg-green-500/10 text-green-500' :
-                                  (q.status || 'Pending') === 'Completed' ? 'bg-blue-500/10 text-blue-500' :
-                                  (q.status || 'Pending') === 'Cancelled' ? 'bg-red-500/10 text-red-500' :
-                                  'bg-yellow-500/10 text-yellow-500'
-                                }`}>
-                                  {(q.status || 'Pending') === 'Confirmed' ? <CheckCircle2 size={10} /> :
-                                   (q.status || 'Pending') === 'Pending' ? <Clock size={10} /> :
-                                   <AlertTriangle size={10} />}
-                                  {q.status || 'Pending'}
-                                </span>
-                              </td>
-                              <td className="px-4 py-3.5 text-right">
-                                <div className="flex items-center gap-1 justify-end">
-                                  <button
-                                    onClick={() => setSelectedOrder({ ...q, type: 'quote' })}
-                                    className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted"
-                                    title="View Details"
+                <div className="rounded-xl border border-border overflow-hidden bg-card">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead className="bg-muted/50 border-b border-border">
+                        <tr>
+                          <th className="text-left px-4 py-3 font-semibold text-muted-foreground">
+                            Customer
+                          </th>
+                          <th className="text-left px-4 py-3 font-semibold text-muted-foreground">
+                            Estimated Quote
+                          </th>
+                          <th className="text-left px-4 py-3 font-semibold text-muted-foreground">
+                            Service Required
+                          </th>
+                          <th className="text-left px-4 py-3 font-semibold text-muted-foreground">
+                            Status
+                          </th>
+                          <th className="text-right px-4 py-3 font-semibold text-muted-foreground w-36">
+                            Actions
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {getFilteredQuotes().map((q) => (
+                          <tr
+                            key={q.id}
+                            className="border-b border-border last:border-0 hover:bg-muted/20"
+                          >
+                            <td className="px-4 py-3.5">
+                              <div className="font-semibold text-foreground">
+                                {q.name}
+                              </div>
+                              <div className="text-xs text-muted-foreground">
+                                {q.email} • {q.phone}
+                              </div>
+                            </td>
+                            <td className="px-4 py-3.5 font-bold text-primary">
+                              ${q.estimated_quote}
+                            </td>
+                            <td className="px-4 py-3.5 capitalize font-medium">
+                              {q.service_type}
+                            </td>
+                            <td className="px-4 py-3.5">
+                              <span
+                                className={`inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full ${
+                                  (q.status || "Pending") === "Confirmed"
+                                    ? "bg-green-500/10 text-green-500"
+                                    : (q.status || "Pending") === "Completed"
+                                      ? "bg-blue-500/10 text-blue-500"
+                                      : (q.status || "Pending") === "Cancelled"
+                                        ? "bg-red-500/10 text-red-500"
+                                        : "bg-yellow-500/10 text-yellow-500"
+                                }`}
+                              >
+                                {(q.status || "Pending") === "Confirmed" ? (
+                                  <CheckCircle2 size={10} />
+                                ) : (q.status || "Pending") === "Pending" ? (
+                                  <Clock size={10} />
+                                ) : (
+                                  <AlertTriangle size={10} />
+                                )}
+                                {q.status || "Pending"}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3.5 text-right">
+                              <div className="flex items-center gap-1 justify-end">
+                                <button
+                                  onClick={() =>
+                                    setSelectedOrder({ ...q, type: "quote" })
+                                  }
+                                  className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted"
+                                  title="View Details"
+                                >
+                                  <Eye size={14} />
+                                </button>
+                                {hasPermission(
+                                  currentUser?.role,
+                                  "canEdit",
+                                  "orders",
+                                ) ? (
+                                  <select
+                                    value={q.status || "Pending"}
+                                    onChange={(e) =>
+                                      handleUpdateStatus(
+                                        "quote_inquiries",
+                                        q.id,
+                                        e.target.value,
+                                      )
+                                    }
+                                    className="text-xs bg-muted border border-border rounded p-1"
                                   >
-                                    <Eye size={14} />
+                                    <option value="Pending">Pending</option>
+                                    <option value="Confirmed">Confirm</option>
+                                    <option value="Completed">Complete</option>
+                                    <option value="Cancelled">Cancel</option>
+                                  </select>
+                                ) : (
+                                  <span className="text-xs bg-muted border border-border rounded px-2 py-1">
+                                    {q.status || "Pending"}
+                                  </span>
+                                )}
+                                {hasPermission(
+                                  currentUser?.role,
+                                  "canDelete",
+                                  "orders",
+                                ) && (
+                                  <button
+                                    onClick={() =>
+                                      handleDeleteOrder("quote_inquiries", q.id)
+                                    }
+                                    className="p-1.5 rounded-lg text-muted-foreground hover:text-destructive"
+                                  >
+                                    <Trash2 size={14} />
                                   </button>
-                                  {!isReadOnly('orders') && (
-                                    <>
-                                      <select
-                                        value={q.status || 'Pending'}
-                                        onChange={(e) => handleUpdateStatus('quote_inquiries', q.id, e.target.value)}
-                                        className="text-xs bg-muted border border-border rounded p-1"
-                                      >
-                                        <option value="Pending">Pending</option>
-                                        <option value="Confirmed">Confirm</option>
-                                        <option value="Completed">Complete</option>
-                                        <option value="Cancelled">Cancel</option>
-                                      </select>
-                                      <button
-                                        onClick={() => handleDeleteOrder('quote_inquiries', q.id)}
-                                        className="p-1.5 rounded-lg text-muted-foreground hover:text-destructive"
-                                      >
-                                        <Trash2 size={14} />
-                                      </button>
-                                    </>
-                                  )}
-                                </div>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
                   </div>
-                )
+                </div>
               )}
             </div>
           )}
 
           {/* TAB CONTENT: TEAM TECHNICIANS */}
-          {activeTab === 'team' && (
+          {activeTab === "team" && (
             <div className="space-y-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <h1 className="text-2xl font-bold tracking-tight text-foreground">Team Technicians</h1>
+                  <h1 className="text-2xl font-bold tracking-tight text-foreground">
+                    Team Technicians
+                  </h1>
                   <p className="text-sm text-muted-foreground mt-1">
-                    Manage profiles, photos, and skills of technicians displayed on the public Team page.
+                    Manage profiles, photos, and skills of technicians displayed
+                    on the public Team page.
                   </p>
                 </div>
-                <Button
-                  onClick={() => {
-                    if (isReadOnly('team')) {
-                      toast.error('Permission Denied: Viewers cannot create technicians.');
-                      return;
-                    }
-                    setEditingTech(null); 
-                    setTechDialogOpen(true);
-                  }}
-                  className="bg-primary hover:bg-primary/90 text-primary-foreground"
-                >
-                  <Plus size={15} className="mr-1.5" />
-                  Add Tech
-                </Button>
+                {hasPermission(currentUser?.role, "canEdit", "team") && (
+                  <Button
+                    onClick={() => {
+                      setEditingTech(null);
+                      setTechDialogOpen(true);
+                    }}
+                    className="bg-primary hover:bg-primary/90 text-primary-foreground"
+                  >
+                    <Plus size={15} className="mr-1.5" />
+                    Add Tech
+                  </Button>
+                )}
               </div>
 
               {loading ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                   {Array.from({ length: 3 }).map((_, i) => (
-                    <div key={i} className="h-48 bg-muted animate-pulse rounded-xl" />
+                    <div
+                      key={i}
+                      className="h-48 bg-muted animate-pulse rounded-xl"
+                    />
                   ))}
                 </div>
               ) : teamMembers.length === 0 ? (
                 <div className="text-center py-20 border border-dashed border-border rounded-2xl text-muted-foreground">
-                  <p className="mb-4 text-sm">No technicians added to dynamic directory.</p>
-                  {!isReadOnly('team') && (
-                    <Button
-                      onClick={() => { setEditingTech(null); setTechDialogOpen(true); }}
-                      variant="outline"
-                    >
-                      Create Technician
-                    </Button>
-                  )}
+                  <p className="mb-4 text-sm">
+                    No technicians added to dynamic directory.
+                  </p>
+                  <Button
+                    onClick={() => {
+                      setEditingTech(null);
+                      setTechDialogOpen(true);
+                    }}
+                    variant="outline"
+                  >
+                    Create Technician
+                  </Button>
                 </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {teamMembers.map((tech) => (
-                    <div key={tech.id} className="bg-card border border-border rounded-xl p-5 flex flex-col justify-between shadow-sm">
+                    <div
+                      key={tech.id}
+                      className="bg-card border border-border rounded-xl p-5 flex flex-col justify-between shadow-sm"
+                    >
                       <div className="flex gap-4">
                         <img
-                          src={tech.photo || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde'}
+                          src={
+                            tech.photo || "/images/team/team-placeholder.jpg"
+                          }
                           alt={tech.name}
                           className="w-16 h-16 rounded-full object-cover border border-border"
                         />
                         <div className="space-y-1">
-                          <h3 className="font-bold text-foreground">{tech.name}</h3>
-                          <p className="text-xs text-muted-foreground line-clamp-3">{tech.bio}</p>
+                          <h3 className="font-bold text-foreground">
+                            {tech.name}
+                          </h3>
+                          <p className="text-xs text-muted-foreground line-clamp-3">
+                            {tech.bio}
+                          </p>
                         </div>
                       </div>
 
                       <div className="mt-4 pt-3 border-t border-border/50">
                         <div className="flex flex-wrap gap-1 mb-3">
                           {tech.skills?.map((s, idx) => (
-                            <span key={idx} className="text-[10px] bg-muted text-muted-foreground px-2 py-0.5 rounded font-medium">
+                            <span
+                              key={idx}
+                              className="text-[10px] bg-muted text-muted-foreground px-2 py-0.5 rounded font-medium"
+                            >
                               {s}
                             </span>
                           ))}
                         </div>
                         <div className="flex justify-end gap-2">
-                          <button
-                            onClick={() => { setEditingTech(tech); setTechDialogOpen(true); }}
-                            className="text-xs bg-muted text-foreground hover:bg-muted/80 px-2.5 py-1.5 rounded font-medium flex items-center gap-1"
-                          >
-                            {isReadOnly('team') ? <Eye size={12} /> : <Pencil size={12} />} {isReadOnly('team') ? 'View' : 'Edit'}
-                          </button>
-                          {!isReadOnly('team') && (
+                          {hasPermission(
+                            currentUser?.role,
+                            "canEdit",
+                            "team",
+                          ) && (
+                            <button
+                              onClick={() => {
+                                setEditingTech(tech);
+                                setTechDialogOpen(true);
+                              }}
+                              className="text-xs bg-muted text-foreground hover:bg-muted/80 px-2.5 py-1.5 rounded font-medium flex items-center gap-1"
+                            >
+                              <Pencil size={12} /> Edit
+                            </button>
+                          )}
+                          {hasPermission(
+                            currentUser?.role,
+                            "canDelete",
+                            "team",
+                          ) && (
                             <button
                               onClick={() => handleDeleteTech(tech.id)}
                               className="text-xs bg-destructive/10 text-destructive hover:bg-destructive hover:text-destructive-foreground px-2.5 py-1.5 rounded font-medium flex items-center gap-1"
@@ -1571,342 +2266,229 @@ const AdminPage = () => {
             </div>
           )}
 
-          {/* TAB CONTENT: CMS PAGES */}
-          {activeTab === 'cms' && (
-            <div className="space-y-6">
-              {isReadOnly('cms') ? (
-                <div className="bg-card border border-border p-8 rounded-xl text-center space-y-4 max-w-md mx-auto my-12">
-                  <Lock className="w-16 h-16 text-primary/50 mx-auto" />
-                  <h3 className="text-lg font-bold text-foreground">Content Management System Locked</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Only users with the <span className="font-semibold text-primary">Admin</span> role can write and publish page configuration details.
-                  </p>
-                </div>
-              ) : (
-                <>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h1 className="text-2xl font-bold tracking-tight text-foreground">CMS Content Editor</h1>
-                      <p className="text-sm text-muted-foreground mt-1">
-                        Edit live page text headings, subtext descriptions, email contacts, and hero images.
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* CMS Sub-tabs */}
-                  <div className="flex gap-2 border-b border-border pb-3">
-                    <button
-                      onClick={() => setCmsPageTab('home')}
-                      className={`px-4 py-2 text-sm font-semibold rounded-lg transition-all ${cmsPageTab === 'home' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground hover:bg-muted'}`}
-                    >
-                      Homepage Content
-                    </button>
-                    <button
-                      onClick={() => setCmsPageTab('about')}
-                      className={`px-4 py-2 text-sm font-semibold rounded-lg transition-all ${cmsPageTab === 'about' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground hover:bg-muted'}`}
-                    >
-                      About Page Content
-                    </button>
-                    <button
-                      onClick={() => setCmsPageTab('contact')}
-                      className={`px-4 py-2 text-sm font-semibold rounded-lg transition-all ${cmsPageTab === 'contact' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground hover:bg-muted'}`}
-                    >
-                      Contact Page Content
-                    </button>
-                  </div>
-
-                  <form onSubmit={handleSaveCMS} className="bg-card border border-border rounded-xl p-6 space-y-5">
-                    {cmsPageTab === 'home' && (
-                      <div className="space-y-4">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <div className="space-y-1">
-                            <label className="text-xs font-semibold uppercase text-muted-foreground">Main Hero Heading</label>
-                            <input
-                              type="text"
-                              value={cmsData.home?.hero_title || ''}
-                              onChange={(e) => handleCmsFieldChange('hero_title', e.target.value)}
-                              className="input-base w-full"
-                              required
-                            />
-                          </div>
-                          <div className="space-y-1">
-                            <label className="text-xs font-semibold uppercase text-muted-foreground">Business Phone</label>
-                            <input
-                              type="text"
-                              value={cmsData.home?.business_phone || ''}
-                              onChange={(e) => handleCmsFieldChange('business_phone', e.target.value)}
-                              className="input-base w-full"
-                              required
-                            />
-                          </div>
-                        </div>
-                        <div className="space-y-1">
-                          <label className="text-xs font-semibold uppercase text-muted-foreground">Hero Subheading</label>
-                          <textarea
-                            value={cmsData.home?.hero_subtitle || ''}
-                            onChange={(e) => handleCmsFieldChange('hero_subtitle', e.target.value)}
-                            rows={3}
-                            className="input-base w-full resize-none"
-                            required
-                          />
-                        </div>
-                      </div>
-                    )}
-
-                    {cmsPageTab === 'about' && (
-                      <div className="space-y-4">
-                        <div className="grid grid-cols-1 gap-4">
-                          <div className="space-y-1">
-                            <label className="text-xs font-semibold uppercase text-muted-foreground">Story Section Title</label>
-                            <input
-                              type="text"
-                              value={cmsData.about?.story_title || ''}
-                              onChange={(e) => handleCmsFieldChange('story_title', e.target.value)}
-                              className="input-base w-full"
-                              required
-                            />
-                          </div>
-                        </div>
-                        <div className="space-y-1">
-                          <label className="text-xs font-semibold uppercase text-muted-foreground">Story Narrative Content</label>
-                          <textarea
-                            value={cmsData.about?.story_content || ''}
-                            onChange={(e) => handleCmsFieldChange('story_content', e.target.value)}
-                            rows={6}
-                            className="input-base w-full resize-none"
-                            required
-                          />
-                        </div>
-                        <div className="space-y-1">
-                          <label className="text-xs font-semibold uppercase text-muted-foreground">Hero Image URL</label>
-                          <input
-                            type="text"
-                            value={cmsData.about?.hero_image || ''}
-                            onChange={(e) => handleCmsFieldChange('hero_image', e.target.value)}
-                            className="input-base w-full"
-                            required
-                          />
-                        </div>
-                      </div>
-                    )}
-
-                    {cmsPageTab === 'contact' && (
-                      <div className="space-y-4">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <div className="space-y-1">
-                            <label className="text-xs font-semibold uppercase text-muted-foreground">Working Hours</label>
-                            <input
-                              type="text"
-                              value={cmsData.contact?.hours || ''}
-                              onChange={(e) => handleCmsFieldChange('hours', e.target.value)}
-                              className="input-base w-full"
-                              required
-                            />
-                          </div>
-                          <div className="space-y-1">
-                            <label className="text-xs font-semibold uppercase text-muted-foreground">Office / Service Address</label>
-                            <input
-                              type="text"
-                              value={cmsData.contact?.address || ''}
-                              onChange={(e) => handleCmsFieldChange('address', e.target.value)}
-                              className="input-base w-full"
-                              required
-                            />
-                          </div>
-                        </div>
-                        <div className="space-y-1">
-                          <label className="text-xs font-semibold uppercase text-muted-foreground">Service Area Description</label>
-                          <textarea
-                            value={cmsData.contact?.city_description || ''}
-                            onChange={(e) => handleCmsFieldChange('city_description', e.target.value)}
-                            rows={3}
-                            className="input-base w-full resize-none"
-                            required
-                          />
-                        </div>
-                      </div>
-                    )}
-
-                    <div className="flex justify-end pt-2 border-t border-border">
-                      <Button
-                        type="submit"
-                        disabled={savingCms}
-                        className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold"
-                      >
-                        {savingCms ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Save size={14} className="mr-1.5" />}
-                        Publish CMS Configuration
-                      </Button>
-                    </div>
-                  </form>
-                </>
-              )}
-            </div>
-          )}
-
           {/* TAB CONTENT: PROFILE & USER MANAGEMENT */}
-          {activeTab === 'profile' && (
+          {activeTab === "profile" && (
             <div className="space-y-8">
               <div>
-                <h1 className="text-2xl font-bold tracking-tight text-foreground">Profile & User Management</h1>
+                <h1 className="text-2xl font-bold tracking-tight text-foreground">
+                  Profile & User Management
+                </h1>
                 <p className="text-sm text-muted-foreground mt-1">
-                  Manage your admin profile, reset security access keys, or manage supplementary administrative users.
+                  Manage your admin profile, reset security access keys, or
+                  manage supplementary administrative users.
                 </p>
               </div>
 
-              {isReadOnly('profile') ? (
-                <div className="bg-card border border-border p-8 rounded-xl text-center space-y-4 max-w-md mx-auto my-12">
-                  <Lock className="w-16 h-16 text-primary/50 mx-auto" />
-                  <h3 className="text-lg font-bold text-foreground">Access Restricted</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Only accounts with the <span className="font-semibold text-primary">Admin</span> role can view, create, or delete security credentials.
-                  </p>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                  
-                  {/* PROFILE INFORMATION */}
-                  <div className="lg:col-span-1 bg-card border border-border rounded-xl p-6 space-y-6">
-                    <div className="flex flex-col items-center text-center pb-4 border-b border-border/50">
-                      <img
-                        src={profileData.avatar}
-                        alt={profileData.name}
-                        className="w-24 h-24 rounded-full object-cover mb-3 border border-border"
-                      />
-                      <h3 className="font-bold text-lg text-foreground">{profileData.name}</h3>
-                      <span className="text-xs bg-primary/20 text-primary px-2.5 py-0.5 rounded-full font-semibold capitalize">
-                        {currentUserRole} Role
-                      </span>
-                    </div>
-
-                    {!isEditingProfile ? (
-                      <div className="space-y-4">
-                        <div>
-                          <span className="text-xs text-muted-foreground block uppercase font-bold tracking-wide">Email</span>
-                          <span className="text-sm font-semibold">{profileData.email}</span>
-                        </div>
-                        <div>
-                          <span className="text-xs text-muted-foreground block uppercase font-bold tracking-wide">Key Access</span>
-                          <span className="text-sm font-semibold italic text-muted-foreground">Protected Key Credentials</span>
-                        </div>
-                        <Button
-                          onClick={() => setIsEditingProfile(true)}
-                          className="w-full"
-                          variant="outline"
-                        >
-                          Edit Profile
-                        </Button>
-                      </div>
-                    ) : (
-                      <form onSubmit={handleUpdateProfile} className="space-y-3">
-                        <div>
-                          <label className="text-xs font-semibold block text-muted-foreground uppercase">Name</label>
-                          <input
-                            type="text"
-                            value={profileData.name}
-                            onChange={(e) => setProfileData({ ...profileData, name: e.target.value })}
-                            className="input-base w-full mt-1"
-                          />
-                        </div>
-                        <div>
-                          <label className="text-xs font-semibold block text-muted-foreground uppercase">Email</label>
-                          <input
-                            type="email"
-                            value={profileData.email}
-                            onChange={(e) => setProfileData({ ...profileData, email: e.target.value })}
-                            className="input-base w-full mt-1"
-                          />
-                        </div>
-                        <div className="flex gap-2 pt-2">
-                          <Button type="submit" className="flex-1">Save</Button>
-                          <Button type="button" variant="outline" onClick={() => setIsEditingProfile(false)}>Cancel</Button>
-                        </div>
-                      </form>
-                    )}
-
-                    {/* SECURITY KEY RESET */}
-                    <div className="pt-4 border-t border-border/50 space-y-3">
-                      <h4 className="text-sm font-bold text-foreground flex items-center gap-1.5">
-                        <Shield size={16} className="text-primary" /> Security Verification Key
-                      </h4>
-                      <p className="text-xs text-muted-foreground">
-                        Reset your master admin key token. Re-login will be required if changed.
-                      </p>
-                      <input
-                        type="password"
-                        placeholder="New Admin Key token"
-                        className="input-base w-full text-xs"
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') {
-                            handleChangeAdminKey(e.target.value);
-                            e.target.value = '';
-                          }
-                        }}
-                      />
-                      <p className="text-[10px] text-muted-foreground italic">Press Enter to save changes.</p>
-                    </div>
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                {/* PROFILE INFORMATION */}
+                <div className="lg:col-span-1 bg-card border border-border rounded-xl p-6 space-y-6">
+                  <div className="flex flex-col items-center text-center pb-4 border-b border-border/50">
+                    <img
+                      src={profileData.avatar}
+                      alt={currentUser?.email || profileData.name}
+                      className="w-24 h-24 rounded-full object-cover mb-3 border border-border"
+                    />
+                    <h3 className="font-bold text-lg text-foreground">
+                      {currentUser?.email || profileData.name}
+                    </h3>
+                    <span className="text-xs bg-primary/20 text-primary px-2.5 py-0.5 rounded-full font-semibold">
+                      {currentUser?.role || profileData.role}
+                    </span>
                   </div>
 
-                  {/* USER ACCOUNTS LIST */}
-                  <div className="lg:col-span-2 bg-card border border-border rounded-xl p-6 space-y-4">
-                    <div className="flex items-center justify-between">
+                  {!isEditingProfile ? (
+                    <div className="space-y-4">
                       <div>
-                        <h3 className="font-bold text-foreground">Authorized System Users</h3>
-                        <p className="text-xs text-muted-foreground">Authorized profiles who can access system features.</p>
+                        <span className="text-xs text-muted-foreground block uppercase font-bold tracking-wide">
+                          Email
+                        </span>
+                        <span className="text-sm font-semibold">
+                          {profileData.email}
+                        </span>
                       </div>
-                      <Button onClick={() => setUserDialogOpen(true)} className="h-9">
-                        <Plus size={14} className="mr-1" /> Add User
+                      <div>
+                        <span className="text-xs text-muted-foreground block uppercase font-bold tracking-wide">
+                          Key Access
+                        </span>
+                        <span className="text-sm font-semibold italic text-muted-foreground">
+                          Protected Key Credentials
+                        </span>
+                      </div>
+                      <Button
+                        onClick={() => setIsEditingProfile(true)}
+                        className="w-full"
+                        variant="outline"
+                      >
+                        Edit Profile
                       </Button>
                     </div>
+                  ) : (
+                    <form onSubmit={handleUpdateProfile} className="space-y-3">
+                      <div>
+                        <label className="text-xs font-semibold block text-muted-foreground uppercase">
+                          Name
+                        </label>
+                        <input
+                          type="text"
+                          value={profileData.name}
+                          onChange={(e) =>
+                            setProfileData({
+                              ...profileData,
+                              name: e.target.value,
+                            })
+                          }
+                          className="input-base w-full mt-1"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs font-semibold block text-muted-foreground uppercase">
+                          Email
+                        </label>
+                        <input
+                          type="email"
+                          value={profileData.email}
+                          onChange={(e) =>
+                            setProfileData({
+                              ...profileData,
+                              email: e.target.value,
+                            })
+                          }
+                          className="input-base w-full mt-1"
+                        />
+                      </div>
+                      <div className="flex gap-2 pt-2">
+                        <Button type="submit" className="flex-1">
+                          Save
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => setIsEditingProfile(false)}
+                        >
+                          Cancel
+                        </Button>
+                      </div>
+                    </form>
+                  )}
 
-                    <div className="border border-border rounded-lg overflow-hidden bg-background">
-                      <table className="w-full text-xs text-left">
-                        <thead className="bg-muted text-muted-foreground font-semibold border-b border-border">
-                          <tr>
-                            <th className="px-4 py-2.5">User</th>
-                            <th className="px-4 py-2.5">Role / Permissions</th>
-                            <th className="px-4 py-2.5">Created</th>
-                            <th className="px-4 py-2.5 text-right w-16">Action</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {users.map((u) => (
-                            <tr key={u.id} className="border-b border-border last:border-0 hover:bg-muted/20">
-                              <td className="px-4 py-3">
-                                <div className="font-bold text-foreground">{u.username}</div>
-                                <div className="text-muted-foreground">{u.email}</div>
-                              </td>
-                              <td className="px-4 py-3">
-                                <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold ${
-                                  (u.role || 'Admin') === 'Admin' ? 'bg-primary/20 text-primary border border-primary/30' :
-                                  (u.role || 'Admin') === 'Moderator' ? 'bg-blue-500/10 text-blue-500 border border-blue-500/20' :
-                                  'bg-yellow-500/10 text-yellow-500 border border-yellow-500/20'
-                                }`}>
-                                  {u.role || 'Admin'}
-                                </span>
-                              </td>
-                              <td className="px-4 py-3 text-muted-foreground">
-                                {new Date(u.created).toLocaleDateString()}
-                              </td>
-                              <td className="px-4 py-3 text-right">
+                  {/* SECURITY KEY RESET */}
+                  <div className="pt-4 border-t border-border/50 space-y-3">
+                    <h4 className="text-sm font-bold text-foreground flex items-center gap-1.5">
+                      <Shield size={16} className="text-primary" /> Security
+                      Verification Key
+                    </h4>
+                    <p className="text-xs text-muted-foreground">
+                      Reset your master admin key token. Re-login will be
+                      required if changed.
+                    </p>
+                    <input
+                      type="password"
+                      placeholder="New Admin Key token"
+                      className="input-base w-full text-xs"
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          handleChangeAdminKey(e.target.value);
+                          e.target.value = "";
+                        }
+                      }}
+                    />
+                    <p className="text-[10px] text-muted-foreground italic">
+                      Press Enter to save changes.
+                    </p>
+                  </div>
+                </div>
+
+                {/* USER ACCOUNTS LIST */}
+                <div className="lg:col-span-2 bg-card border border-border rounded-xl p-6 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="font-bold text-foreground">
+                        Authorized System Users
+                      </h3>
+                      <p className="text-xs text-muted-foreground">
+                        Authorized profiles who can access system features.
+                      </p>
+                    </div>
+                    {hasPermission(currentUser?.role, "canEdit", "users") && (
+                      <Button
+                        onClick={() => setUserDialogOpen(true)}
+                        className="h-9"
+                      >
+                        <Plus size={14} className="mr-1" /> Add User
+                      </Button>
+                    )}
+                  </div>
+
+                  <div className="border border-border rounded-lg overflow-hidden bg-background">
+                    <table className="w-full text-xs text-left">
+                      <thead className="bg-muted text-muted-foreground font-semibold border-b border-border">
+                        <tr>
+                          <th className="px-4 py-2.5">User</th>
+                          <th className="px-4 py-2.5">Role</th>
+                          <th className="px-4 py-2.5">Created</th>
+                          <th className="px-4 py-2.5 text-right w-16">
+                            Action
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {users.map((u) => (
+                          <tr
+                            key={u.id}
+                            className="border-b border-border last:border-0 hover:bg-muted/20"
+                          >
+                            <td className="px-4 py-3">
+                              <div className="font-bold text-foreground">
+                                {u.username}
+                              </div>
+                              <div className="text-muted-foreground">
+                                {u.email}
+                              </div>
+                            </td>
+                            <td className="px-4 py-3">
+                              <span className="bg-primary/10 text-primary px-2 py-0.5 rounded-full text-[10px] font-semibold">
+                                {u.role || "Admin"}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3 text-muted-foreground">
+                              {new Date(u.created).toLocaleDateString()}
+                            </td>
+                            <td className="px-4 py-3 text-right">
+                              {hasPermission(
+                                currentUser?.role,
+                                "canDelete",
+                                "users",
+                              ) && (
                                 <button
                                   onClick={() => handleDeleteUser(u.id)}
                                   className="text-muted-foreground hover:text-destructive p-1 rounded-md"
                                 >
                                   <Trash2 size={13} />
                                 </button>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
                   </div>
-
                 </div>
-              )}
+              </div>
             </div>
           )}
 
+          {/* TAB CONTENT: FINANCE */}
+          {activeTab === "finance" && <FinanceModule />}
+
+          {/* TAB CONTENT: CMS */}
+          {activeTab === "cms" && <CMSEditor />}
+
+          {/* TAB CONTENT: MEDIA LIBRARY */}
+          {activeTab === "media" && (
+            <MediaLibraryAdmin
+              canEdit={hasPermission(currentUser?.role, "canEdit", "media")}
+            />
+          )}
         </main>
       </div>
 
@@ -1915,9 +2497,7 @@ const AdminPage = () => {
         open={projectDialogOpen}
         onClose={() => setProjectDialogOpen(false)}
         initial={editingProject}
-        adminKey={adminKey}
         onSaved={handleProjectSaved}
-        isReadOnly={isReadOnly('projects')}
       />
 
       <TechFormDialog
@@ -1925,7 +2505,6 @@ const AdminPage = () => {
         onClose={() => setTechDialogOpen(false)}
         initial={editingTech}
         onSaved={handleTechSaved}
-        isReadOnly={isReadOnly('team')}
       />
 
       <UserFormDialog
@@ -1936,60 +2515,193 @@ const AdminPage = () => {
 
       {/* DETAIL MODAL FOR ORDERS */}
       {selectedOrder && (
-        <Dialog open={!!selectedOrder} onOpenChange={() => setSelectedOrder(null)}>
+        <Dialog
+          open={!!selectedOrder}
+          onOpenChange={() => setSelectedOrder(null)}
+        >
           <DialogContent className="max-w-md bg-card border border-border">
             <DialogHeader>
-              <DialogTitle className="capitalize">{selectedOrder.type} Details</DialogTitle>
+              <DialogTitle className="capitalize">
+                {selectedOrder.type} Details
+              </DialogTitle>
             </DialogHeader>
             <div className="space-y-3 mt-2 text-sm">
               <div className="grid grid-cols-3 border-b border-border/50 py-1.5">
                 <span className="text-muted-foreground">Customer</span>
-                <span className="col-span-2 font-bold">{selectedOrder.name}</span>
+                <span className="col-span-2 font-bold">
+                  {selectedOrder.name}
+                </span>
               </div>
               <div className="grid grid-cols-3 border-b border-border/50 py-1.5">
                 <span className="text-muted-foreground">Contact</span>
-                <span className="col-span-2">{selectedOrder.email} <br /> {selectedOrder.phone}</span>
+                <span className="col-span-2">
+                  {selectedOrder.email} <br /> {selectedOrder.phone}
+                </span>
               </div>
               <div className="grid grid-cols-3 border-b border-border/50 py-1.5">
                 <span className="text-muted-foreground">Service</span>
-                <span className="col-span-2 capitalize font-semibold">{selectedOrder.service_type}</span>
+                <span className="col-span-2 capitalize font-semibold">
+                  {selectedOrder.service_type}
+                </span>
               </div>
-              {selectedOrder.type === 'appointment' ? (
+              {selectedOrder.type === "appointment" ? (
                 <>
                   <div className="grid grid-cols-3 border-b border-border/50 py-1.5">
-                    <span className="text-muted-foreground">Preferred Time</span>
-                    <span className="col-span-2">{selectedOrder.preferred_date} at {selectedOrder.preferred_time || 'Anytime'}</span>
+                    <span className="text-muted-foreground">
+                      Preferred Time
+                    </span>
+                    <span className="col-span-2">
+                      {selectedOrder.preferred_date} at{" "}
+                      {selectedOrder.preferred_time || "Anytime"}
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-3 border-b border-border/50 py-1.5">
+                    <span className="text-muted-foreground">Technician</span>
+                    <span className="col-span-2">
+                      {hasPermission(
+                        currentUser?.role,
+                        "canEdit",
+                        "orders",
+                      ) ? (
+                        <Select
+                          value={
+                            selectedOrder.assignedTechId
+                              ? String(selectedOrder.assignedTechId)
+                              : "unassigned"
+                          }
+                          onValueChange={(techId) => {
+                            if (techId === "unassigned") {
+                              handleUpdateBooking(selectedOrder.id, {
+                                assignedTechId: null,
+                                assignedTechName: null,
+                              });
+                              setSelectedOrder((prev) => ({
+                                ...prev,
+                                assignedTechId: null,
+                                assignedTechName: null,
+                              }));
+                            } else {
+                              const tech = teamMembers.find(
+                                (t) => String(t.id) === techId,
+                              );
+                              if (tech) {
+                                handleUpdateBooking(selectedOrder.id, {
+                                  assignedTechId: tech.id,
+                                  assignedTechName: tech.name,
+                                });
+                                setSelectedOrder((prev) => ({
+                                  ...prev,
+                                  assignedTechId: tech.id,
+                                  assignedTechName: tech.name,
+                                }));
+                              }
+                            }
+                          }}
+                        >
+                          <SelectTrigger className="h-8 text-xs">
+                            <SelectValue placeholder="Assign technician" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="unassigned">
+                              Unassigned
+                            </SelectItem>
+                            {teamMembers.map((tech) => (
+                              <SelectItem
+                                key={tech.id}
+                                value={String(tech.id)}
+                              >
+                                {tech.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      ) : (
+                        selectedOrder.assignedTechName || "Unassigned"
+                      )}
+                    </span>
                   </div>
                   <div className="grid grid-cols-3 border-b border-border/50 py-1.5">
                     <span className="text-muted-foreground">Job Details</span>
-                    <span className="col-span-2 whitespace-pre-wrap">{selectedOrder.project_description || 'None provided'}</span>
+                    <span className="col-span-2 whitespace-pre-wrap">
+                      {selectedOrder.project_description || "None provided"}
+                    </span>
                   </div>
                 </>
               ) : (
                 <>
                   <div className="grid grid-cols-3 border-b border-border/50 py-1.5">
-                    <span className="text-muted-foreground">Estimated Cost</span>
-                    <span className="col-span-2 font-bold text-primary">${selectedOrder.estimated_quote}</span>
+                    <span className="text-muted-foreground">
+                      Estimated Cost
+                    </span>
+                    <span className="col-span-2 font-bold text-primary">
+                      ${selectedOrder.estimated_quote}
+                    </span>
                   </div>
                   <div className="grid grid-cols-3 border-b border-border/50 py-1.5">
                     <span className="text-muted-foreground">Scope Details</span>
-                    <span className="col-span-2 whitespace-pre-wrap">{selectedOrder.project_details || 'None provided'}</span>
+                    <span className="col-span-2 whitespace-pre-wrap">
+                      {selectedOrder.project_details || "None provided"}
+                    </span>
                   </div>
                 </>
               )}
               <div className="grid grid-cols-3 border-b border-border/50 py-1.5">
                 <span className="text-muted-foreground">Current Status</span>
-                <span className="col-span-2 font-semibold capitalize">
-                  {selectedOrder.status || 'Pending'}
+                <span className="col-span-2">
+                  <span className="bg-primary/20 text-primary px-2 py-0.5 rounded font-semibold text-xs capitalize">
+                    {selectedOrder.status || "Pending"}
+                  </span>
                 </span>
               </div>
-              <div className="flex justify-end pt-3">
+              <div className="flex justify-end gap-2 pt-3">
+                {selectedOrder.type === "appointment" &&
+                  normalizeStatus(selectedOrder.status) === "Completed" && (
+                    <Button
+                      variant="outline"
+                      onClick={() =>
+                        openSendInvoiceForBooking(selectedOrder)
+                      }
+                    >
+                      <Send size={14} className="mr-1" /> Send Invoice
+                    </Button>
+                  )}
                 <Button onClick={() => setSelectedOrder(null)}>Close</Button>
               </div>
             </div>
           </DialogContent>
         </Dialog>
       )}
+
+      {/* SEND INVOICE MODAL */}
+      <Dialog open={showSendInvoice} onOpenChange={setShowSendInvoice}>
+        <DialogContent className="max-w-md bg-card border border-border">
+          <DialogHeader>
+            <DialogTitle>Send Invoice</DialogTitle>
+          </DialogHeader>
+          {invoiceToSend && (
+            <div className="space-y-3 py-2">
+              <p className="text-sm text-muted-foreground">
+                Send {invoiceToSend.number} to {invoiceToSend.clientName} — $
+                {(invoiceToSend.total || 0).toFixed(2)}
+              </p>
+              {[
+                { method: "email", label: "Email", icon: Mail },
+                { method: "sms", label: "Text Message", icon: Smartphone },
+                { method: "whatsapp", label: "WhatsApp", icon: MessageSquare },
+              ].map(({ method, label, icon: Icon }) => (
+                <button
+                  key={method}
+                  onClick={() => handleSendInvoice(method)}
+                  className="w-full flex items-center gap-3 p-3 rounded-xl border border-border bg-card hover:bg-muted/50 transition-colors text-left"
+                >
+                  <Icon size={18} className="text-primary" />
+                  <span className="font-medium">{label}</span>
+                </button>
+              ))}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* Input styles */}
       <style>{`
