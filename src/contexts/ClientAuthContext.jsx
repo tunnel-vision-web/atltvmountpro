@@ -82,10 +82,10 @@ export const ClientAuthProvider = ({ children }) => {
       const u = {
         id: authData.record.id,
         email: authData.record.email,
-        name: authData.record.name || authData.record.email,
-        role: authData.record.role || 'customer',
-        type: authData.record.type || 'customer',
-        phone: authData.record.phone || '',
+        name: authData.record.Name || authData.record.email,
+        role: authData.record.Role || 'customer',
+        type: authData.record.Type || 'customer',
+        phone: authData.record.Phone_Number || '',
         token: authData.token,
       };
       setUser(u);
@@ -114,19 +114,19 @@ export const ClientAuthProvider = ({ children }) => {
         email,
         password,
         passwordConfirm: password,
-        name,
-        phone,
-        role,
-        type: role,
+        Name: name,
+        Phone_Number: phone,
+        Role: role,
+        Type: role,
       });
       const authData = await pb.collection('clients').authWithPassword(email, password);
       const u = {
         id: record.id,
-        email,
-        name,
-        role,
-        type: role,
-        phone: phone || '',
+        email: authData.record.email,
+        name: authData.record.Name || name,
+        role: authData.record.Role || role,
+        type: authData.record.Type || role,
+        phone: authData.record.Phone_Number || phone || '',
         token: authData.token,
       };
       setUser(u);
