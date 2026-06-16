@@ -1,16 +1,8 @@
 import React from "react";
 import usePageTitle from "@/hooks/usePageTitle";
 import { motion } from "framer-motion";
-import {
-  Tv,
-  Hammer,
-  Paintbrush,
-  Wrench,
-  Home,
-  Droplet,
-  Zap,
-  ArrowRight,
-} from "lucide-react";
+import * as Icons from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
@@ -28,45 +20,51 @@ import { useCMS } from "@/hooks/useCMS";
 import ProjectCard from "@/components/ProjectCard";
 import DUMMY_PROJECTS from "@/data/dummyProjects";
 
-const services = [
+// Helper to resolve icon component from name string
+const getIconComponent = (iconName) => {
+  const IconComponent = Icons[iconName];
+  return IconComponent || Icons.Hammer;
+};
+
+const defaultStaticServices = [
   {
-    icon: Tv,
+    icon: "Tv",
     title: "TV Mounting",
     description:
       "Professional wall mounting for all TV sizes with clean cable management and optimal viewing angles.",
   },
   {
-    icon: Hammer,
+    icon: "Hammer",
     title: "Drywall Repair",
     description:
       "Expert patching of holes, crack repairs, smooth finishes, and texture matching for seamless results.",
   },
   {
-    icon: Paintbrush,
+    icon: "Paintbrush",
     title: "Painting",
     description:
       "Interior and exterior painting services with color consultation and thorough prep work included.",
   },
   {
-    icon: Wrench,
+    icon: "Wrench",
     title: "Carpentry",
     description:
       "Custom shelving, trim work, door installation, and professional carpentry repairs.",
   },
   {
-    icon: Home,
+    icon: "Home",
     title: "Flooring",
     description:
       "Hardwood, laminate, and tile installation with expert repair services.",
   },
   {
-    icon: Droplet,
+    icon: "Droplet",
     title: "Plumbing",
     description:
       "Fixture installation, leak repairs, and drain cleaning services.",
   },
   {
-    icon: Zap,
+    icon: "Zap",
     title: "Light Electrical",
     description:
       "Outlet installation, switch replacement, and light fixture mounting.",
@@ -109,9 +107,10 @@ const testimonials = [
 const HomePage = () => {
   const { openQuoteModal, openBookingModal } = useUI();
   const { data: cmsHome } = useCMS("home");
-
+  const { data: cmsServicesData } = useCMS("services");
+ 
   const [projects, setProjects] = React.useState([]);
-
+ 
   React.useEffect(() => {
     fetch("/api/projects")
       .then((r) => {
@@ -138,14 +137,16 @@ const HomePage = () => {
         setProjects(featured.length > 0 ? featured.slice(0, 3) : DUMMY_PROJECTS.slice(0, 3));
       });
   }, []);
-
-  const cmsFeaturedServices = cmsHome?.featuredServices;
+ 
   const cmsFaqs = cmsHome?.faqs;
-
+ 
+  const allServicesList = cmsServicesData?.list || [];
+  const cmsCoreServices = allServicesList.filter((s) => s.isCore);
+ 
   const featuredServices =
-    cmsFeaturedServices?.length > 0
-      ? cmsFeaturedServices
-      : [
+    cmsCoreServices.length > 0
+      ? cmsCoreServices
+      : (allServicesList.length > 0 ? allServicesList.slice(0, 3) : [
           {
             title: "TV Mounting & AV Setup",
             tagline: "Clean walls. Perfect angles.",
@@ -173,8 +174,10 @@ const HomePage = () => {
               "https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=900&q=80",
             bg: "from-black/70 via-black/50 to-black/20",
           },
-        ];
-
+        ]);
+ 
+  const servicesListToRender = allServicesList.length > 0 ? allServicesList : defaultStaticServices;
+ 
   const faqs =
     cmsFaqs?.length > 0
       ? cmsFaqs
@@ -313,16 +316,19 @@ const HomePage = () => {
             </p>
           </motion.div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
-            {services.slice(0, 4).map((service, index) => (
-              <ServiceCard key={index} {...service} index={index} />
-            ))}
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
-            {services.slice(4).map((service, index) => (
-              <ServiceCard key={index + 4} {...service} index={index + 4} />
-            ))}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-12">
+            {servicesListToRender.map((service, index) => {
+              const IconComponent = getIconComponent(service.icon);
+              return (
+                <ServiceCard
+                  key={service.id || index}
+                  icon={IconComponent}
+                  title={service.title}
+                  description={service.description}
+                  index={index}
+                />
+              );
+            })}
           </div>
 
           <div className="text-center flex gap-4 justify-center flex-wrap">

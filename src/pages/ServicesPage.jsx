@@ -1,23 +1,21 @@
 import React from "react";
 import usePageTitle from "@/hooks/usePageTitle";
 import { motion } from "framer-motion";
-import {
-  Tv,
-  Hammer,
-  Paintbrush,
-  Wrench,
-  Home,
-  Droplet,
-  Zap,
-} from "lucide-react";
+import * as Icons from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useUI } from "@/contexts/UIContext";
 import PageHero from "@/components/PageHero";
+import { useCMS } from "@/hooks/useCMS";
 
-const services = [
+const getIconComponent = (iconName) => {
+  const IconComponent = Icons[iconName];
+  return IconComponent || Icons.Hammer;
+};
+
+const defaultStaticServices = [
   {
-    icon: Tv,
+    icon: "Tv",
     title: "TV mounting",
     description: "Professional wall mounting for all TV sizes",
     details:
@@ -29,12 +27,10 @@ const services = [
       "Secure wall mounting",
       "Same-day service available",
     ],
-    image: "/images/services/service-tv-mounting.jpg",
-    fallback:
-      "https://images.unsplash.com/photo-1698047945367-112339b04d51?w=900&q=80",
+    image: "https://images.unsplash.com/photo-1698047945367-112339b04d51?w=900&q=80",
   },
   {
-    icon: Hammer,
+    icon: "Hammer",
     title: "Drywall repair",
     description: "Expert patching and texture matching",
     details:
@@ -46,12 +42,10 @@ const services = [
       "Smooth finishes",
       "Paint-ready results",
     ],
-    image: "/images/services/service-drywall.jpg",
-    fallback:
-      "https://images.unsplash.com/photo-1618832515521-3a8c6716aafc?w=900&q=80",
+    image: "https://images.unsplash.com/photo-1562259949-e8e7689d7828?w=900&q=80",
   },
   {
-    icon: Paintbrush,
+    icon: "Paintbrush",
     title: "Painting",
     description: "Interior and exterior painting services",
     details:
@@ -63,12 +57,10 @@ const services = [
       "Quality materials",
       "Complete cleanup",
     ],
-    image: "/images/services/service-painting.jpg",
-    fallback:
-      "https://images.unsplash.com/photo-1629195352955-850830e4d6c9?w=900&q=80",
+    image: "https://images.unsplash.com/photo-1629195352955-850830e4d6c9?w=900&q=80",
   },
   {
-    icon: Wrench,
+    icon: "Wrench",
     title: "Carpentry",
     description: "Custom woodwork and repairs",
     details:
@@ -80,12 +72,10 @@ const services = [
       "Built-ins",
       "Precise measurements",
     ],
-    image: "/images/services/service-carpentry.jpg",
-    fallback:
-      "https://images.unsplash.com/photo-1581858726788-75bc0f6a952d?w=900&q=80",
+    image: "https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=900&q=80",
   },
   {
-    icon: Home,
+    icon: "Home",
     title: "Flooring",
     description: "Professional floor installation",
     details:
@@ -97,12 +87,10 @@ const services = [
       "Floor repairs",
       "Subfloor prep",
     ],
-    image: "/images/services/service-flooring.jpg",
-    fallback:
-      "https://images.unsplash.com/photo-1615971677499-5467cbab01c0?w=900&q=80",
+    image: "https://images.unsplash.com/photo-1615971677499-5467cbab01c0?w=900&q=80",
   },
   {
-    icon: Droplet,
+    icon: "Droplet",
     title: "Plumbing",
     description: "Fixture installation and repairs",
     details:
@@ -114,12 +102,10 @@ const services = [
       "Faucet replacement",
       "Toilet installation",
     ],
-    image: "/images/services/service-plumbing.jpg",
-    fallback:
-      "https://images.unsplash.com/photo-1607472586893-edb57bdc0e39?w=900&q=80",
+    image: "https://images.unsplash.com/photo-1607472586893-edb57bdc0e39?w=900&q=80",
   },
   {
-    icon: Zap,
+    icon: "Zap",
     title: "Light electrical",
     description: "Safe electrical installations",
     details:
@@ -131,15 +117,17 @@ const services = [
       "Code compliant",
       "Safety tested",
     ],
-    image: "/images/services/service-electrical.jpg",
-    fallback:
-      "https://images.unsplash.com/photo-1621905251918-48416bd8575a?w=900&q=80",
+    image: "https://images.unsplash.com/photo-1621905251918-48416bd8575a?w=900&q=80",
   },
 ];
 
 const ServicesPage = () => {
   const { openQuoteModal } = useUI();
+  const { data: cmsServicesData } = useCMS("services");
   usePageTitle("Our Services - Atlanta TV Mount Pro");
+
+  const allServicesList = cmsServicesData?.list || [];
+  const servicesListToRender = allServicesList.length > 0 ? allServicesList : defaultStaticServices;
 
   return (
     <>
@@ -147,72 +135,78 @@ const ServicesPage = () => {
         eyebrow="What We Do"
         title="Our Services"
         subtitle="Professional handyman services delivered with expertise and care"
-        image="/images/hero/hero-tv-mounting.jpg"
+        image="https://images.unsplash.com/photo-1698047945367-112339b04d51?w=1200&q=80"
         alt="Professional TV mounting service"
       />
 
       <div className="py-20 bg-background">
         <div className="max-w-[1140px] mx-auto px-4 sm:px-6 lg:px-8">
           <div className="space-y-16">
-            {services.map((service, index) => (
-              <motion.div
-                key={index}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: index * 0.1 }}
-              >
-                <Card className="overflow-hidden border-border">
-                  <div
-                    className={`grid grid-cols-1 md:grid-cols-2 gap-0 ${index % 2 === 1 ? "md:flex-row-reverse" : ""}`}
-                  >
-                    <div className={`${index % 2 === 1 ? "md:order-2" : ""}`}>
-                      <img
-                        src={service.image}
-                        alt={service.title}
-                        className="w-full h-full object-cover min-h-[300px]"
-                        onError={(e) => {
-                          e.target.onerror = null;
-                          e.target.src = service.fallback;
-                        }}
-                      />
-                    </div>
-                    <CardContent
-                      className={`p-8 flex flex-col justify-center ${index % 2 === 1 ? "md:order-1" : ""}`}
+            {servicesListToRender.map((service, index) => {
+              const IconComponent = getIconComponent(service.icon);
+              const fallbackImage = "https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=900&q=80";
+              return (
+                <motion.div
+                  key={service.id || index}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5, delay: index * 0.1 }}
+                >
+                  <Card className="overflow-hidden border-border">
+                    <div
+                      className={`grid grid-cols-1 md:grid-cols-2 gap-0 ${index % 2 === 1 ? "md:flex-row-reverse" : ""}`}
                     >
-                      <div className="mb-4 p-3 bg-primary/10 rounded-xl w-fit">
-                        <service.icon className="w-8 h-8 text-primary" />
+                      <div className={`${index % 2 === 1 ? "md:order-2" : ""}`}>
+                        <img
+                          src={service.image || fallbackImage}
+                          alt={service.title}
+                          className="w-full h-full object-cover min-h-[300px]"
+                          onError={(e) => {
+                            e.target.onerror = null;
+                            e.target.src = fallbackImage;
+                          }}
+                        />
                       </div>
-                      <h2 className="text-2xl md:text-3xl font-bold mb-3">
-                        {service.title}
-                      </h2>
-                      <p className="text-lg text-muted-foreground mb-4">
-                        {service.description}
-                      </p>
-                      <p className="text-card-foreground leading-relaxed mb-6">
-                        {service.details}
-                      </p>
-                      <ul className="space-y-2 mb-6">
-                        {service.benefits.map((benefit, i) => (
-                          <li
-                            key={i}
-                            className="flex items-center gap-2 text-card-foreground"
-                          >
-                            <span className="w-1.5 h-1.5 bg-primary rounded-full" />
-                            {benefit}
-                          </li>
-                        ))}
-                      </ul>
-                      <Button
-                        onClick={openQuoteModal}
-                        className="bg-primary hover:bg-primary/90 text-primary-foreground transition-all duration-200 active:scale-[0.98] w-fit"
+                      <CardContent
+                        className={`p-8 flex flex-col justify-center ${index % 2 === 1 ? "md:order-1" : ""}`}
                       >
-                        Get a quote
-                      </Button>
-                    </CardContent>
-                  </div>
-                </Card>
-              </motion.div>
-            ))}
+                        <div className="mb-4 p-3 bg-primary/10 rounded-xl w-fit">
+                          <IconComponent className="w-8 h-8 text-primary" />
+                        </div>
+                        <h2 className="text-2xl md:text-3xl font-bold mb-3">
+                          {service.title}
+                        </h2>
+                        <p className="text-lg text-muted-foreground mb-4">
+                          {service.description}
+                        </p>
+                        <p className="text-card-foreground leading-relaxed mb-6">
+                          {service.details}
+                        </p>
+                        {service.benefits && service.benefits.length > 0 && (
+                          <ul className="space-y-2 mb-6">
+                            {service.benefits.map((benefit, i) => (
+                              <li
+                                key={i}
+                                className="flex items-center gap-2 text-card-foreground"
+                              >
+                                <span className="w-1.5 h-1.5 bg-primary rounded-full" />
+                                {benefit}
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                        <Button
+                          onClick={openQuoteModal}
+                          className="bg-primary hover:bg-primary/90 text-primary-foreground transition-all duration-200 active:scale-[0.98] w-fit"
+                        >
+                          Get a quote
+                        </Button>
+                      </CardContent>
+                    </div>
+                  </Card>
+                </motion.div>
+              );
+            })}
           </div>
         </div>
       </div>

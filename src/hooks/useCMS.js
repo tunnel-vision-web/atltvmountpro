@@ -105,6 +105,129 @@ export const DEFAULT_CMS_DATA = {
     mapEmbed:
       "https://www.openstreetmap.org/export/embed.html?bbox=-84.4882%2C33.6490%2C-84.2882%2C33.8490&layer=mapnik&marker=33.7490%2C-84.3882",
   },
+  services: {
+    list: [
+      {
+        id: "svc-1",
+        title: "TV Mounting",
+        tagline: "Clean walls. Perfect angles.",
+        description: "Professional wall mounting for all TV sizes with clean cable management and optimal viewing angles.",
+        details: "Our expert technicians handle TVs of all sizes, from compact 32-inch displays to massive 85-inch screens. We ensure optimal viewing angles, secure mounting on any wall type (drywall, brick, concrete), and clean cable management that keeps wires hidden. Every installation includes a level check, stud finder verification, and a final quality inspection.",
+        benefits: [
+          "All TV sizes supported",
+          "Clean cable management",
+          "Optimal viewing angles",
+          "Secure wall mounting",
+          "Same-day service available"
+        ],
+        image: "https://images.unsplash.com/photo-1698047945367-112339b04d51?w=900&q=80",
+        icon: "Tv",
+        isCore: true
+      },
+      {
+        id: "svc-2",
+        title: "Drywall Repair",
+        tagline: "Flawless finishes, every time.",
+        description: "Expert patching of holes, crack repairs, smooth finishes, and texture matching for seamless results.",
+        details: "From small nail holes to large damaged sections, we repair all types of drywall damage. Our process includes proper patching, sanding, texture matching, and priming. We ensure seamless repairs that blend perfectly with your existing walls, making damage completely invisible.",
+        benefits: [
+          "Hole patching",
+          "Crack repair",
+          "Texture matching",
+          "Smooth finishes",
+          "Paint-ready results"
+        ],
+        image: "https://images.unsplash.com/photo-1562259949-e8e7689d7828?w=900&q=80",
+        icon: "Hammer",
+        isCore: true
+      },
+      {
+        id: "svc-3",
+        title: "Painting",
+        tagline: "Color your world.",
+        description: "Interior and exterior painting services with color consultation and thorough prep work included.",
+        details: "Transform your space with professional painting services. We handle everything from single rooms to entire homes, both interior and exterior. Our service includes color consultation, thorough surface preparation, quality paint application, and complete cleanup. We use premium paints and ensure clean lines and even coverage.",
+        benefits: [
+          "Color consultation",
+          "Surface preparation",
+          "Interior & exterior",
+          "Quality materials",
+          "Complete cleanup"
+        ],
+        image: "https://images.unsplash.com/photo-1629195352955-850830e4d6c9?w=900&q=80",
+        icon: "Paintbrush",
+        isCore: true
+      },
+      {
+        id: "svc-4",
+        title: "Carpentry",
+        tagline: "Built exactly the way you need it.",
+        description: "Custom shelving, trim work, door installation, and professional carpentry repairs.",
+        details: "Our skilled carpenters handle custom shelving, trim work, door installation, and repairs. Whether you need built-in storage solutions, crown molding, or door replacements, we deliver precise craftsmanship. Every project is measured carefully and built to last.",
+        benefits: [
+          "Custom shelving",
+          "Trim installation",
+          "Door repairs",
+          "Built-ins",
+          "Precise measurements"
+        ],
+        image: "https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=900&q=80",
+        icon: "Wrench",
+        isCore: false
+      },
+      {
+        id: "svc-5",
+        title: "Flooring",
+        tagline: "Step onto quality.",
+        description: "Hardwood, laminate, and tile installation with expert repair services.",
+        details: "We install and repair hardwood, laminate, and tile flooring. Our process includes proper subfloor preparation, precise cutting and fitting, and professional finishing. We ensure level surfaces, tight seams, and durable installations that look great and last for years.",
+        benefits: [
+          "Hardwood installation",
+          "Laminate flooring",
+          "Tile work",
+          "Floor repairs",
+          "Subfloor prep"
+        ],
+        image: "https://images.unsplash.com/photo-1615971677499-5467cbab01c0?w=900&q=80",
+        icon: "Home",
+        isCore: false
+      },
+      {
+        id: "svc-6",
+        title: "Plumbing",
+        tagline: "Flowing smoothly.",
+        description: "Fixture installation, leak repairs, and drain cleaning services.",
+        details: "From faucet replacements to toilet installations, we handle common plumbing tasks. Our services include fixture installation, leak repairs, drain cleaning, and minor pipe repairs. We ensure proper connections, test for leaks, and leave your plumbing working perfectly.",
+        benefits: [
+          "Fixture installation",
+          "Leak repairs",
+          "Drain cleaning",
+          "Faucet replacement",
+          "Toilet installation"
+        ],
+        image: "https://images.unsplash.com/photo-1607472586893-edb57bdc0e39?w=900&q=80",
+        icon: "Droplet",
+        isCore: false
+      },
+      {
+        id: "svc-7",
+        title: "Light Electrical",
+        tagline: "Powering your comfort.",
+        description: "Outlet installation, switch replacement, and light fixture mounting.",
+        details: "We handle light electrical work including outlet installation, switch replacement, and light fixture mounting. All work is performed safely and up to code. We test all connections and ensure proper grounding for your safety.",
+        benefits: [
+          "Outlet installation",
+          "Switch replacement",
+          "Light fixtures",
+          "Code compliant",
+          "Safety tested"
+        ],
+        image: "https://images.unsplash.com/photo-1621905251918-48416bd8575a?w=900&q=80",
+        icon: "Zap",
+        isCore: false
+      }
+    ]
+  }
 };
 
 function getLocalCMS() {
@@ -127,6 +250,10 @@ function getLocalCMS() {
       }
       if (parsed.contact?.heroImage === "/images/pages/page-contact.jpg") {
         parsed.contact.heroImage = "https://images.unsplash.com/photo-1423666639041-f56000c27a9a?w=1200&q=80";
+      }
+      // Seed services list if missing
+      if (!parsed.services || !parsed.services.list) {
+        parsed.services = { ...DEFAULT_CMS_DATA.services };
       }
       return parsed;
     }
