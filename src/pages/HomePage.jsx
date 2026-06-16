@@ -119,7 +119,8 @@ const HomePage = () => {
         return r.json();
       })
       .then((data) => {
-        setProjects((data || []).slice(0, 3));
+        const featured = (data || []).filter(p => p.featured_landing);
+        setProjects(featured.length > 0 ? featured.slice(0, 3) : (data || []).slice(0, 3));
       })
       .catch(() => {
         const stored = localStorage.getItem("atltvmountpro_local_projects");
@@ -127,12 +128,14 @@ const HomePage = () => {
           try {
             const parsed = JSON.parse(stored);
             if (parsed && parsed.length > 0) {
-              setProjects(parsed.slice(0, 3));
+              const featured = parsed.filter(p => p.featured_landing);
+              setProjects(featured.length > 0 ? featured.slice(0, 3) : parsed.slice(0, 3));
               return;
             }
           } catch {}
         }
-        setProjects(DUMMY_PROJECTS.slice(0, 3));
+        const featured = DUMMY_PROJECTS.filter(p => p.featured_landing);
+        setProjects(featured.length > 0 ? featured.slice(0, 3) : DUMMY_PROJECTS.slice(0, 3));
       });
   }, []);
 

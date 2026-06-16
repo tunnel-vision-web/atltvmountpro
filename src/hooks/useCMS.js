@@ -15,7 +15,7 @@ export const DEFAULT_CMS_DATA = {
         tagline: "Clean walls. Perfect angles.",
         description:
           "We mount any size TV on any wall type — brick, tile, concrete, or drywall — with full in-wall cable concealment.",
-        image: "/images/services/service-tv-mounting.jpg",
+        image: "https://images.unsplash.com/photo-1698047945367-112339b04d51?w=900&q=80",
         bg: "from-black/70 via-black/50 to-black/20",
       },
       {
@@ -23,7 +23,7 @@ export const DEFAULT_CMS_DATA = {
         tagline: "Flawless finishes, every time.",
         description:
           "Seamless hole repairs with texture matching, full-room priming and painting with colour consultation included.",
-        image: "/images/services/service-drywall.jpg",
+        image: "https://images.unsplash.com/photo-1562259949-e8e7689d7828?w=900&q=80",
         bg: "from-black/70 via-black/50 to-black/20",
       },
       {
@@ -31,7 +31,7 @@ export const DEFAULT_CMS_DATA = {
         tagline: "Built exactly the way you need it.",
         description:
           "Floating shelves, entertainment centers, trim work, and custom storage built to fit your space perfectly.",
-        image: "/images/services/service-carpentry.jpg",
+        image: "https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=900&q=80",
         bg: "from-black/70 via-black/50 to-black/20",
       },
     ],
@@ -64,7 +64,7 @@ export const DEFAULT_CMS_DATA = {
     ],
   },
   about: {
-    heroImage: "/images/about/about-hero.jpg",
+    heroImage: "https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=1200&q=80",
     heroTitle: "About Atlanta TV Mount Pro",
     heroSubtitle:
       "Your trusted partner for professional handyman services in Atlanta",
@@ -95,7 +95,7 @@ export const DEFAULT_CMS_DATA = {
     ],
   },
   contact: {
-    heroImage: "/images/pages/page-contact.jpg",
+    heroImage: "https://images.unsplash.com/photo-1423666639041-f56000c27a9a?w=1200&q=80",
     heroTitle: "Contact Us",
     heroSubtitle: "Get in touch for a free quote or to schedule your service",
     phone: "770-374-3203",
@@ -110,7 +110,26 @@ export const DEFAULT_CMS_DATA = {
 function getLocalCMS() {
   try {
     const stored = localStorage.getItem(CMS_STORAGE_KEY);
-    if (stored) return JSON.parse(stored);
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      // Clean up legacy broken local paths from storage
+      if (parsed.home?.featuredServices?.[0]?.image === "/images/services/service-tv-mounting.jpg") {
+        parsed.home.featuredServices[0].image = "https://images.unsplash.com/photo-1698047945367-112339b04d51?w=900&q=80";
+      }
+      if (parsed.home?.featuredServices?.[1]?.image === "/images/services/service-drywall.jpg") {
+        parsed.home.featuredServices[1].image = "https://images.unsplash.com/photo-1562259949-e8e7689d7828?w=900&q=80";
+      }
+      if (parsed.home?.featuredServices?.[2]?.image === "/images/services/service-carpentry.jpg") {
+        parsed.home.featuredServices[2].image = "https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=900&q=80";
+      }
+      if (parsed.about?.heroImage === "/images/about/about-hero.jpg") {
+        parsed.about.heroImage = "https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=1200&q=80";
+      }
+      if (parsed.contact?.heroImage === "/images/pages/page-contact.jpg") {
+        parsed.contact.heroImage = "https://images.unsplash.com/photo-1423666639041-f56000c27a9a?w=1200&q=80";
+      }
+      return parsed;
+    }
   } catch {
     // ignore
   }

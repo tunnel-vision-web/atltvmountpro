@@ -90,6 +90,7 @@ const EMPTY_PROJECT_FORM = {
   thumbnail: "",
   images: [""],
   sort_order: 0,
+  featured_landing: false,
 };
 
 // ── Permission constants ──────────────────────────────────────────────────────
@@ -488,17 +489,31 @@ const ProjectFormDialog = ({ open, onClose, initial, onSaved }) => {
             </button>
           </div>
 
-          <div className="w-32">
-            <label className="text-sm font-medium mb-1.5 block text-foreground">
-              Sort Order
-            </label>
-            <input
-              type="number"
-              value={form.sort_order}
-              onChange={(e) => field("sort_order", e.target.value)}
-              className="input-base w-full"
-              min={0}
-            />
+          <div className="flex gap-6 items-end">
+            <div className="w-32">
+              <label className="text-sm font-medium mb-1.5 block text-foreground">
+                Sort Order
+              </label>
+              <input
+                type="number"
+                value={form.sort_order}
+                onChange={(e) => field("sort_order", e.target.value)}
+                className="input-base w-full"
+                min={0}
+              />
+            </div>
+            <div className="flex items-center gap-2 pb-2.5">
+              <input
+                type="checkbox"
+                id="featured_landing"
+                checked={!!form.featured_landing}
+                onChange={(e) => field("featured_landing", e.target.checked)}
+                className="rounded border-border text-primary focus:ring-primary h-4 w-4 bg-muted/40 cursor-pointer"
+              />
+              <label htmlFor="featured_landing" className="text-sm font-medium text-foreground cursor-pointer select-none">
+                Featured on Landing Page
+              </label>
+            </div>
           </div>
 
           <div className="flex justify-end gap-3 pt-2 border-t border-border">
@@ -1800,6 +1815,9 @@ const AdminPage = () => {
                           <th className="text-left px-4 py-3 font-semibold text-muted-foreground hidden lg:table-cell">
                             Services
                           </th>
+                          <th className="text-left px-4 py-3 font-semibold text-muted-foreground w-20">
+                            Featured
+                          </th>
                           <th className="text-right px-4 py-3 font-semibold text-muted-foreground w-24">
                             Actions
                           </th>
@@ -1839,6 +1857,17 @@ const AdminPage = () => {
                                   </span>
                                 ))}
                               </div>
+                            </td>
+                            <td className="px-4 py-3.5">
+                              {project.featured_landing ? (
+                                <span className="bg-green-500/10 text-green-500 text-[10px] font-semibold px-2 py-0.5 rounded-full border border-green-500/20">
+                                  Featured
+                                </span>
+                              ) : (
+                                <span className="text-muted-foreground text-xs">
+                                  No
+                                </span>
+                              )}
                             </td>
                             <td className="px-4 py-3.5 text-right">
                               <div className="flex items-center gap-1 justify-end">

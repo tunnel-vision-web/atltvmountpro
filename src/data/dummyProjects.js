@@ -16,6 +16,7 @@ const DUMMY_PROJECTS = [
       'https://images.unsplash.com/photo-1601944179066-29786cb9d32a?w=1200&q=80',
     ],
     sort_order: 1,
+    featured_landing: true,
   },
   {
     id: 'demo-2',
@@ -30,6 +31,7 @@ const DUMMY_PROJECTS = [
       'https://images.unsplash.com/photo-1562259949-e8e7689d7828?w=1200&q=80',
     ],
     sort_order: 2,
+    featured_landing: true,
   },
   {
     id: 'demo-3',
@@ -44,6 +46,7 @@ const DUMMY_PROJECTS = [
       'https://images.unsplash.com/photo-1589939705384-5185137a7f0f?w=1200&q=80',
     ],
     sort_order: 3,
+    featured_landing: false,
   },
   {
     id: 'demo-4',
@@ -58,6 +61,7 @@ const DUMMY_PROJECTS = [
       'https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=1200&q=80',
     ],
     sort_order: 4,
+    featured_landing: false,
   },
   {
     id: 'demo-5',
@@ -72,6 +76,7 @@ const DUMMY_PROJECTS = [
       'https://images.unsplash.com/photo-1615971677499-5467cbab01c0?w=1200&q=80',
     ],
     sort_order: 5,
+    featured_landing: false,
   },
   {
     id: 'demo-6',
@@ -86,6 +91,7 @@ const DUMMY_PROJECTS = [
       'https://images.unsplash.com/photo-1567690187548-f07b1d7bf5a9?w=1200&q=80',
     ],
     sort_order: 6,
+    featured_landing: true,
   },
 ];
 
