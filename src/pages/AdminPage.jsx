@@ -34,6 +34,8 @@ import {
   Send,
   Smartphone,
   MessageSquare,
+  UserPlus,
+  Briefcase,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -103,7 +105,7 @@ const ROLES = {
 
 const PERMISSIONS = {
   [ROLES.Admin]: {
-    canView: ["projects", "orders", "team", "profile", "cms", "finance", "media", "crm"],
+    canView: ["projects", "orders", "team", "profile", "cms", "finance", "media", "crm", "recruitment"],
     canEdit: [
       "projects",
       "orders",
@@ -114,6 +116,7 @@ const PERMISSIONS = {
       "finance",
       "media",
       "crm",
+      "recruitment",
     ],
     canDelete: [
       "projects",
@@ -125,6 +128,7 @@ const PERMISSIONS = {
       "finance",
       "media",
       "crm",
+      "recruitment",
     ],
   },
   [ROLES.Moderator]: {
@@ -1014,6 +1018,13 @@ const AdminPage = () => {
   const [techDialogOpen, setTechDialogOpen] = useState(false);
   const [editingTech, setEditingTech] = useState(null);
 
+  // Recruitment state
+  const [applications, setApplications] = useState([]);
+  const [loadingApplications, setLoadingApplications] = useState(false);
+  const [selectedApplication, setSelectedApplication] = useState(null);
+  const [appFilter, setAppFilter] = useState("All");
+  const [appSearch, setAppSearch] = useState("");
+
   // User & Profile State
   const [profileData, setProfileData] = useState({
     name: "ATL Admin",
@@ -1128,6 +1139,133 @@ const AdminPage = () => {
     }
   }, []);
 
+  const extractHardwareItems = useCallback((desc) => {
+    if (!desc) return [];
+    const match = desc.match(/\[Hardware Requested:\s*(.*?)\]/);
+    if (!match) return [];
+    const itemsStr = match[1];
+    return itemsStr.split(',').map(item => {
+      const parts = item.trim().match(/(.*?)\s*\(\$(.*?)\)/);
+      if (!parts) return { name: item.trim(), price: 0 };
+      return { name: parts[1].trim(), price: Number(parts[2]) || 0 };
+    });
+  }, []);
+
+  const fetchApplications = useCallback(async () => {
+    setLoadingApplications(true);
+    try {
+      const apps = await pb
+        .collection("technician_applications")
+        .getFullList({ sort: "-created" });
+      const normalized = apps.map((a) => {
+        let skills = [];
+        let tools = [];
+        try {
+          skills = typeof a.skills === "string" ? JSON.parse(a.skills) : (a.skills || []);
+        } catch {
+          skills = Array.isArray(a.skills) ? a.skills : [];
+        }
+        try {
+          tools = typeof a.tools === "string" ? JSON.parse(a.tools) : (a.tools || []);
+        } catch {
+          tools = Array.isArray(a.tools) ? a.tools : [];
+        }
+        return {
+          ...a,
+          skills,
+          tools,
+          name: a.name || "",
+          email: a.email || "",
+          phone: a.phone || "",
+          city: a.city || "",
+          zip: a.zip || "",
+          experience: a.experience || "",
+          notes: a.notes || "",
+          status: a.status || "Applied",
+        };
+      });
+      setApplications(normalized);
+      localStorage.setItem("atltv_tech_applications", JSON.stringify(normalized));
+    } catch (err) {
+      console.warn("PocketBase applications fetch failed, reading localStorage:", err);
+      const stored = localStorage.getItem("atltv_tech_applications");
+      if (stored) {
+        try {
+          setApplications(JSON.parse(stored));
+        } catch {
+          setApplications([]);
+        }
+      } else {
+        setApplications([]);
+      }
+    } finally {
+      setLoadingApplications(false);
+    }
+  }, []);
+
+  const handleUpdateApplicationStatus = async (appId, newStatus) => {
+    try {
+      if (appId && !appId.startsWith("local_")) {
+        await pb.collection("technician_applications").update(appId, { status: newStatus });
+      }
+      
+      const updated = applications.map((app) => {
+        if (app.id === appId) {
+          return { ...app, status: newStatus };
+        }
+        return app;
+      });
+      setApplications(updated);
+      localStorage.setItem("atltv_tech_applications", JSON.stringify(updated));
+      toast.success(`Application status updated to ${newStatus}.`);
+    } catch (err) {
+      console.error("Failed to update status:", err);
+      const updated = applications.map((app) => {
+        if (app.id === appId) {
+          return { ...app, status: newStatus };
+        }
+        return app;
+      });
+      setApplications(updated);
+      localStorage.setItem("atltv_tech_applications", JSON.stringify(updated));
+      toast.success(`Application status updated to ${newStatus} (locally).`);
+    }
+  };
+
+  const handleApproveApplication = async (app) => {
+    const skillsList = Array.isArray(app.skills) ? app.skills : [];
+    const payload = {
+      name: app.name,
+      photo: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&h=400&fit=crop&q=80",
+      bio: `Independent Technician based in ${app.city}, ${app.zip} with ${app.experience} experience.`,
+      skills: skillsList,
+    };
+
+    try {
+      let newTech;
+      try {
+        newTech = await pb.collection("team_members").create(payload);
+      } catch (err) {
+        console.warn("PocketBase team creation failed, creating locally:", err);
+        newTech = {
+          ...payload,
+          id: "local_" + Math.random().toString(36).substr(2, 9),
+          created: new Date().toISOString(),
+        };
+      }
+
+      const updatedTeam = [...teamMembers, newTech];
+      setTeamMembers(updatedTeam);
+      localStorage.setItem(LOCAL_TEAM_STORAGE, JSON.stringify(updatedTeam));
+
+      await handleUpdateApplicationStatus(app.id, "Approved");
+      toast.success(`Technician ${app.name} approved & added to active team list!`);
+    } catch (err) {
+      console.error("Failed to approve application:", err);
+      toast.error("Error approving technician application.");
+    }
+  };
+
   const handleTogglePermission = async (user, resource) => {
     let customPerms = {};
     if (user.custom_permissions) {
@@ -1241,6 +1379,7 @@ const AdminPage = () => {
       if (hasPermission(currentUser, "canView", "finance")) allowed.push("finance");
       if (hasPermission(currentUser, "canView", "cms")) allowed.push("cms");
       if (hasPermission(currentUser, "canView", "media")) allowed.push("media");
+      if (hasPermission(currentUser, "canView", "recruitment")) allowed.push("recruitment");
       
       if (allowed.length > 0 && !allowed.includes(activeTab)) {
         setActiveTab(allowed[0]);
@@ -1258,6 +1397,7 @@ const AdminPage = () => {
     }
     if (activeTab === "team") fetchTeam();
     if (activeTab === "profile") fetchUsers();
+    if (activeTab === "recruitment") fetchApplications();
   }, [
     activeTab,
     authed,
@@ -1265,6 +1405,7 @@ const AdminPage = () => {
     fetchBookingsAndQuotes,
     fetchTeam,
     fetchUsers,
+    fetchApplications,
   ]);
 
   // Seed demo data into localStorage if collections are empty
@@ -1639,6 +1780,19 @@ const AdminPage = () => {
                 >
                   <Users size={18} className="flex-shrink-0" />
                   <span>Team Technicians</span>
+                </button>
+              )}
+
+              {hasPermission(currentUser, "canView", "recruitment") && (
+                <button
+                  onClick={() => {
+                    setActiveTab("recruitment");
+                    setSidebarOpen(false);
+                  }}
+                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 ${activeTab === "recruitment" ? "bg-primary text-primary-foreground shadow-sm shadow-primary/20" : "text-muted-foreground hover:bg-muted hover:text-foreground"}`}
+                >
+                  <UserPlus size={18} className="flex-shrink-0" />
+                  <span>Recruitment</span>
                 </button>
               )}
 
@@ -2731,6 +2885,160 @@ const AdminPage = () => {
               canEdit={hasPermission(currentUser?.role, "canEdit", "media")}
             />
           )}
+
+          {/* TAB CONTENT: RECRUITMENT */}
+          {activeTab === "recruitment" && (
+            <div className="space-y-6">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-card border border-border p-6 rounded-2xl">
+                <div>
+                  <h2 className="text-2xl font-bold tracking-tight">Technician Applications</h2>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Review and screen incoming technician applications, check credentials, and activate them.
+                  </p>
+                </div>
+              </div>
+
+              {/* Filters & Search */}
+              <div className="flex flex-col md:flex-row gap-4 items-center justify-between bg-muted/40 p-4 rounded-xl border border-border/50">
+                <div className="flex items-center gap-2 w-full md:w-auto">
+                  <div className="relative flex-1 md:w-64">
+                    <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                    <input
+                      type="text"
+                      placeholder="Search name, email, or zip..."
+                      value={appSearch}
+                      onChange={(e) => setAppSearch(e.target.value)}
+                      className="input-base pl-9 w-full bg-card text-sm border-border h-9 text-foreground rounded-lg"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex gap-2 overflow-x-auto w-full md:w-auto pb-2 md:pb-0">
+                  {["All", "Applied", "Screening", "Background Pending", "Approved", "Rejected"].map((status) => (
+                    <button
+                      key={status}
+                      onClick={() => setAppFilter(status)}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all ${
+                        appFilter === status
+                          ? "bg-primary text-primary-foreground shadow-sm shadow-primary/20"
+                          : "bg-card border border-border text-muted-foreground hover:bg-muted hover:text-foreground"
+                      }`}
+                    >
+                      {status}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* List */}
+              {loadingApplications ? (
+                <div className="flex items-center justify-center py-20">
+                  <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                </div>
+              ) : (
+                <div className="bg-card border border-border rounded-2xl overflow-hidden shadow-sm">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-sm">
+                      <thead className="bg-muted/50 border-b border-border/60 text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                        <tr>
+                          <th className="px-6 py-4">Technician</th>
+                          <th className="px-6 py-4">Location</th>
+                          <th className="px-6 py-4">Experience</th>
+                          <th className="px-6 py-4">Skills & Tools</th>
+                          <th className="px-6 py-4">Status</th>
+                          <th className="px-6 py-4 text-right">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-border/60">
+                        {(() => {
+                          const filtered = applications.filter((app) => {
+                            const matchesFilter = appFilter === "All" || app.status === appFilter;
+                            const matchesSearch =
+                              app.name.toLowerCase().includes(appSearch.toLowerCase()) ||
+                              app.email.toLowerCase().includes(appSearch.toLowerCase()) ||
+                              app.zip.includes(appSearch) ||
+                              app.city.toLowerCase().includes(appSearch.toLowerCase());
+                            return matchesFilter && matchesSearch;
+                          });
+
+                          if (filtered.length === 0) {
+                            return (
+                              <tr>
+                                <td colSpan={6} className="text-center py-12 text-muted-foreground text-sm">
+                                  No technician applications found matching criteria.
+                                </td>
+                              </tr>
+                            );
+                          }
+
+                          return filtered.map((app) => (
+                            <tr key={app.id} className="hover:bg-muted/20 transition-all">
+                              <td className="px-6 py-4">
+                                <div className="font-semibold text-foreground">{app.name}</div>
+                                <div className="text-xs text-muted-foreground">{app.email}</div>
+                                <div className="text-xs text-muted-foreground">{app.phone}</div>
+                              </td>
+                              <td className="px-6 py-4">
+                                <div className="text-foreground">{app.city}</div>
+                                <div className="text-xs text-muted-foreground">ZIP: {app.zip}</div>
+                              </td>
+                              <td className="px-6 py-4">
+                                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary">
+                                  {app.experience}
+                                </span>
+                              </td>
+                              <td className="px-6 py-4 max-w-[240px]">
+                                <div className="truncate text-foreground text-xs" title={app.skills.join(", ")}>
+                                  <strong>Skills:</strong> {app.skills.join(", ") || "None"}
+                                </div>
+                                <div className="truncate text-muted-foreground text-xs mt-1" title={app.tools.join(", ")}>
+                                  <strong>Tools:</strong> {app.tools.join(", ") || "None"}
+                                </div>
+                              </td>
+                              <td className="px-6 py-4">
+                                <select
+                                  value={app.status}
+                                  onChange={(e) => handleUpdateApplicationStatus(app.id, e.target.value)}
+                                  className="bg-card border border-border text-xs rounded-md px-2.5 py-1 text-foreground focus:ring-1 focus:ring-primary focus:outline-none capitalize font-semibold"
+                                >
+                                  <option value="Applied">Applied</option>
+                                  <option value="Screening">Screening</option>
+                                  <option value="Background Pending">Background Pending</option>
+                                  <option value="Approved">Approved</option>
+                                  <option value="Rejected">Rejected</option>
+                                </select>
+                              </td>
+                              <td className="px-6 py-4 text-right">
+                                <div className="flex items-center justify-end gap-2">
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => setSelectedApplication(app)}
+                                    className="text-xs h-8"
+                                  >
+                                    View Details
+                                  </Button>
+                                  {app.status !== "Approved" && (
+                                    <Button
+                                      size="sm"
+                                      onClick={() => handleApproveApplication(app)}
+                                      className="bg-primary hover:bg-primary/90 text-primary-foreground text-xs h-8"
+                                    >
+                                      Approve & Activate
+                                    </Button>
+                                  )}
+                                </div>
+                              </td>
+                            </tr>
+                          ));
+                        })()}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </main>
       </div>
 
@@ -2868,6 +3176,24 @@ const AdminPage = () => {
                       {selectedOrder.project_description || "None provided"}
                     </span>
                   </div>
+                  {(() => {
+                    const hwItems = selectedOrder.hardwareItems || extractHardwareItems(selectedOrder.project_description);
+                    if (!hwItems || hwItems.length === 0) return null;
+                    return (
+                      <div className="grid grid-cols-3 border-b border-border/50 py-2 bg-primary/5 px-2.5 rounded-lg my-1.5">
+                        <span className="text-muted-foreground font-semibold text-xs">Required Hardware</span>
+                        <span className="col-span-2">
+                          <ul className="list-disc list-inside space-y-1 text-xs text-foreground">
+                            {hwItems.map((item, idx) => (
+                              <li key={idx}>
+                                <span className="font-semibold">{item.name}</span> (${item.price})
+                              </li>
+                            ))}
+                          </ul>
+                        </span>
+                      </div>
+                    );
+                  })()}
                 </>
               ) : (
                 <>
@@ -2944,6 +3270,103 @@ const AdminPage = () => {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Technician Application Detail Dialog */}
+      {selectedApplication && (
+        <Dialog
+          open={!!selectedApplication}
+          onOpenChange={() => setSelectedApplication(null)}
+        >
+          <DialogContent className="max-w-md bg-card border border-border">
+            <DialogHeader>
+              <DialogTitle>Application Details</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 mt-2">
+              <div className="pb-3 border-b border-border/60">
+                <h3 className="font-bold text-lg text-foreground">{selectedApplication.name}</h3>
+                <p className="text-xs text-muted-foreground">{selectedApplication.email} | {selectedApplication.phone}</p>
+                <p className="text-xs text-muted-foreground">Location: {selectedApplication.city}, ZIP: {selectedApplication.zip}</p>
+              </div>
+
+              <div>
+                <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Experience</span>
+                <p className="text-sm text-foreground mt-0.5">{selectedApplication.experience}</p>
+              </div>
+
+              <div>
+                <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Skills</span>
+                <div className="flex flex-wrap gap-1 mt-1.5">
+                  {selectedApplication.skills.map((skill, i) => (
+                    <span key={i} className="bg-primary/10 text-primary px-2.5 py-0.5 rounded-full text-xs font-medium">
+                      {skill}
+                    </span>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Tools Checklist</span>
+                <div className="flex flex-wrap gap-1 mt-1.5">
+                  {selectedApplication.tools.map((tool, i) => (
+                    <span key={i} className="bg-muted text-muted-foreground border border-border px-2.5 py-0.5 rounded-full text-xs font-medium">
+                      {tool}
+                    </span>
+                  ))}
+                </div>
+              </div>
+
+              {selectedApplication.notes && (
+                <div>
+                  <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Notes & Background</span>
+                  <p className="text-xs text-foreground bg-muted/30 p-2.5 rounded-lg border border-border/50 mt-1 whitespace-pre-wrap">
+                    {selectedApplication.notes}
+                  </p>
+                </div>
+              )}
+
+              <div className="p-3 bg-muted/40 rounded-xl border border-border/50 space-y-2 text-xs">
+                <div className="flex items-center gap-2 text-green-500 font-semibold">
+                  <CheckCircle2 size={14} /> Background Check Consent Authorized
+                </div>
+                <div className="flex items-center gap-2 text-green-500 font-semibold">
+                  <CheckCircle2 size={14} /> Legal Work Authorization Confirmed
+                </div>
+              </div>
+
+              <div className="flex justify-between items-center pt-3 border-t border-border/60">
+                <div className="flex gap-2">
+                  {selectedApplication.status !== "Approved" && (
+                    <Button
+                      onClick={() => {
+                        handleApproveApplication(selectedApplication);
+                        setSelectedApplication(null);
+                      }}
+                      className="bg-primary hover:bg-primary/90 text-primary-foreground text-xs"
+                    >
+                      Approve & Activate
+                    </Button>
+                  )}
+                  {selectedApplication.status !== "Rejected" && (
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        handleUpdateApplicationStatus(selectedApplication.id, "Rejected");
+                        setSelectedApplication(null);
+                      }}
+                      className="text-destructive hover:bg-destructive/10 text-xs"
+                    >
+                      Reject
+                    </Button>
+                  )}
+                </div>
+                <Button variant="ghost" onClick={() => setSelectedApplication(null)} className="text-xs">
+                  Close
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
 
       {/* Input styles */}
       <style>{`

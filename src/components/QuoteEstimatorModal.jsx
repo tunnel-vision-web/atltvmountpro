@@ -246,7 +246,6 @@ const SERVICES = {
         ],
       },
       {
-        id: 'elec_qty',
         label: 'Number of Fixtures / Points',
         type: 'select',
         choices: [
@@ -259,6 +258,20 @@ const SERVICES = {
     ],
   },
 };
+
+const TV_HARDWARE_OPTIONS = [
+  { id: "hw-flat", name: "Standard Flat Mount (Up to 80\")", price: 49 },
+  { id: "hw-tilt", name: "Tilting Wall Mount (Up to 80\")", price: 59 },
+  { id: "hw-motion", name: "Full-Motion Articulating Mount (Up to 85\")", price: 89 },
+  { id: "hw-hdmi", name: "Premium HDMI 2.1 Cable (10ft)", price: 19 },
+  { id: "hw-conceal", name: "In-Wall Cable Concealment Power Kit", price: 69 },
+];
+
+const GENERAL_HARDWARE_OPTIONS = [
+  { id: "hw-drywall-kit", name: "Drywall Patch & Paint Backing Kit", price: 15, services: ["Drywall Repair", "Painting"] },
+  { id: "hw-brackets", name: "Floating Shelf Brackets (Pair)", price: 25, services: ["Carpentry", "Other"] },
+  { id: "hw-anchors", name: "Heavy-Duty Toggle Wall Anchors Pack", price: 12, services: ["TV Mounting", "Carpentry", "Other", "Light Electrical"] },
+];
 
 const DISCOUNT_RATE = 0.2; // 20% below industry standard
 
@@ -278,6 +291,7 @@ const QuoteEstimatorModal = () => {
 
   const [selectedService, setSelectedService] = useState('');
   const [optionValues, setOptionValues] = useState({});
+  const [selectedHardware, setSelectedHardware] = useState([]);
 
   const [contactData, setContactData] = useState({
     name: '',
@@ -286,6 +300,24 @@ const QuoteEstimatorModal = () => {
     project_details: '',
   });
   const [loading, setLoading] = useState(false);
+
+  const getAvailableHardwareOptions = () => {
+    const s = String(selectedService).toLowerCase();
+    if (s === "tv mounting") {
+      return TV_HARDWARE_OPTIONS;
+    }
+    return GENERAL_HARDWARE_OPTIONS.filter(
+      (opt) => !opt.services || opt.services.map(x => x.toLowerCase()).includes(s)
+    );
+  };
+
+  const toggleHardware = (hw) => {
+    setSelectedHardware((prev) =>
+      prev.some((item) => item.id === hw.id)
+        ? prev.filter((item) => item.id !== hw.id)
+        : [...prev, hw]
+    );
+  };
 
   // ── Derived pricing ──────────────────────────────────────────────────────
   const serviceConfig = SERVICES[selectedService] || null;
@@ -298,21 +330,17 @@ const QuoteEstimatorModal = () => {
     items.push({ label: `${serviceConfig.label} — base rate`, amount: serviceConfig.base });
 
     for (const opt of serviceConfig.options) {
-      const val = optionValues[opt.id];
-      if (!val && val !== true) continue;
-
       if (opt.type === 'select') {
-        const choice = opt.choices.find((c) => c.label === val);
-        if (choice && choice.value > 0) {
-          items.push({ label: `${opt.label}: ${choice.label}`, amount: choice.value });
-          total += choice.value;
+        const val = optionValues[opt.id];
+        const match = opt.choices.find((c) => String(c.value) === String(val) || c.label === val);
+        if (match && Number(match.value) > 0) {
+          total += Number(match.value);
+          items.push({ label: `${opt.label} (${match.label})`, amount: Number(match.value) });
         }
-      } else if (opt.type === 'toggle' && val === true) {
-        if (opt.delta > 0) {
-          items.push({ label: opt.label, amount: opt.delta });
+      } else if (opt.type === 'toggle') {
+        if (optionValues[opt.id]) {
           total += opt.delta;
-        } else if (opt.note) {
-          items.push({ label: `${opt.label} — ${opt.note}`, amount: 0 });
+          items.push({ label: opt.label, amount: opt.delta });
         }
       }
     }
@@ -320,8 +348,9 @@ const QuoteEstimatorModal = () => {
     return { subtotal: total, lineItems: items };
   }, [serviceConfig, optionValues]);
 
+  const hardwareTotal = selectedHardware.reduce((sum, h) => sum + h.price, 0);
   const discountAmount = Math.round(subtotal * DISCOUNT_RATE);
-  const finalEstimate = subtotal - discountAmount;
+  const finalEstimate = subtotal - discountAmount + hardwareTotal;
 
   // ── Handlers ─────────────────────────────────────────────────────────────
   const handleOptionChange = (optId, value) => {
@@ -331,6 +360,7 @@ const QuoteEstimatorModal = () => {
   const handleServiceChange = (val) => {
     setSelectedService(val);
     setOptionValues({});
+    setSelectedHardware([]);
   };
 
   const handleSubmit = async (e) => {
@@ -340,6 +370,12 @@ const QuoteEstimatorModal = () => {
       return;
     }
     setLoading(true);
+
+    const hardwareText = selectedHardware.length > 0
+      ? `\n\n[Hardware Requested: ${selectedHardware.map(h => `${h.name} ($${h.price})`).join(", ")}]`
+      : "";
+    const finalDetails = `${contactData.project_details || ""}${hardwareText}`.trim();
+
     try {
       await pb.collection('quote_inquiries').create(
         {
@@ -347,7 +383,7 @@ const QuoteEstimatorModal = () => {
           email: contactData.email,
           phone: contactData.phone,
           service_type: selectedService,
-          project_details: contactData.project_details,
+          project_details: finalDetails,
           estimated_quote: finalEstimate,
         },
         { $autoCancel: false }
@@ -610,6 +646,49 @@ const QuoteEstimatorModal = () => {
                   placeholder="your@email.com"
                 />
               </div>
+
+              {selectedService && getAvailableHardwareOptions().length > 0 && (
+                <div className="space-y-2 border border-border bg-muted/30 rounded-xl p-3.5">
+                  <div className="flex justify-between items-center mb-1">
+                    <Label className="text-sm font-semibold text-foreground">Need Mounts or Hardware?</Label>
+                    {selectedHardware.length > 0 && (
+                      <span className="text-xs bg-primary/20 text-primary border border-primary/20 px-2 py-0.5 rounded-full font-semibold">
+                        +${selectedHardware.reduce((sum, h) => sum + h.price, 0)} hardware
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-[11px] text-muted-foreground -mt-1 mb-2">
+                    Select any accessories to have the technician arrive with the required hardware.
+                  </p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                    {getAvailableHardwareOptions().map((opt) => {
+                      const isSelected = selectedHardware.some((item) => item.id === opt.id);
+                      return (
+                        <div
+                          key={opt.id}
+                          onClick={() => toggleHardware(opt)}
+                          className={`flex items-center gap-3 p-2.5 rounded-lg border text-[11px] cursor-pointer select-none transition-all duration-150 ${
+                            isSelected
+                              ? "bg-primary/10 border-primary text-foreground font-medium"
+                              : "bg-muted/40 border-border text-muted-foreground hover:bg-muted/70 hover:text-foreground"
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            readOnly
+                            className="rounded border-border text-primary focus:ring-primary h-3.5 w-3.5 bg-muted/40 cursor-pointer pointer-events-none"
+                          />
+                          <div className="flex-1 min-w-0">
+                            <p className="truncate">{opt.name}</p>
+                            <p className="text-[10px] text-primary/85 font-semibold mt-0.5">+${opt.price}</p>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
 
               <div className="space-y-1.5">
                 <Label htmlFor="q-details">Additional Details</Label>

@@ -110,7 +110,34 @@ export function autoCreateInvoiceForBooking(booking, options = {}) {
     phone: booking.phone,
   });
 
-  const subtotal = Number(estimatedTotal) || 0;
+  const baseRates = {
+    "TV Mounting": 120,
+    "Drywall Repair": 150,
+    "Painting": 200,
+    "Carpentry": 180,
+    "Flooring": 250,
+    "Plumbing": 140,
+    "Light Electrical": 110,
+  };
+  const serviceRate = Number(estimatedTotal) || baseRates[booking.service_type] || 120;
+
+  // Extract hardware items from booking or options
+  const hardwareItems = booking.hardwareItems || options.hardwareItems || [];
+
+  const items = [
+    {
+      description: `${booking.service_type || "Service"} (Base)`,
+      quantity: 1,
+      rate: serviceRate,
+    },
+    ...hardwareItems.map((hw) => ({
+      description: hw.name,
+      quantity: 1,
+      rate: Number(hw.price) || 0,
+    })),
+  ];
+
+  const subtotal = items.reduce((sum, item) => sum + item.rate * item.quantity, 0);
   const taxRate = 0.07;
   const tax = subtotal * taxRate;
   const total = subtotal + tax;
@@ -124,13 +151,7 @@ export function autoCreateInvoiceForBooking(booking, options = {}) {
     clientId: null,
     bookingId: booking.id,
     jobId: booking.jobId || null,
-    items: [
-      {
-        description: booking.service_type || "Service",
-        quantity: 1,
-        rate: Number(estimatedTotal) || 0,
-      },
-    ],
+    items: items,
     notes: booking.project_description || "",
     subtotal: subtotal,
     tax: tax,

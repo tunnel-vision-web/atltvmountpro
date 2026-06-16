@@ -54,6 +54,24 @@ const Footer = () => {
               >
                 Contact
               </Link>
+              <Link
+                to="/join"
+                className="text-sm hover:text-primary transition-colors duration-200 font-semibold text-primary"
+              >
+                Become a Tech
+              </Link>
+              <Link
+                to="/apps/tech"
+                className="text-sm hover:text-primary transition-colors duration-200"
+              >
+                Tech App (Mock)
+              </Link>
+              <Link
+                to="/apps/customer"
+                className="text-sm hover:text-primary transition-colors duration-200"
+              >
+                Customer App (Mock)
+              </Link>
             </nav>
           </div>
 

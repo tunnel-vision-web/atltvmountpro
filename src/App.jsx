@@ -23,6 +23,9 @@ import ProjectDetailPage from "./pages/ProjectDetailPage";
 import ClientDashboard from "./pages/ClientDashboard";
 import AdminPage from "./pages/AdminPage";
 import VerifyOptinPage from "./pages/VerifyOptinPage";
+import JoinPage from "./pages/JoinPage";
+import TechAppPage from "./pages/TechAppPage";
+import CustomerAppPage from "./pages/CustomerAppPage";
 
 function App() {
   React.useEffect(() => {
@@ -37,6 +40,10 @@ function App() {
           <Routes>
             {/* Admin — no site chrome */}
             <Route path="/admin" element={<AdminPage />} />
+
+            {/* App Simulators — no site chrome */}
+            <Route path="/apps/tech" element={<TechAppPage />} />
+            <Route path="/apps/customer" element={<CustomerAppPage />} />
 
             {/* Client Dashboard — minimal chrome */}
             <Route
@@ -85,6 +92,7 @@ function App() {
                         path="/verify-optin"
                         element={<VerifyOptinPage />}
                       />
+                      <Route path="/join" element={<JoinPage />} />
                     </Routes>
                   </main>
                   <Footer />

@@ -23,6 +23,20 @@ import { toast } from "sonner";
 import { CalendarDays, Clock, CheckCircle2 } from "lucide-react";
 import { autoCreateInvoiceForBooking } from "@/lib/invoiceUtils";
 
+const TV_HARDWARE_OPTIONS = [
+  { id: "hw-flat", name: "Standard Flat Mount (Up to 80\")", price: 49 },
+  { id: "hw-tilt", name: "Tilting Wall Mount (Up to 80\")", price: 59 },
+  { id: "hw-motion", name: "Full-Motion Articulating Mount (Up to 85\")", price: 89 },
+  { id: "hw-hdmi", name: "Premium HDMI 2.1 Cable (10ft)", price: 19 },
+  { id: "hw-conceal", name: "In-Wall Cable Concealment Power Kit", price: 69 },
+];
+
+const GENERAL_HARDWARE_OPTIONS = [
+  { id: "hw-drywall-kit", name: "Drywall Patch & Paint Backing Kit", price: 15, services: ["Drywall Repair", "Painting"] },
+  { id: "hw-brackets", name: "Floating Shelf Brackets (Pair)", price: 25, services: ["Carpentry", "Other"] },
+  { id: "hw-anchors", name: "Heavy-Duty Toggle Wall Anchors Pack", price: 12, services: ["TV Mounting", "Carpentry", "Other", "Light Electrical"] },
+];
+
 const LOCAL_BOOKINGS_KEY = "atltvmountpro_local_bookings";
 
 const AppointmentBookingModal = () => {
@@ -36,8 +50,26 @@ const AppointmentBookingModal = () => {
     preferred_time: "",
     project_description: "",
   });
+  const [selectedHardware, setSelectedHardware] = useState([]);
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+
+  const getAvailableHardwareOptions = () => {
+    if (formData.service_type === "TV Mounting") {
+      return TV_HARDWARE_OPTIONS;
+    }
+    return GENERAL_HARDWARE_OPTIONS.filter(
+      (opt) => !opt.services || opt.services.includes(formData.service_type)
+    );
+  };
+
+  const toggleHardware = (hw) => {
+    setSelectedHardware((prev) =>
+      prev.some((item) => item.id === hw.id)
+        ? prev.filter((item) => item.id !== hw.id)
+        : [...prev, hw]
+    );
+  };
 
   const saveBookingLocally = (record) => {
     const stored = JSON.parse(localStorage.getItem(LOCAL_BOOKINGS_KEY) || "[]");
@@ -62,6 +94,11 @@ const AppointmentBookingModal = () => {
 
     setLoading(true);
 
+    const hardwareText = selectedHardware.length > 0
+      ? `\n\n[Hardware Requested: ${selectedHardware.map(h => `${h.name} ($${h.price})`).join(", ")}]`
+      : "";
+    const finalDescription = `${formData.project_description || ""}${hardwareText}`.trim();
+
     const payload = {
       name: formData.name,
       email: formData.email,
@@ -69,8 +106,9 @@ const AppointmentBookingModal = () => {
       service_type: formData.service_type,
       preferred_date: formData.preferred_date,
       preferred_time: formData.preferred_time,
-      project_description: formData.project_description,
+      project_description: finalDescription,
       status: "Pending",
+      hardwareItems: selectedHardware,
     };
 
     const pbPayload = {
@@ -79,7 +117,7 @@ const AppointmentBookingModal = () => {
       Phone_Number: formData.phone,
       Preferred_Date: formData.preferred_date,
       Preferred_Time: formData.preferred_time,
-      Project_Description: formData.project_description || "",
+      Project_Description: finalDescription,
     };
 
     try {
@@ -95,7 +133,8 @@ const AppointmentBookingModal = () => {
         phone: record.Phone_Number || record.phone || formData.phone,
         preferred_date: record.Preferred_Date || record.preferred_date || formData.preferred_date,
         preferred_time: record.Preferred_Time || record.preferred_time || formData.preferred_time,
-        project_description: record.Project_Description || record.project_description || formData.project_description,
+        project_description: record.Project_Description || record.project_description || finalDescription,
+        hardwareItems: selectedHardware,
       };
       autoCreateInvoiceForBooking(normalized);
       setSubmitted(true);
@@ -118,6 +157,7 @@ const AppointmentBookingModal = () => {
     closeBookingModal();
     setTimeout(() => {
       setSubmitted(false);
+      setSelectedHardware([]);
       setFormData({
         name: "",
         email: "",
@@ -278,6 +318,49 @@ const AppointmentBookingModal = () => {
                   </div>
                 </div>
               </div>
+
+              {formData.service_type && getAvailableHardwareOptions().length > 0 && (
+                <div className="space-y-2 border border-border bg-muted/30 rounded-xl p-3.5">
+                  <div className="flex justify-between items-center mb-1">
+                    <Label className="text-sm font-semibold text-foreground">Need Mounts or Hardware?</Label>
+                    {selectedHardware.length > 0 && (
+                      <span className="text-xs bg-primary/20 text-primary border border-primary/20 px-2 py-0.5 rounded-full font-semibold">
+                        +${selectedHardware.reduce((sum, h) => sum + h.price, 0)} hardware
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-[11px] text-muted-foreground -mt-1 mb-2">
+                    Select any accessories to have the technician arrive with the required hardware.
+                  </p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                    {getAvailableHardwareOptions().map((opt) => {
+                      const isSelected = selectedHardware.some((item) => item.id === opt.id);
+                      return (
+                        <div
+                          key={opt.id}
+                          onClick={() => toggleHardware(opt)}
+                          className={`flex items-center gap-3 p-2.5 rounded-lg border text-[11px] cursor-pointer select-none transition-all duration-150 ${
+                            isSelected
+                              ? "bg-primary/10 border-primary text-foreground font-medium"
+                              : "bg-muted/40 border-border text-muted-foreground hover:bg-muted/70 hover:text-foreground"
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            readOnly
+                            className="rounded border-border text-primary focus:ring-primary h-3.5 w-3.5 bg-muted/40 cursor-pointer pointer-events-none"
+                          />
+                          <div className="flex-1 min-w-0">
+                            <p className="truncate">{opt.name}</p>
+                            <p className="text-[10px] text-primary/85 font-semibold mt-0.5">+${opt.price}</p>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
 
               <div className="space-y-1.5">
                 <Label htmlFor="booking-desc">Project Description</Label>
