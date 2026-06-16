@@ -62,6 +62,7 @@ import {
   getInvoiceForBooking,
   sendInvoiceVia,
 } from "@/lib/invoiceUtils";
+import DUMMY_PROJECTS from "@/data/dummyProjects";
 
 const ADMIN_KEY_STORAGE = "atltvmountpro_admin_key";
 const LOCAL_BOOKINGS_STORAGE = "atltvmountpro_local_bookings";
@@ -1262,6 +1263,7 @@ const AdminPage = () => {
     seedIfEmpty(LOCAL_BOOKINGS_STORAGE, ADMIN_DEMO_BOOKINGS);
     seedIfEmpty(LOCAL_QUOTES_STORAGE, ADMIN_DEMO_QUOTES);
     seedIfEmpty(LOCAL_TEAM_STORAGE, ADMIN_DEMO_TEAM);
+    seedIfEmpty(LOCAL_PROJECTS_STORAGE, DUMMY_PROJECTS);
   }, [authed]);
 
   const handleLogin = (user) => {

@@ -28,6 +28,19 @@ const ProjectDetailPage = () => {
       setLoading(false);
       return;
     }
+    // Check local storage projects next
+    const stored = localStorage.getItem("atltvmountpro_local_projects");
+    if (stored) {
+      try {
+        const parsed = JSON.parse(stored);
+        const match = parsed?.find((p) => String(p.id) === String(id));
+        if (match) {
+          setProject(match);
+          setLoading(false);
+          return;
+        }
+      } catch {}
+    }
     fetch(`/api/projects/${id}`)
       .then((r) => {
         if (r.status === 404) {

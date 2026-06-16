@@ -22,7 +22,18 @@ const ProjectsPage = () => {
         setLoading(false);
       })
       .catch(() => {
-        setError(true);
+        const stored = localStorage.getItem("atltvmountpro_local_projects");
+        if (stored) {
+          try {
+            const parsed = JSON.parse(stored);
+            if (parsed && parsed.length > 0) {
+              setProjects(parsed);
+              setLoading(false);
+              return;
+            }
+          } catch {}
+        }
+        setProjects(DUMMY_PROJECTS);
         setLoading(false);
       });
   }, []);

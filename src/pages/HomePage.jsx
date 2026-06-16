@@ -25,6 +25,8 @@ import TestimonialCard from "@/components/TestimonialCard";
 import NewsletterSignup from "@/components/NewsletterSignup";
 import { useUI } from "@/contexts/UIContext";
 import { useCMS } from "@/hooks/useCMS";
+import ProjectCard from "@/components/ProjectCard";
+import DUMMY_PROJECTS from "@/data/dummyProjects";
 
 const services = [
   {
@@ -107,6 +109,32 @@ const testimonials = [
 const HomePage = () => {
   const { openQuoteModal, openBookingModal } = useUI();
   const { data: cmsHome } = useCMS("home");
+
+  const [projects, setProjects] = React.useState([]);
+
+  React.useEffect(() => {
+    fetch("/api/projects")
+      .then((r) => {
+        if (!r.ok) throw new Error("Failed");
+        return r.json();
+      })
+      .then((data) => {
+        setProjects((data || []).slice(0, 3));
+      })
+      .catch(() => {
+        const stored = localStorage.getItem("atltvmountpro_local_projects");
+        if (stored) {
+          try {
+            const parsed = JSON.parse(stored);
+            if (parsed && parsed.length > 0) {
+              setProjects(parsed.slice(0, 3));
+              return;
+            }
+          } catch {}
+        }
+        setProjects(DUMMY_PROJECTS.slice(0, 3));
+      });
+  }, []);
 
   const cmsFeaturedServices = cmsHome?.featuredServices;
   const cmsFaqs = cmsHome?.faqs;
@@ -321,7 +349,7 @@ const HomePage = () => {
             initial={{ opacity: 0, y: 18 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
-            className="text-center mb-3"
+            className="text-center mb-12"
           >
             <p className="text-xs tracking-[0.18em] uppercase text-primary font-medium mb-3">
               Real Results
@@ -329,9 +357,20 @@ const HomePage = () => {
             <h2 className="text-3xl md:text-4xl font-bold mb-4">
               Our Work Speaks for Itself
             </h2>
-            <p className="text-muted-foreground max-w-xl mx-auto mb-10">
+            <p className="text-muted-foreground max-w-xl mx-auto">
               Browse completed projects across the Atlanta metro area.
             </p>
+          </motion.div>
+
+          {projects.length > 0 && (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12 text-left">
+              {projects.map((project, i) => (
+                <ProjectCard key={project.id} project={project} index={i} />
+              ))}
+            </div>
+          )}
+
+          <div className="text-center">
             <Link to="/projects">
               <Button
                 size="lg"
@@ -340,7 +379,7 @@ const HomePage = () => {
                 View All Projects <ArrowRight size={16} className="ml-1.5" />
               </Button>
             </Link>
-          </motion.div>
+          </div>
         </div>
       </section>
 
