@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Save, Loader2 } from 'lucide-react';
+import { Save, Loader2, Sparkles, Wrench, Info, Mail, Activity } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { useAllCMS } from '@/hooks/useCMS';
@@ -17,6 +17,64 @@ export default function CMSEditor() {
   const [activePage, setActivePage] = useState('home');
   const [saving, setSaving] = useState(false);
   const [formData, setFormData] = useState({});
+
+  const getPageGuide = () => {
+    switch (activePage) {
+      case 'home':
+        return {
+          title: "Home Page Settings",
+          icon: Sparkles,
+          description: "Manage landing hero text, spotlight configurations, and customer frequently asked questions.",
+          tips: [
+            "Keep the Hero Title short and direct to ensure optimal rendering across mobile viewpoints.",
+            "Featured services spotlight sections display core services dynamically selected in the Services tab.",
+            "Use precise answers in the FAQs list to reduce support call volume and improve local SEO."
+          ]
+        };
+      case 'services':
+        return {
+          title: "Services Catalogue",
+          icon: Wrench,
+          description: "Modify taglines, icons, details, and core spotlight status for site-wide handyman services.",
+          tips: [
+            "Highlight as Core adds this service to the homepage carousel spotlight list dynamically.",
+            "The Lucide Icon Class selection resolves icons programmatically on the homepage and services grid.",
+            "Comma-separate benefits to render them as structured bullet points on detail views."
+          ]
+        };
+      case 'about':
+        return {
+          title: "About Page Setup",
+          icon: Info,
+          description: "Update the background history, service values, and key statistic counters.",
+          tips: [
+            "Ensure the story paragraphs reflect background checks and premium TV mount service values.",
+            "Statistics values support strings (e.g. '100%') to highlight service satisfaction metrics.",
+            "Review core value cards regularly to keep credentials aligned with branding."
+          ]
+        };
+      case 'contact':
+        return {
+          title: "Contact Parameters",
+          icon: Mail,
+          description: "Verify dispatch phone configurations, hours of operation, and location boundaries.",
+          tips: [
+            "Ensure phone formatting matches active SMS invite and dispatch requirements.",
+            "Map Embed URLs must resolve to clean iframe sources for proper rendering.",
+            "Address fields propagate to search index profiles for localized local SEO matching."
+          ]
+        };
+      default:
+        return {
+          title: "CMS Portal Settings",
+          icon: Activity,
+          description: "Modify site-wide content databases.",
+          tips: [
+            "Save Changes writes directly to PocketBase schemas with immediate local replication fallback."
+          ]
+        };
+    }
+  };
 
   useEffect(() => {
     fetchAll();
@@ -81,6 +139,9 @@ export default function CMSEditor() {
     );
   }
 
+  const guide = getPageGuide();
+  const GuideIcon = guide.icon;
+
   return (
     <div className="space-y-6">
       <div>
@@ -116,499 +177,553 @@ export default function CMSEditor() {
         </Button>
       </div>
 
-      {/* Home Page Editor */}
-      {activePage === 'home' && (
-        <div className="space-y-6">
-          <CMSCard title="Hero Section">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="text-xs font-medium text-muted-foreground mb-1 block">Hero Title</label>
-                <input
-                  value={formData.heroTitle || ''}
-                  onChange={(e) => updateField('heroTitle', e.target.value)}
-                  className="input-base w-full"
-                  placeholder="e.g. Atlanta TV Mount Pro"
-                />
-              </div>
-              <div>
-                <label className="text-xs font-medium text-muted-foreground mb-1 block">Hero Subtitle</label>
-                <input
-                  value={formData.heroSubtitle || ''}
-                  onChange={(e) => updateField('heroSubtitle', e.target.value)}
-                  className="input-base w-full"
-                  placeholder="e.g. Professional TV Mounting & Handyman Services"
-                />
-              </div>
-            </div>
-            <div>
-              <label className="text-xs font-medium text-muted-foreground mb-1 block">Hero Description</label>
-              <textarea
-                value={formData.heroDescription || ''}
-                onChange={(e) => updateField('heroDescription', e.target.value)}
-                rows={3}
-                className="input-base w-full resize-none"
-                placeholder="Short description for SEO/meta..."
-              />
-            </div>
-            <MediaPickerButton
-              label="Hero Background Video (optional)"
-              value={formData.heroVideo || ''}
-              onChange={(val) => updateField('heroVideo', val)}
-              accept="video"
-              placeholder="Select or upload a hero video…"
-            />
-          </CMSCard>
-
-          <CMSCard title="Featured Services">
-            {(formData.featuredServices || []).map((svc, idx) => (
-              <div key={idx} className="border border-border rounded-lg p-4 space-y-3">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+        {/* Left Side: Form Controls */}
+        <div className="lg:col-span-2 space-y-6">
+          {/* Home Page Editor */}
+          {activePage === 'home' && (
+            <div className="space-y-6">
+              <CMSCard title="Hero Section">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="text-xs font-medium text-muted-foreground mb-1 block">Title</label>
+                    <label className="text-xs font-medium text-muted-foreground mb-1 block">Hero Title</label>
                     <input
-                      value={svc.title || ''}
-                      onChange={(e) => {
-                        const updated = [...(formData.featuredServices || [])];
-                        updated[idx] = { ...updated[idx], title: e.target.value };
-                        updateField('featuredServices', updated);
-                      }}
+                      value={formData.heroTitle || ''}
+                      onChange={(e) => updateField('heroTitle', e.target.value)}
                       className="input-base w-full"
+                      placeholder="e.g. Atlanta TV Mount Pro"
                     />
                   </div>
                   <div>
-                    <label className="text-xs font-medium text-muted-foreground mb-1 block">Tagline</label>
+                    <label className="text-xs font-medium text-muted-foreground mb-1 block">Hero Subtitle</label>
                     <input
-                      value={svc.tagline || ''}
-                      onChange={(e) => {
-                        const updated = [...(formData.featuredServices || [])];
-                        updated[idx] = { ...updated[idx], tagline: e.target.value };
-                        updateField('featuredServices', updated);
-                      }}
+                      value={formData.heroSubtitle || ''}
+                      onChange={(e) => updateField('heroSubtitle', e.target.value)}
                       className="input-base w-full"
+                      placeholder="e.g. Professional TV Mounting & Handyman Services"
                     />
                   </div>
                 </div>
                 <div>
-                  <label className="text-xs font-medium text-muted-foreground mb-1 block">Description</label>
+                  <label className="text-xs font-medium text-muted-foreground mb-1 block">Hero Description</label>
                   <textarea
-                    value={svc.description || ''}
-                    onChange={(e) => {
-                      const updated = [...(formData.featuredServices || [])];
-                      updated[idx] = { ...updated[idx], description: e.target.value };
-                      updateField('featuredServices', updated);
-                    }}
-                    rows={2}
+                    value={formData.heroDescription || ''}
+                    onChange={(e) => updateField('heroDescription', e.target.value)}
+                    rows={3}
                     className="input-base w-full resize-none"
+                    placeholder="Short description for SEO/meta..."
                   />
                 </div>
                 <MediaPickerButton
-                  label="Service Image"
-                  value={svc.image || ''}
-                  onChange={(val) => {
-                    const updated = [...(formData.featuredServices || [])];
-                    updated[idx] = { ...updated[idx], image: val };
-                    updateField('featuredServices', updated);
-                  }}
+                  label="Hero Background Video (optional)"
+                  value={formData.heroVideo || ''}
+                  onChange={(val) => updateField('heroVideo', val)}
+                  accept="video"
+                  placeholder="Select or upload a hero video…"
+                />
+              </CMSCard>
+
+              <CMSCard title="Featured Services">
+                {(formData.featuredServices || []).map((svc, idx) => (
+                  <div key={idx} className="border border-border rounded-lg p-4 space-y-3">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <div>
+                        <label className="text-xs font-medium text-muted-foreground mb-1 block">Title</label>
+                        <input
+                          value={svc.title || ''}
+                          onChange={(e) => {
+                            const updated = [...(formData.featuredServices || [])];
+                            updated[idx] = { ...updated[idx], title: e.target.value };
+                            updateField('featuredServices', updated);
+                          }}
+                          className="input-base w-full"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs font-medium text-muted-foreground mb-1 block">Tagline</label>
+                        <input
+                          value={svc.tagline || ''}
+                          onChange={(e) => {
+                            const updated = [...(formData.featuredServices || [])];
+                            updated[idx] = { ...updated[idx], tagline: e.target.value };
+                            updateField('featuredServices', updated);
+                          }}
+                          className="input-base w-full"
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="text-xs font-medium text-muted-foreground mb-1 block">Description</label>
+                      <textarea
+                        value={svc.description || ''}
+                        onChange={(e) => {
+                          const updated = [...(formData.featuredServices || [])];
+                          updated[idx] = { ...updated[idx], description: e.target.value };
+                          updateField('featuredServices', updated);
+                        }}
+                        rows={2}
+                        className="input-base w-full resize-none"
+                      />
+                    </div>
+                    <MediaPickerButton
+                      label="Service Image"
+                      value={svc.image || ''}
+                      onChange={(val) => {
+                        const updated = [...(formData.featuredServices || [])];
+                        updated[idx] = { ...updated[idx], image: val };
+                        updateField('featuredServices', updated);
+                      }}
+                      accept="image"
+                    />
+                    <MediaPickerButton
+                      label="Service Video (optional)"
+                      value={svc.video || ''}
+                      onChange={(val) => {
+                        const updated = [...(formData.featuredServices || [])];
+                        updated[idx] = { ...updated[idx], video: val };
+                        updateField('featuredServices', updated);
+                      }}
+                      accept="video"
+                    />
+                  </div>
+                ))}
+              </CMSCard>
+
+              <CMSCard title="FAQs">
+                {(formData.faqs || []).map((faq, idx) => (
+                  <div key={idx} className="border border-border rounded-lg p-4 space-y-3">
+                    <div>
+                      <label className="text-xs font-medium text-muted-foreground mb-1 block">Question</label>
+                      <input
+                        value={faq.question || ''}
+                        onChange={(e) => {
+                          const updated = [...(formData.faqs || [])];
+                          updated[idx] = { ...updated[idx], question: e.target.value };
+                          updateField('faqs', updated);
+                        }}
+                        className="input-base w-full"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs font-medium text-muted-foreground mb-1 block">Answer</label>
+                      <textarea
+                        value={faq.answer || ''}
+                        onChange={(e) => {
+                          const updated = [...(formData.faqs || [])];
+                          updated[idx] = { ...updated[idx], answer: e.target.value };
+                          updateField('faqs', updated);
+                        }}
+                        rows={3}
+                        className="input-base w-full resize-none"
+                      />
+                    </div>
+                  </div>
+                ))}
+              </CMSCard>
+            </div>
+          )}
+
+          {/* About Page Editor */}
+          {activePage === 'about' && (
+            <div className="space-y-6">
+              <CMSCard title="Hero Section">
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground mb-1 block">Hero Title</label>
+                  <input
+                    value={formData.heroTitle || ''}
+                    onChange={(e) => updateField('heroTitle', e.target.value)}
+                    className="input-base w-full"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground mb-1 block">Hero Subtitle</label>
+                  <input
+                    value={formData.heroSubtitle || ''}
+                    onChange={(e) => updateField('heroSubtitle', e.target.value)}
+                    className="input-base w-full"
+                  />
+                </div>
+                <MediaPickerButton
+                  label="Hero Image"
+                  value={formData.heroImage || ''}
+                  onChange={(val) => updateField('heroImage', val)}
                   accept="image"
                 />
                 <MediaPickerButton
-                  label="Service Video (optional)"
-                  value={svc.video || ''}
-                  onChange={(val) => {
-                    const updated = [...(formData.featuredServices || [])];
-                    updated[idx] = { ...updated[idx], video: val };
-                    updateField('featuredServices', updated);
-                  }}
+                  label="Hero Video (optional)"
+                  value={formData.heroVideo || ''}
+                  onChange={(val) => updateField('heroVideo', val)}
                   accept="video"
                 />
-              </div>
-            ))}
-          </CMSCard>
+              </CMSCard>
 
-          <CMSCard title="FAQs">
-            {(formData.faqs || []).map((faq, idx) => (
-              <div key={idx} className="border border-border rounded-lg p-4 space-y-3">
+              <CMSCard title="Our Story">
+                {(formData.storyParagraphs || []).map((para, idx) => (
+                  <div key={idx}>
+                    <label className="text-xs font-medium text-muted-foreground mb-1 block">Paragraph {idx + 1}</label>
+                    <textarea
+                      value={para || ''}
+                      onChange={(e) => {
+                        const updated = [...(formData.storyParagraphs || [])];
+                        updated[idx] = e.target.value;
+                        updateField('storyParagraphs', updated);
+                      }}
+                      rows={4}
+                      className="input-base w-full resize-none"
+                    />
+                  </div>
+                ))}
+              </CMSCard>
+
+              <CMSCard title="Statistics">
+                {(formData.stats || []).map((stat, idx) => (
+                  <div key={idx} className="grid grid-cols-1 md:grid-cols-2 gap-3 border border-border rounded-lg p-3">
+                    <div>
+                      <label className="text-xs font-medium text-muted-foreground mb-1 block">Label</label>
+                      <input
+                        value={stat.label || ''}
+                        onChange={(e) => {
+                          const updated = [...(formData.stats || [])];
+                          updated[idx] = { ...updated[idx], label: e.target.value };
+                          updateField('stats', updated);
+                        }}
+                        className="input-base w-full"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs font-medium text-muted-foreground mb-1 block">Value</label>
+                      <input
+                        value={stat.value || ''}
+                        onChange={(e) => {
+                          const updated = [...(formData.stats || [])];
+                          updated[idx] = { ...updated[idx], value: e.target.value };
+                          updateField('stats', updated);
+                        }}
+                        className="input-base w-full"
+                      />
+                    </div>
+                  </div>
+                ))}
+              </CMSCard>
+
+              <CMSCard title="Why Choose Us">
+                {(formData.whyChooseUs || []).map((item, idx) => (
+                  <div key={idx} className="border border-border rounded-lg p-3 space-y-2">
+                    <div>
+                      <label className="text-xs font-medium text-muted-foreground mb-1 block">Title</label>
+                      <input
+                        value={item.title || ''}
+                        onChange={(e) => {
+                          const updated = [...(formData.whyChooseUs || [])];
+                          updated[idx] = { ...updated[idx], title: e.target.value };
+                          updateField('whyChooseUs', updated);
+                        }}
+                        className="input-base w-full"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs font-medium text-muted-foreground mb-1 block">Description</label>
+                      <textarea
+                        value={item.description || ''}
+                        onChange={(e) => {
+                          const updated = [...(formData.whyChooseUs || [])];
+                          updated[idx] = { ...updated[idx], description: e.target.value };
+                          updateField('whyChooseUs', updated);
+                        }}
+                        rows={2}
+                        className="input-base w-full resize-none"
+                      />
+                    </div>
+                  </div>
+                ))}
+              </CMSCard>
+            </div>
+          )}
+
+          {/* Contact Page Editor */}
+          {activePage === 'contact' && (
+            <div className="space-y-6">
+              <CMSCard title="Hero Section">
                 <div>
-                  <label className="text-xs font-medium text-muted-foreground mb-1 block">Question</label>
+                  <label className="text-xs font-medium text-muted-foreground mb-1 block">Hero Title</label>
                   <input
-                    value={faq.question || ''}
-                    onChange={(e) => {
-                      const updated = [...(formData.faqs || [])];
-                      updated[idx] = { ...updated[idx], question: e.target.value };
-                      updateField('faqs', updated);
-                    }}
+                    value={formData.heroTitle || ''}
+                    onChange={(e) => updateField('heroTitle', e.target.value)}
                     className="input-base w-full"
                   />
                 </div>
                 <div>
-                  <label className="text-xs font-medium text-muted-foreground mb-1 block">Answer</label>
+                  <label className="text-xs font-medium text-muted-foreground mb-1 block">Hero Subtitle</label>
+                  <input
+                    value={formData.heroSubtitle || ''}
+                    onChange={(e) => updateField('heroSubtitle', e.target.value)}
+                    className="input-base w-full"
+                  />
+                </div>
+                <MediaPickerButton
+                  label="Hero Image"
+                  value={formData.heroImage || ''}
+                  onChange={(val) => updateField('heroImage', val)}
+                  accept="image"
+                />
+                <MediaPickerButton
+                  label="Hero Video (optional)"
+                  value={formData.heroVideo || ''}
+                  onChange={(val) => updateField('heroVideo', val)}
+                  accept="video"
+                />
+              </CMSCard>
+
+              <CMSCard title="Contact Information">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-xs font-medium text-muted-foreground mb-1 block">Phone</label>
+                    <input
+                      value={formData.phone || ''}
+                      onChange={(e) => updateField('phone', e.target.value)}
+                      className="input-base w-full"
+                      placeholder="e.g. 770-374-3203"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-muted-foreground mb-1 block">Address</label>
+                    <input
+                      value={formData.address || ''}
+                      onChange={(e) => updateField('address', e.target.value)}
+                      className="input-base w-full"
+                      placeholder="e.g. Atlanta, GA"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground mb-1 block">Service Area</label>
+                  <input
+                    value={formData.serviceArea || ''}
+                    onChange={(e) => updateField('serviceArea', e.target.value)}
+                    className="input-base w-full"
+                    placeholder="e.g. Atlanta metro area and throughout Georgia"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground mb-1 block">Hours</label>
                   <textarea
-                    value={faq.answer || ''}
-                    onChange={(e) => {
-                      const updated = [...(formData.faqs || [])];
-                      updated[idx] = { ...updated[idx], answer: e.target.value };
-                      updateField('faqs', updated);
-                    }}
+                    value={formData.hours || ''}
+                    onChange={(e) => updateField('hours', e.target.value)}
                     rows={3}
                     className="input-base w-full resize-none"
+                    placeholder="Monday - Saturday: 8:00 AM - 6:00 PM"
                   />
                 </div>
-              </div>
-            ))}
-          </CMSCard>
-        </div>
-      )}
-
-      {/* About Page Editor */}
-      {activePage === 'about' && (
-        <div className="space-y-6">
-          <CMSCard title="Hero Section">
-            <div>
-              <label className="text-xs font-medium text-muted-foreground mb-1 block">Hero Title</label>
-              <input
-                value={formData.heroTitle || ''}
-                onChange={(e) => updateField('heroTitle', e.target.value)}
-                className="input-base w-full"
-              />
-            </div>
-            <div>
-              <label className="text-xs font-medium text-muted-foreground mb-1 block">Hero Subtitle</label>
-              <input
-                value={formData.heroSubtitle || ''}
-                onChange={(e) => updateField('heroSubtitle', e.target.value)}
-                className="input-base w-full"
-              />
-            </div>
-            <MediaPickerButton
-              label="Hero Image"
-              value={formData.heroImage || ''}
-              onChange={(val) => updateField('heroImage', val)}
-              accept="image"
-            />
-            <MediaPickerButton
-              label="Hero Video (optional)"
-              value={formData.heroVideo || ''}
-              onChange={(val) => updateField('heroVideo', val)}
-              accept="video"
-            />
-          </CMSCard>
-
-          <CMSCard title="Our Story">
-            {(formData.storyParagraphs || []).map((para, idx) => (
-              <div key={idx}>
-                <label className="text-xs font-medium text-muted-foreground mb-1 block">Paragraph {idx + 1}</label>
-                <textarea
-                  value={para || ''}
-                  onChange={(e) => {
-                    const updated = [...(formData.storyParagraphs || [])];
-                    updated[idx] = e.target.value;
-                    updateField('storyParagraphs', updated);
-                  }}
-                  rows={4}
-                  className="input-base w-full resize-none"
-                />
-              </div>
-            ))}
-          </CMSCard>
-
-          <CMSCard title="Statistics">
-            {(formData.stats || []).map((stat, idx) => (
-              <div key={idx} className="grid grid-cols-1 md:grid-cols-2 gap-3 border border-border rounded-lg p-3">
                 <div>
-                  <label className="text-xs font-medium text-muted-foreground mb-1 block">Label</label>
+                  <label className="text-xs font-medium text-muted-foreground mb-1 block">Map Embed URL</label>
                   <input
-                    value={stat.label || ''}
-                    onChange={(e) => {
-                      const updated = [...(formData.stats || [])];
-                      updated[idx] = { ...updated[idx], label: e.target.value };
-                      updateField('stats', updated);
-                    }}
+                    value={formData.mapEmbed || ''}
+                    onChange={(e) => updateField('mapEmbed', e.target.value)}
                     className="input-base w-full"
+                    placeholder="OpenStreetMap embed URL..."
                   />
                 </div>
-                <div>
-                  <label className="text-xs font-medium text-muted-foreground mb-1 block">Value</label>
-                  <input
-                    value={stat.value || ''}
-                    onChange={(e) => {
-                      const updated = [...(formData.stats || [])];
-                      updated[idx] = { ...updated[idx], value: e.target.value };
-                      updateField('stats', updated);
-                    }}
-                    className="input-base w-full"
-                  />
-                </div>
-              </div>
-            ))}
-          </CMSCard>
+              </CMSCard>
+            </div>
+          )}
 
-          <CMSCard title="Why Choose Us">
-            {(formData.whyChooseUs || []).map((item, idx) => (
-              <div key={idx} className="border border-border rounded-lg p-3 space-y-2">
-                <div>
-                  <label className="text-xs font-medium text-muted-foreground mb-1 block">Title</label>
-                  <input
-                    value={item.title || ''}
-                    onChange={(e) => {
-                      const updated = [...(formData.whyChooseUs || [])];
-                      updated[idx] = { ...updated[idx], title: e.target.value };
-                      updateField('whyChooseUs', updated);
-                    }}
-                    className="input-base w-full"
-                  />
-                </div>
-                <div>
-                  <label className="text-xs font-medium text-muted-foreground mb-1 block">Description</label>
-                  <textarea
-                    value={item.description || ''}
-                    onChange={(e) => {
-                      const updated = [...(formData.whyChooseUs || [])];
-                      updated[idx] = { ...updated[idx], description: e.target.value };
-                      updateField('whyChooseUs', updated);
-                    }}
-                    rows={2}
-                    className="input-base w-full resize-none"
-                  />
-                </div>
-              </div>
-            ))}
-          </CMSCard>
-        </div>
-      )}
-
-      {/* Contact Page Editor */}
-      {activePage === 'contact' && (
-        <div className="space-y-6">
-          <CMSCard title="Hero Section">
-            <div>
-              <label className="text-xs font-medium text-muted-foreground mb-1 block">Hero Title</label>
-              <input
-                value={formData.heroTitle || ''}
-                onChange={(e) => updateField('heroTitle', e.target.value)}
-                className="input-base w-full"
-              />
-            </div>
-            <div>
-              <label className="text-xs font-medium text-muted-foreground mb-1 block">Hero Subtitle</label>
-              <input
-                value={formData.heroSubtitle || ''}
-                onChange={(e) => updateField('heroSubtitle', e.target.value)}
-                className="input-base w-full"
-              />
-            </div>
-            <MediaPickerButton
-              label="Hero Image"
-              value={formData.heroImage || ''}
-              onChange={(val) => updateField('heroImage', val)}
-              accept="image"
-            />
-            <MediaPickerButton
-              label="Hero Video (optional)"
-              value={formData.heroVideo || ''}
-              onChange={(val) => updateField('heroVideo', val)}
-              accept="video"
-            />
-          </CMSCard>
-
-          <CMSCard title="Contact Information">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="text-xs font-medium text-muted-foreground mb-1 block">Phone</label>
-                <input
-                  value={formData.phone || ''}
-                  onChange={(e) => updateField('phone', e.target.value)}
-                  className="input-base w-full"
-                  placeholder="e.g. 770-374-3203"
-                />
-              </div>
-              <div>
-                <label className="text-xs font-medium text-muted-foreground mb-1 block">Address</label>
-                <input
-                  value={formData.address || ''}
-                  onChange={(e) => updateField('address', e.target.value)}
-                  className="input-base w-full"
-                  placeholder="e.g. Atlanta, GA"
-                />
-              </div>
-            </div>
-            <div>
-              <label className="text-xs font-medium text-muted-foreground mb-1 block">Service Area</label>
-              <input
-                value={formData.serviceArea || ''}
-                onChange={(e) => updateField('serviceArea', e.target.value)}
-                className="input-base w-full"
-                placeholder="e.g. Atlanta metro area and throughout Georgia"
-              />
-            </div>
-            <div>
-              <label className="text-xs font-medium text-muted-foreground mb-1 block">Hours</label>
-              <textarea
-                value={formData.hours || ''}
-                onChange={(e) => updateField('hours', e.target.value)}
-                rows={3}
-                className="input-base w-full resize-none"
-                placeholder="Monday - Saturday: 8:00 AM - 6:00 PM"
-              />
-            </div>
-            <div>
-              <label className="text-xs font-medium text-muted-foreground mb-1 block">Map Embed URL</label>
-              <input
-                value={formData.mapEmbed || ''}
-                onChange={(e) => updateField('mapEmbed', e.target.value)}
-                className="input-base w-full"
-                placeholder="OpenStreetMap embed URL..."
-              />
-            </div>
-          </CMSCard>
-        </div>
-      )}
-
-      {/* Services Page Editor */}
-      {activePage === 'services' && (
-        <div className="space-y-6">
-          <div className="flex justify-between items-center mb-2">
-            <h3 className="text-lg font-semibold text-foreground">Manage Services ({ (formData.list || []).length })</h3>
-            <button
-              onClick={addService}
-              type="button"
-              className="bg-primary hover:bg-primary/90 text-primary-foreground px-3 py-1.5 text-xs font-semibold rounded-lg flex items-center gap-1.5 transition-all"
-            >
-              + Add New Service
-            </button>
-          </div>
-
-          {(formData.list || []).map((svc, idx) => (
-            <CMSCard key={svc.id || idx} title={`${idx + 1}. ${svc.title || 'New Service'}`}>
-              <div className="flex justify-between items-center pb-2 border-b border-border mb-3">
-                <div className="flex items-center gap-3">
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      id={`is_core_${idx}`}
-                      checked={!!svc.isCore}
-                      onChange={(e) => updateServiceField(idx, 'isCore', e.target.checked)}
-                      className="rounded border-border text-primary focus:ring-primary h-4 w-4 bg-muted/40 cursor-pointer"
-                    />
-                    <label htmlFor={`is_core_${idx}`} className="text-xs font-medium text-foreground cursor-pointer select-none">
-                      Highlight as Core Service on Landing Page
-                    </label>
-                  </div>
-                  {svc.isCore && (
-                    <span className="bg-primary/10 text-primary text-[10px] font-semibold px-2 py-0.5 rounded-full border border-primary/20">
-                      Core Landing Spotlight
-                    </span>
-                  )}
-                </div>
+          {/* Services Page Editor */}
+          {activePage === 'services' && (
+            <div className="space-y-6">
+              <div className="flex justify-between items-center mb-2">
+                <h3 className="text-lg font-semibold text-foreground">Manage Services ({ (formData.list || []).length })</h3>
                 <button
-                  onClick={() => deleteService(idx)}
+                  onClick={addService}
                   type="button"
-                  className="text-xs font-semibold text-red-500 hover:text-red-600 bg-red-500/10 hover:bg-red-500/20 px-2.5 py-1 rounded transition-all"
+                  className="bg-primary hover:bg-primary/90 text-primary-foreground px-3 py-1.5 text-xs font-semibold rounded-lg flex items-center gap-1.5 transition-all"
                 >
-                  Delete Service
+                  + Add New Service
                 </button>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="text-xs font-medium text-muted-foreground mb-1 block">Service Title</label>
-                  <input
-                    value={svc.title || ''}
-                    onChange={(e) => updateServiceField(idx, 'title', e.target.value)}
-                    className="input-base w-full"
-                    placeholder="e.g. TV Mounting"
-                  />
+              {(formData.list || []).map((svc, idx) => (
+                <CMSCard key={svc.id || idx} title={`${idx + 1}. ${svc.title || 'New Service'}`}>
+                  <div className="flex justify-between items-center pb-2 border-b border-border mb-3">
+                    <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          id={`is_core_${idx}`}
+                          checked={!!svc.isCore}
+                          onChange={(e) => updateServiceField(idx, 'isCore', e.target.checked)}
+                          className="rounded border-border text-primary focus:ring-primary h-4 w-4 bg-muted/40 cursor-pointer"
+                        />
+                        <label htmlFor={`is_core_${idx}`} className="text-xs font-medium text-foreground cursor-pointer select-none">
+                          Highlight as Core Service on Landing Page
+                        </label>
+                      </div>
+                      {svc.isCore && (
+                        <span className="bg-primary/10 text-primary text-[10px] font-semibold px-2 py-0.5 rounded-full border border-primary/20">
+                          Core Landing Spotlight
+                        </span>
+                      )}
+                    </div>
+                    <button
+                      onClick={() => deleteService(idx)}
+                      type="button"
+                      className="text-xs font-semibold text-red-500 hover:text-red-600 bg-red-500/10 hover:bg-red-500/20 px-2.5 py-1 rounded transition-all"
+                    >
+                      Delete Service
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-xs font-medium text-muted-foreground mb-1 block">Service Title</label>
+                      <input
+                        value={svc.title || ''}
+                        onChange={(e) => updateServiceField(idx, 'title', e.target.value)}
+                        className="input-base w-full"
+                        placeholder="e.g. TV Mounting"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs font-medium text-muted-foreground mb-1 block">Homepage Tagline</label>
+                      <input
+                        value={svc.tagline || ''}
+                        onChange={(e) => updateServiceField(idx, 'tagline', e.target.value)}
+                        className="input-base w-full"
+                        placeholder="e.g. Clean walls. Perfect angles."
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-medium text-muted-foreground mb-1 block">Short Summary Description</label>
+                    <input
+                      value={svc.description || ''}
+                      onChange={(e) => updateServiceField(idx, 'description', e.target.value)}
+                      className="input-base w-full"
+                      placeholder="Appears on landing page services list..."
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-medium text-muted-foreground mb-1 block">Detailed Description (Services Page)</label>
+                    <textarea
+                      value={svc.details || ''}
+                      onChange={(e) => updateServiceField(idx, 'details', e.target.value)}
+                      rows={3}
+                      className="input-base w-full resize-none"
+                      placeholder="Full description of what this service covers..."
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-xs font-medium text-muted-foreground mb-1 block">Benefits / Bullet Points (comma-separated)</label>
+                      <input
+                        value={svc.benefits ? (Array.isArray(svc.benefits) ? svc.benefits.join(', ') : svc.benefits) : ''}
+                        onChange={(e) => {
+                          const benefitsArr = e.target.value.split(',').map(b => b.trim()).filter(Boolean);
+                          updateServiceField(idx, 'benefits', benefitsArr);
+                        }}
+                        className="input-base w-full"
+                        placeholder="e.g. Stud finder verification, Cable management, Fully insured"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs font-medium text-muted-foreground mb-1 block">Lucide Icon Class</label>
+                      <select
+                        value={svc.icon || 'Hammer'}
+                        onChange={(e) => updateServiceField(idx, 'icon', e.target.value)}
+                        className="input-base w-full h-[38px] bg-muted/40 text-sm border-border text-foreground"
+                      >
+                        <option value="Tv">Tv (Television)</option>
+                        <option value="Hammer">Hammer (Drywall/Handyman)</option>
+                        <option value="Paintbrush">Paintbrush (Painting)</option>
+                        <option value="Wrench">Wrench (Carpentry)</option>
+                        <option value="Home">Home (Flooring)</option>
+                        <option value="Droplet">Droplet (Plumbing)</option>
+                        <option value="Zap">Zap (Electrical)</option>
+                        <option value="Trash">Trash (Cleanup)</option>
+                        <option value="Shield">Shield (Security)</option>
+                        <option value="Sun">Sun (Outdoor/Patio)</option>
+                        <option value="Scissors">Scissors (Hanging Art)</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <MediaPickerButton
+                      label="Service Image"
+                      value={svc.image || ''}
+                      onChange={(val) => updateServiceField(idx, 'image', val)}
+                      accept="image"
+                    />
+                    <MediaPickerButton
+                      label="Service Video (optional)"
+                      value={svc.video || ''}
+                      onChange={(val) => updateServiceField(idx, 'video', val)}
+                      accept="video"
+                    />
+                  </div>
+                </CMSCard>
+              ))}
+
+              {(formData.list || []).length === 0 && (
+                <div className="text-center py-12 border border-dashed border-border rounded-xl">
+                  <p className="text-muted-foreground text-sm">No services defined. Click "+ Add New Service" to start.</p>
                 </div>
-                <div>
-                  <label className="text-xs font-medium text-muted-foreground mb-1 block">Homepage Tagline</label>
-                  <input
-                    value={svc.tagline || ''}
-                    onChange={(e) => updateServiceField(idx, 'tagline', e.target.value)}
-                    className="input-base w-full"
-                    placeholder="e.g. Clean walls. Perfect angles."
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="text-xs font-medium text-muted-foreground mb-1 block">Short Summary Description</label>
-                <input
-                  value={svc.description || ''}
-                  onChange={(e) => updateServiceField(idx, 'description', e.target.value)}
-                  className="input-base w-full"
-                  placeholder="Appears on landing page services list..."
-                />
-              </div>
-
-              <div>
-                <label className="text-xs font-medium text-muted-foreground mb-1 block">Detailed Description (Services Page)</label>
-                <textarea
-                  value={svc.details || ''}
-                  onChange={(e) => updateServiceField(idx, 'details', e.target.value)}
-                  rows={3}
-                  className="input-base w-full resize-none"
-                  placeholder="Full description of what this service covers..."
-                />
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="text-xs font-medium text-muted-foreground mb-1 block">Benefits / Bullet Points (comma-separated)</label>
-                  <input
-                    value={svc.benefits ? (Array.isArray(svc.benefits) ? svc.benefits.join(', ') : svc.benefits) : ''}
-                    onChange={(e) => {
-                      const benefitsArr = e.target.value.split(',').map(b => b.trim()).filter(Boolean);
-                      updateServiceField(idx, 'benefits', benefitsArr);
-                    }}
-                    className="input-base w-full"
-                    placeholder="e.g. Stud finder verification, Cable management, Fully insured"
-                  />
-                </div>
-                <div>
-                  <label className="text-xs font-medium text-muted-foreground mb-1 block">Lucide Icon Class</label>
-                  <select
-                    value={svc.icon || 'Hammer'}
-                    onChange={(e) => updateServiceField(idx, 'icon', e.target.value)}
-                    className="input-base w-full h-[38px] bg-muted/40 text-sm border-border text-foreground"
-                  >
-                    <option value="Tv">Tv (Television)</option>
-                    <option value="Hammer">Hammer (Drywall/Handyman)</option>
-                    <option value="Paintbrush">Paintbrush (Painting)</option>
-                    <option value="Wrench">Wrench (Carpentry)</option>
-                    <option value="Home">Home (Flooring)</option>
-                    <option value="Droplet">Droplet (Plumbing)</option>
-                    <option value="Zap">Zap (Electrical)</option>
-                    <option value="Trash">Trash (Cleanup)</option>
-                    <option value="Shield">Shield (Security)</option>
-                    <option value="Sun">Sun (Outdoor/Patio)</option>
-                    <option value="Scissors">Scissors (Hanging Art)</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <MediaPickerButton
-                  label="Service Image"
-                  value={svc.image || ''}
-                  onChange={(val) => updateServiceField(idx, 'image', val)}
-                  accept="image"
-                />
-                <MediaPickerButton
-                  label="Service Video (optional)"
-                  value={svc.video || ''}
-                  onChange={(val) => updateServiceField(idx, 'video', val)}
-                  accept="video"
-                />
-              </div>
-            </CMSCard>
-          ))}
-
-          { (formData.list || []).length === 0 && (
-            <div className="text-center py-12 border border-dashed border-border rounded-xl">
-              <p className="text-muted-foreground text-sm">No services defined. Click "+ Add New Service" to start.</p>
+              )}
             </div>
           )}
         </div>
-      )}
+
+        {/* Right Column: Information Panel */}
+        <div className="lg:col-span-1 bg-gradient-to-br from-primary/10 via-card to-cyan-500/5 dark:to-cyan-950/20 border border-border/80 rounded-2xl p-6 space-y-6 shadow-lg shadow-primary/5 backdrop-blur-sm">
+          <div className="flex items-center gap-2.5 pb-4 border-b border-border/60">
+            <div className="p-2 bg-primary/10 rounded-xl text-primary">
+              <GuideIcon size={20} />
+            </div>
+            <div>
+              <h3 className="font-bold text-sm text-foreground">{guide.title}</h3>
+              <p className="text-[10px] font-bold text-cyan-600 dark:text-cyan-400 uppercase tracking-wider mt-0.5">Active Configuration Portal</p>
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            <div>
+              <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block mb-1">Description</span>
+              <p className="text-xs text-foreground leading-relaxed bg-muted/40 border-l-2 border-l-primary/70 border-y border-r border-border/50 p-3 rounded-xl">
+                {guide.description}
+              </p>
+            </div>
+
+            <div className="space-y-3">
+              <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">CMS Tips & Guidelines</span>
+              <div className="space-y-2.5">
+                {guide.tips.map((tip, idx) => (
+                  <div key={idx} className="flex gap-2.5 p-3 rounded-xl bg-cyan-500/5 dark:bg-cyan-950/20 border border-cyan-500/20 dark:border-cyan-500/30 border-l-2 border-l-cyan-500 shadow-sm transition-all hover:bg-cyan-500/10">
+                    <span className="h-5 w-5 rounded-full bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 flex items-center justify-center text-[10px] font-bold shrink-0 mt-0.5 border border-cyan-500/20">
+                      {idx + 1}
+                    </span>
+                    <p className="text-xs text-foreground/90 dark:text-slate-200 font-medium leading-relaxed">
+                      {tip}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="pt-4 border-t border-border/60 flex items-center justify-between text-[10px] font-mono uppercase tracking-wider text-muted-foreground">
+              <div className="flex items-center gap-1.5">
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                </span>
+                <span className="text-green-600 dark:text-green-400 font-semibold">Live Sync Active</span>
+              </div>
+              <span className="text-muted-foreground/80">UTF-8 Schema</span>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
