@@ -1236,7 +1236,7 @@ const AdminPage = () => {
     const skillsList = Array.isArray(app.skills) ? app.skills : [];
     const payload = {
       name: app.name,
-      photo: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&h=400&fit=crop&q=80",
+      photo: "/images/team/generic-tech.jpg",
       bio: `Independent Technician based in ${app.city}, ${app.zip} with ${app.experience} experience.`,
       skills: skillsList,
     };
@@ -3378,6 +3378,9 @@ const AdminPage = () => {
           font-size: 0.875rem;
           color: hsl(var(--foreground));
           transition: box-shadow 0.15s;
+        }
+        .input-base.pl-9 {
+          padding-left: 2.25rem !important;
         }
         .input-base::placeholder { color: hsl(var(--muted-foreground)); }
         .input-base:focus { outline: none; box-shadow: 0 0 0 2px hsl(var(--primary) / 0.35); }

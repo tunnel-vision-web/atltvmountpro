@@ -26,21 +26,21 @@ import pb from "@/lib/pocketbaseClient";
 
 const SLIDES = [
   {
-    image: "https://images.unsplash.com/photo-1621905251189-08b45d6a269e?w=1920&q=80",
+    image: "/images/pages/join-slide1.jpg",
     title: "Earn Up to $45 – $85 / Hour",
     description: "Atlanta TV Mount Pro is recruiting talented independent technicians. Average weekly payout: $800 - $2,500.",
     cta: "Apply Now",
     action: "apply",
   },
   {
-    image: "https://images.unsplash.com/photo-1504307651254-35680f356dfd?w=1920&q=80",
+    image: "/images/pages/join-slide2.jpg",
     title: "Weekly Direct Payouts",
     description: "Get paid automatically every week. No invoicing customers, chasing quotes, or chasing down balances.",
     cta: "Estimate Earnings",
     action: "calculator",
   },
   {
-    image: "https://images.unsplash.com/photo-1581094794329-c8112a89af12?w=1920&q=80",
+    image: "/images/pages/join-slide3.jpg",
     title: "Set Your Own Schedule",
     description: "Be your own boss. Accept jobs you want in your service area, skip the ones you don't. Work when you want.",
     cta: "Apply Now",

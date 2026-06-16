@@ -175,4 +175,15 @@
     .input-base {
         @apply flex h-9 w-full rounded-md border border-input bg-muted px-3 py-1 text-sm text-foreground shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring;
     }
+
+    /* Prevents overlapping search icons in inputs by ensuring pl utilities take precedence */
+    .input-base.pl-8, input.pl-8 {
+        padding-left: 2rem !important;
+    }
+    .input-base.pl-9, input.pl-9 {
+        padding-left: 2.25rem !important;
+    }
+    .input-base.pl-10, input.pl-10 {
+        padding-left: 2.5rem !important;
+    }
 }

@@ -10,7 +10,7 @@ const Footer = () => {
           {/* Brand */}
           <div className="flex flex-col items-center text-center">
             <img
-              src="/images/logo/logo.png"
+              src="/images/logo/logo-footer.png"
               alt="Atlanta TV Mount Pro"
               className="h-12 mb-4"
             />
