@@ -13,7 +13,11 @@ const Section = ({ title, children }) => (
 );
 
 const TermsOfServicePage = () => {
-  usePageTitle("Terms of Service - Atlanta TV Mount Pro");
+  usePageTitle({
+    title: "Terms of Service - Atlanta TV Mount PRO",
+    description: "Read the Terms of Service for Atlanta TV Mount PRO outlining our agreement, billing, liabilities, and service guidelines.",
+    keywords: "terms of service, Atlanta TV Mount PRO terms"
+  });
   return (
     <>
       <div className="py-24 bg-background min-h-screen">

@@ -15,9 +15,13 @@ const ProjectDetailPage = () => {
   const [project, setProject] = useState(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
-  usePageTitle(
-    project ? `${project.title} — Atlanta TV Mount Pro` : "Atlanta TV Mount Pro",
-  );
+  usePageTitle({
+    title: project ? `${project.title} - Atlanta TV Mount PRO` : "Atlanta TV Mount PRO",
+    description: project ? `${project.description || project.title}. Learn more about our professional mounting work in Atlanta.` : "Explore details of our professional TV mounting and handyman projects in Atlanta.",
+    keywords: project ? `TV mounting, ${project.title}, Atlanta TV Mount PRO, handyman project` : "TV mounting projects, handyman Atlanta",
+    ogImage: project?.image || "/favicon.png",
+    ogType: "article"
+  });
 
   useEffect(() => {
     setLoading(true);

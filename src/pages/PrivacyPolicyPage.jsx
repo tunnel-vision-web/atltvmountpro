@@ -13,7 +13,11 @@ const Section = ({ title, children }) => (
 );
 
 const PrivacyPolicyPage = () => {
-  usePageTitle("Privacy Policy - Atlanta TV Mount Pro");
+  usePageTitle({
+    title: "Privacy Policy - Atlanta TV Mount PRO",
+    description: "Read the Privacy Policy for Atlanta TV Mount PRO to understand how we collect, use, and protect your information.",
+    keywords: "privacy policy, Atlanta TV Mount PRO privacy"
+  });
   return (
     <>
       <div className="py-24 bg-background min-h-screen">

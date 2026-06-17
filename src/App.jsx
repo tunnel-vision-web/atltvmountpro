@@ -26,6 +26,8 @@ import VerifyOptinPage from "./pages/VerifyOptinPage";
 import JoinPage from "./pages/JoinPage";
 import TechAppPage from "./pages/TechAppPage";
 import CustomerAppPage from "./pages/CustomerAppPage";
+import BlogPage from "./pages/BlogPage";
+import BlogPostDetailPage from "./pages/BlogPostDetailPage";
 
 function App() {
   React.useEffect(() => {
@@ -73,6 +75,11 @@ function App() {
                       <Route
                         path="/testimonials"
                         element={<TestimonialsPage />}
+                      />
+                      <Route path="/blog" element={<BlogPage />} />
+                      <Route
+                        path="/blog/:slug"
+                        element={<BlogPostDetailPage />}
                       />
                       <Route path="/contact" element={<ContactPage />} />
                       <Route path="/projects" element={<ProjectsPage />} />

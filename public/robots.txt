@@ -1,0 +1,9 @@
+User-agent: *
+Allow: /
+
+# Disallow administration and client dashboards
+Disallow: /admin
+Disallow: /dashboard
+
+# Sitemap URL
+Sitemap: https://atltvmountpro.com/sitemap.xml

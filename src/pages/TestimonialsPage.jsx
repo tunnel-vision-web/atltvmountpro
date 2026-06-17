@@ -68,7 +68,11 @@ const testimonials = [
 ];
 
 const TestimonialsPage = () => {
-  usePageTitle("Testimonials - Atlanta TV Mount Pro");
+  usePageTitle({
+    title: "Testimonials & Reviews - Atlanta TV Mount PRO",
+    description: "Read customer reviews and ratings for Atlanta TV Mount PRO. See why our clients rate us 5 stars for TV mounting, drywall repair, and handyman services.",
+    keywords: "Atlanta TV Mount PRO reviews, TV mounting testimonials, customer feedback handyman Atlanta"
+  });
   return (
     <>
       <PageHero

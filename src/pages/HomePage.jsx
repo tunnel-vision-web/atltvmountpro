@@ -209,9 +209,12 @@ const HomePage = () => {
           },
         ];
 
-  usePageTitle(
-    "Atlanta TV Mount Pro - Professional TV Mounting & Handyman Services in Atlanta",
-  );
+  usePageTitle({
+    title: "Atlanta TV Mount PRO - Professional TV Mounting & Handyman Services in Atlanta",
+    description: "Atlanta's top-rated professional TV wall mounting, wire concealment, home theater installation, drywall patching, and handyman services. Fully licensed and insured. Get a free quote today!",
+    keywords: "TV mounting Atlanta, TV wall mount, cable concealment, home theater setup, handyman services Atlanta, drywall repair, TV installation Atlanta",
+    ogImage: "/favicon.png"
+  });
 
   return (
     <>

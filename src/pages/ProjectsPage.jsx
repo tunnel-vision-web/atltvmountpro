@@ -9,7 +9,11 @@ const ProjectsPage = () => {
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
-  usePageTitle("Our Projects - Atlanta TV Mount Pro");
+  usePageTitle({
+    title: "Our Projects & Gallery - Atlanta TV Mount PRO",
+    description: "Browse our gallery of completed professional TV mounting, cable concealment, and handyman projects in Atlanta. View our quality results.",
+    keywords: "TV mounting gallery, TV wall mounting projects, handyman gallery Atlanta, TV installation examples"
+  });
 
   useEffect(() => {
     fetch("/api/projects")

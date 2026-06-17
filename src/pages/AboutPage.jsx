@@ -58,7 +58,11 @@ const AboutPage = () => {
           },
         ];
 
-  usePageTitle("About Us - Atlanta TV Mount Pro");
+  usePageTitle({
+    title: "About Us - Atlanta TV Mount PRO",
+    description: "Learn about the expert team behind Atlanta TV Mount PRO. Discover our values, professional standards, and why we are Atlanta's preferred TV mounting and handyman technicians.",
+    keywords: "about Atlanta TV Mount PRO, TV mounting experts, Atlanta handyman company, professional mounting technicians"
+  });
 
   return (
     <>

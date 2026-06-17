@@ -124,7 +124,11 @@ const defaultStaticServices = [
 const ServicesPage = () => {
   const { openQuoteModal } = useUI();
   const { data: cmsServicesData } = useCMS("services");
-  usePageTitle("Our Services - Atlanta TV Mount Pro");
+  usePageTitle({
+    title: "Our Services - Atlanta TV Mount PRO",
+    description: "Explore our expert services in Atlanta: professional TV wall mounting, in-wall wire concealment, drywall patching, interior painting, custom shelving, and electrical installations.",
+    keywords: "TV mounting services, wire concealment, drywall patch Atlanta, custom shelving installation, home improvement service Atlanta, TV mount brick wall"
+  });
 
   const allServicesList = cmsServicesData?.list || [];
   const servicesListToRender = allServicesList.length > 0 ? allServicesList : defaultStaticServices;

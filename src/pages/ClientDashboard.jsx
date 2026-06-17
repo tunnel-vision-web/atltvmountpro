@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
+import usePageTitle from "@/hooks/usePageTitle";
 import {
   useClientAuth,
   getLocalJobs,
@@ -60,6 +61,11 @@ function saveLocalBookings(bookings) {
 }
 
 const ClientDashboard = () => {
+  usePageTitle({
+    title: "Client Dashboard - Atlanta TV Mount PRO",
+    robots: "noindex, nofollow",
+  });
+
   const { user, isAuthenticated, isCustomer, isTech } = useClientAuth();
   const [jobs, setJobs] = useState([]);
   const [assignedBookings, setAssignedBookings] = useState([]);

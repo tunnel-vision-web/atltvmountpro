@@ -22,7 +22,11 @@ const ContactPage = () => {
     message: "",
   });
   const [loading, setLoading] = useState(false);
-  usePageTitle("Contact Us - Atlanta TV Mount Pro");
+  usePageTitle({
+    title: "Contact Us - Atlanta TV Mount PRO",
+    description: "Contact Atlanta TV Mount PRO to book professional TV installation, wire concealment, drywall repair, and local handyman services. Fast response guaranteed.",
+    keywords: "contact Atlanta TV Mount PRO, book TV mounting online, handyman quote Atlanta, TV mounting appointment"
+  });
 
   const { data: cmsContact } = useCMS("contact");
 

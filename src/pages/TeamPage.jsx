@@ -64,7 +64,11 @@ const STATIC_TEAM = [
 const TeamPage = () => {
   const [teamMembers, setTeamMembers] = useState([]);
   const [loading, setLoading] = useState(true);
-  usePageTitle("Our Team - Atlanta TV Mount Pro");
+  usePageTitle({
+    title: "Our Team of Technicians - Atlanta TV Mount PRO",
+    description: "Meet our professional, fully insured, and background-checked technicians and handyman experts at Atlanta TV Mount PRO.",
+    keywords: "Atlanta TV mounting team, handyman technicians, professional mounting staff"
+  });
 
   useEffect(() => {
     const loadTeam = async () => {

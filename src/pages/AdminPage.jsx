@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useCallback } from "react";
+import usePageTitle from "@/hooks/usePageTitle";
 
 import { Link } from "react-router-dom";
 import {
@@ -987,6 +988,11 @@ const LOCAL_PROJECTS_STORAGE = "atltvmountpro_local_projects";
 
 // ── Main Admin Panel ──────────────────────────────────────────────────────────
 const AdminPage = () => {
+  usePageTitle({
+    title: "Admin Portal - Atlanta TV Mount PRO",
+    robots: "noindex, nofollow",
+  });
+
   const [currentUser, setCurrentUser] = useState(null);
   const [authed, setAuthed] = useState(false);
   const [checking, setChecking] = useState(true);
