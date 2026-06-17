@@ -28,7 +28,7 @@ const PageHero = ({ eyebrow, title, subtitle, image, alt }) => (
               {eyebrow}
             </p>
           )}
-          <h1 className="text-4xl md:text-5xl font-bold text-white mb-4">
+          <h1 className="hero-title">
             {title}
           </h1>
           {subtitle && (

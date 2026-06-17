@@ -51,6 +51,16 @@ export default function CRMModule() {
   const [blastSubject, setBlastSubject] = useState("");
   const [blastBody, setBlastBody] = useState("");
   const [sendingBlast, setSendingBlast] = useState(false);
+
+  // Pagination States
+  const [contactsPage, setContactsPage] = useState(1);
+  const contactsItemsPerPage = 10;
+  const [blastsPage, setBlastsPage] = useState(1);
+  const blastsItemsPerPage = 5;
+
+  useEffect(() => {
+    setContactsPage(1);
+  }, [searchQuery, filterType, filterChannel, filterStatus]);
   
   // Queue Dispatch Progress States
   const [dispatchQueue, setDispatchQueue] = useState([]);
@@ -566,21 +576,33 @@ export default function CRMModule() {
                   </tr>
                 </thead>
                 <tbody>
-                  {loading ? (
-                    <tr>
-                      <td colSpan={5} className="text-center py-10">
-                        <Loader2 className="w-6 h-6 animate-spin mx-auto text-primary" />
-                        <span className="text-xs text-muted-foreground mt-2 block">Loading Directory...</span>
-                      </td>
-                    </tr>
-                  ) : filteredContacts.length === 0 ? (
-                    <tr>
-                      <td colSpan={5} className="text-center py-12 text-muted-foreground">
-                        No contacts found matching criteria.
-                      </td>
-                    </tr>
-                  ) : (
-                    filteredContacts.map(c => (
+                  {(() => {
+                    const totalContactsPages = Math.ceil(filteredContacts.length / contactsItemsPerPage) || 1;
+                    const contactsStartIndex = (contactsPage - 1) * contactsItemsPerPage;
+                    const paginatedContacts = filteredContacts.slice(contactsStartIndex, contactsStartIndex + contactsItemsPerPage);
+
+                    if (loading) {
+                      return (
+                        <tr>
+                          <td colSpan={5} className="text-center py-10">
+                            <Loader2 className="w-6 h-6 animate-spin mx-auto text-primary" />
+                            <span className="text-xs text-muted-foreground mt-2 block">Loading Directory...</span>
+                          </td>
+                        </tr>
+                      );
+                    }
+
+                    if (filteredContacts.length === 0) {
+                      return (
+                        <tr>
+                          <td colSpan={5} className="text-center py-12 text-muted-foreground">
+                            No contacts found matching criteria.
+                          </td>
+                        </tr>
+                      );
+                    }
+
+                    return paginatedContacts.map(c => (
                       <tr 
                         key={`${c.type}-${c.id}`}
                         onClick={() => setSelectedContact(c)}
@@ -651,11 +673,47 @@ export default function CRMModule() {
                           </div>
                         </td>
                       </tr>
-                    ))
-                  )}
+                    ));
+                  })()}
                 </tbody>
               </table>
             </div>
+
+            {(() => {
+              const totalContactsPages = Math.ceil(filteredContacts.length / contactsItemsPerPage) || 1;
+              const contactsStartIndex = (contactsPage - 1) * contactsItemsPerPage;
+              if (totalContactsPages > 1) {
+                return (
+                  <div className="flex items-center justify-between pt-4 border-t border-border">
+                    <span className="text-xs text-muted-foreground">
+                      Showing {contactsStartIndex + 1} to {Math.min(contactsStartIndex + contactsItemsPerPage, filteredContacts.length)} of {filteredContacts.length} contacts
+                    </span>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setContactsPage((p) => Math.max(p - 1, 1))}
+                        disabled={contactsPage === 1}
+                      >
+                        Previous
+                      </Button>
+                      <span className="text-xs font-semibold px-2">
+                        Page {contactsPage} of {totalContactsPages}
+                      </span>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setContactsPage((p) => Math.min(p + 1, totalContactsPages))}
+                        disabled={contactsPage === totalContactsPages}
+                      >
+                        Next
+                      </Button>
+                    </div>
+                  </div>
+                );
+              }
+              return null;
+            })()}
           </div>
 
           {/* HubSpot-style Detail Panel & Activity Timeline */}
@@ -897,12 +955,20 @@ export default function CRMModule() {
             </div>
 
             <div className="space-y-3 max-h-[400px] overflow-y-auto pr-1">
-              {blasts.length === 0 ? (
-                <div className="text-center py-12 text-muted-foreground text-xs border border-dashed border-border rounded-xl">
-                  No historical blasts logged.
-                </div>
-              ) : (
-                blasts.map(b => {
+              {(() => {
+                const totalBlastsPages = Math.ceil(blasts.length / blastsItemsPerPage) || 1;
+                const blastsStartIndex = (blastsPage - 1) * blastsItemsPerPage;
+                const paginatedBlasts = blasts.slice(blastsStartIndex, blastsStartIndex + blastsItemsPerPage);
+
+                if (blasts.length === 0) {
+                  return (
+                    <div className="text-center py-12 text-muted-foreground text-xs border border-dashed border-border rounded-xl">
+                      No historical blasts logged.
+                    </div>
+                  );
+                }
+
+                return paginatedBlasts.map(b => {
                   let parsedStats = { sent: 0, skipped: 0, failed: 0 };
                   if (b.stats) {
                     parsedStats = typeof b.stats === "string" ? JSON.parse(b.stats) : b.stats;
@@ -934,15 +1000,49 @@ export default function CRMModule() {
                         <span className="text-muted-foreground">Sent by: {b.sent_by?.split("@")[0]}</span>
                         <div className="flex gap-2">
                           <span className="text-emerald-500 font-bold">✓ {parsedStats.sent}</span>
-                          {parsedStats.skipped > 0 && <span className="text-amber-500 font-bold">↷ {parsedStats.skipped}</span>}
+                          <span className="text-amber-500 font-bold">↷ {parsedStats.skipped}</span>
                           {parsedStats.failed > 0 && <span className="text-destructive font-bold">✗ {parsedStats.failed}</span>}
                         </div>
                       </div>
                     </div>
                   );
-                })
-              )}
+                });
+              })()}
             </div>
+
+            {(() => {
+              const totalBlastsPages = Math.ceil(blasts.length / blastsItemsPerPage) || 1;
+              if (totalBlastsPages > 1) {
+                return (
+                  <div className="flex items-center justify-between pt-4 border-t border-border mt-4">
+                    <span className="text-xs text-muted-foreground">
+                      Page {blastsPage} of {totalBlastsPages}
+                    </span>
+                    <div className="flex items-center gap-1">
+                      <Button
+                        variant="outline"
+                        size="xs"
+                        onClick={() => setBlastsPage((p) => Math.max(p - 1, 1))}
+                        disabled={blastsPage === 1}
+                        className="h-7 text-xs"
+                      >
+                        Prev
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="xs"
+                        onClick={() => setBlastsPage((p) => Math.min(p + 1, totalBlastsPages))}
+                        disabled={blastsPage === totalBlastsPages}
+                        className="h-7 text-xs"
+                      >
+                        Next
+                      </Button>
+                    </div>
+                  </div>
+                );
+              }
+              return null;
+            })()}
           </div>
         </div>
       )}

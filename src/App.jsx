@@ -28,6 +28,7 @@ import TechAppPage from "./pages/TechAppPage";
 import CustomerAppPage from "./pages/CustomerAppPage";
 import BlogPage from "./pages/BlogPage";
 import BlogPostDetailPage from "./pages/BlogPostDetailPage";
+import TechnicianTermsPage from "./pages/TechnicianTermsPage";
 
 function App() {
   React.useEffect(() => {
@@ -100,6 +101,7 @@ function App() {
                         element={<VerifyOptinPage />}
                       />
                       <Route path="/join" element={<JoinPage />} />
+                      <Route path="/technician-terms" element={<TechnicianTermsPage />} />
                     </Routes>
                   </main>
                   <Footer />

@@ -67,6 +67,20 @@ const FinanceModule = ({ initialData = null, currentUser = null }) => {
   const [showViewInvoice, setShowViewInvoice] = useState(false);
   const [showViewReceipt, setShowViewReceipt] = useState(false);
 
+  // Pagination states
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+  const [taxPage, setTaxPage] = useState(1);
+  const taxItemsPerPage = 10;
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filterStatus]);
+
+  useEffect(() => {
+    setTaxPage(1);
+  }, [taxYear, taxQuarter]);
+
   const [taxYear, setTaxYear] = useState("2026");
   const [taxQuarter, setTaxQuarter] = useState("all");
 
@@ -691,12 +705,20 @@ const FinanceModule = ({ initialData = null, currentUser = null }) => {
                   </tr>
                 </thead>
                 <tbody>
-                  {taxPaidInvoices.length === 0 ? (
-                    <tr>
-                      <td colSpan={6} className="text-center py-6 text-muted-foreground italic">No paid transactions in this period.</td>
-                    </tr>
-                  ) : (
-                    taxPaidInvoices.map((inv) => {
+                  {(() => {
+                    const totalTaxPages = Math.ceil(taxPaidInvoices.length / taxItemsPerPage) || 1;
+                    const taxStartIndex = (taxPage - 1) * taxItemsPerPage;
+                    const paginatedTaxInvoices = taxPaidInvoices.slice(taxStartIndex, taxStartIndex + taxItemsPerPage);
+
+                    if (taxPaidInvoices.length === 0) {
+                      return (
+                        <tr>
+                          <td colSpan={6} className="text-center py-6 text-muted-foreground italic">No paid transactions in this period.</td>
+                        </tr>
+                      );
+                    }
+
+                    return paginatedTaxInvoices.map((inv) => {
                       const sub = inv.subtotal ?? (inv.total / 1.07);
                       const tax = inv.tax ?? (inv.total - sub);
                       return (
@@ -709,11 +731,47 @@ const FinanceModule = ({ initialData = null, currentUser = null }) => {
                           <td className="px-3 py-2 text-right capitalize font-medium text-primary">{inv.paymentMethod}</td>
                         </tr>
                       );
-                    })
-                  )}
+                    });
+                  })()}
                 </tbody>
               </table>
             </div>
+            {(() => {
+              const totalTaxPages = Math.ceil(taxPaidInvoices.length / taxItemsPerPage) || 1;
+              if (totalTaxPages > 1) {
+                return (
+                  <div className="flex items-center justify-between pt-4 border-t border-border">
+                    <span className="text-xs text-muted-foreground">
+                      Showing {(taxPage - 1) * taxItemsPerPage + 1} to {Math.min(taxPage * taxItemsPerPage, taxPaidInvoices.length)} of {taxPaidInvoices.length} entries
+                    </span>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setTaxPage((p) => Math.max(p - 1, 1))}
+                        disabled={taxPage === 1}
+                        className="h-8 text-xs"
+                      >
+                        Previous
+                      </Button>
+                      <span className="text-xs font-semibold px-2">
+                        Page {taxPage} of {totalTaxPages}
+                      </span>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setTaxPage((p) => Math.min(p + 1, totalTaxPages))}
+                        disabled={taxPage === totalTaxPages}
+                        className="h-8 text-xs"
+                      >
+                        Next
+                      </Button>
+                    </div>
+                  </div>
+                );
+              }
+              return null;
+            })()}
           </div>
         </div>
       </div>
@@ -807,106 +865,147 @@ const FinanceModule = ({ initialData = null, currentUser = null }) => {
           </div>
 
           <div className="space-y-3">
-            {filteredInvoices.length === 0 ? (
-              <div className="bg-card border border-border rounded-xl p-8 text-center">
-                <DollarSign className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
-                <h3 className="font-semibold mb-1">No invoices</h3>
-                <p className="text-sm text-muted-foreground">
-                  Create your first invoice or schedule a job to auto-generate one.
-                </p>
-              </div>
-            ) : (
-              filteredInvoices.map((inv) => (
-                <div
-                  key={inv.id}
-                  className="bg-card border border-border rounded-xl p-5 hover:border-primary/30 transition-colors"
-                >
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1 flex-wrap">
-                        <h3 className="font-semibold">{inv.number}</h3>
-                        <Badge
-                          variant="outline"
-                          className={statusColors[inv.status] || ""}
-                        >
-                          {inv.status}
-                        </Badge>
-                        {inv.bookingId && (
-                          <Badge variant="outline" className="text-xs">
-                            Job linked
-                          </Badge>
-                        )}
-                      </div>
-                      <p className="text-sm text-muted-foreground">
-                        {inv.clientName} • {inv.clientEmail}
-                      </p>
-                      <p className="text-xs text-muted-foreground mt-0.5">
-                        Created {new Date(inv.created).toLocaleDateString()}
-                        {inv.jobDate &&
-                          ` • Job ${new Date(inv.jobDate).toLocaleDateString()}`}
-                        {inv.dueDate &&
-                          ` • Due ${new Date(inv.dueDate).toLocaleDateString()}`}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <p className="text-lg font-bold mr-2">
-                        ${(inv.total || 0).toFixed(2)}
-                      </p>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => {
-                          setSelectedInvoice(inv);
-                          setShowViewInvoice(true);
-                        }}
-                      >
-                        <Eye size={14} className="mr-1" /> View Invoice
-                      </Button>
-                      {inv.status === "paid" && (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="border-green-500/30 text-green-500 hover:bg-green-500/10 hover:text-green-600"
-                          onClick={() => {
-                            setSelectedInvoice(inv);
-                            setShowViewReceipt(true);
-                          }}
-                        >
-                          <Receipt size={14} className="mr-1" /> View Receipt
-                        </Button>
-                      )}
-                      {(inv.status === "draft" ||
-                        inv.status === "sent" ||
-                        inv.status === "pending") && (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => openSend(inv)}
-                        >
-                          <Send size={14} className="mr-1" /> Send
-                        </Button>
-                      )}
-                      {(inv.status === "sent" || inv.status === "pending") && (
-                        <Button
-                          size="sm"
-                          className="bg-primary hover:bg-primary/90 text-primary-foreground"
-                          onClick={() => openPayment(inv)}
-                        >
-                          <DollarSign size={14} className="mr-1" /> Record Payment
-                        </Button>
-                      )}
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => deleteInvoice(inv.id)}
-                      >
-                        <Trash2 size={14} className="text-destructive" />
-                      </Button>
-                    </div>
+            {(() => {
+              const totalPages = Math.ceil(filteredInvoices.length / itemsPerPage) || 1;
+              const startIndex = (currentPage - 1) * itemsPerPage;
+              const paginatedInvoices = filteredInvoices.slice(startIndex, startIndex + itemsPerPage);
+
+              if (filteredInvoices.length === 0) {
+                return (
+                  <div className="bg-card border border-border rounded-xl p-8 text-center">
+                    <DollarSign className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
+                    <h3 className="font-semibold mb-1">No invoices</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Create your first invoice or schedule a job to auto-generate one.
+                    </p>
                   </div>
+                );
+              }
+
+              return (
+                <div className="space-y-3">
+                  {paginatedInvoices.map((inv) => (
+                    <div
+                      key={inv.id}
+                      className="bg-card border border-border rounded-xl p-5 hover:border-primary/30 transition-colors"
+                    >
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1 flex-wrap">
+                            <h3 className="font-semibold">{inv.number}</h3>
+                            <Badge
+                              variant="outline"
+                              className={statusColors[inv.status] || ""}
+                            >
+                              {inv.status}
+                            </Badge>
+                            {inv.bookingId && (
+                              <Badge variant="outline" className="text-xs">
+                                Job linked
+                              </Badge>
+                            )}
+                          </div>
+                          <p className="text-sm text-muted-foreground">
+                            {inv.clientName} • {inv.clientEmail}
+                          </p>
+                          <p className="text-xs text-muted-foreground mt-0.5">
+                            Created {new Date(inv.created).toLocaleDateString()}
+                            {inv.jobDate &&
+                              ` • Job ${new Date(inv.jobDate).toLocaleDateString()}`}
+                            {inv.dueDate &&
+                              ` • Due ${new Date(inv.dueDate).toLocaleDateString()}`}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <p className="text-lg font-bold mr-2">
+                            ${(inv.total || 0).toFixed(2)}
+                          </p>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => {
+                              setSelectedInvoice(inv);
+                              setShowViewInvoice(true);
+                            }}
+                          >
+                            <Eye size={14} className="mr-1" /> View Invoice
+                          </Button>
+                          {inv.status === "paid" && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="border-green-500/30 text-green-500 hover:bg-green-500/10 hover:text-green-600"
+                              onClick={() => {
+                                setSelectedInvoice(inv);
+                                setShowViewReceipt(true);
+                              }}
+                            >
+                              <Receipt size={14} className="mr-1" /> View Receipt
+                            </Button>
+                          )}
+                          {(inv.status === "draft" ||
+                            inv.status === "sent" ||
+                            inv.status === "pending") && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => openSend(inv)}
+                            >
+                              <Send size={14} className="mr-1" /> Send
+                            </Button>
+                          )}
+                          {(inv.status === "sent" || inv.status === "pending") && (
+                            <Button
+                              size="sm"
+                              className="bg-primary hover:bg-primary/90 text-primary-foreground"
+                              onClick={() => openPayment(inv)}
+                            >
+                              <DollarSign size={14} className="mr-1" /> Record Payment
+                            </Button>
+                          )}
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => deleteInvoice(inv.id)}
+                          >
+                            <Trash2 size={14} className="text-destructive" />
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+
+                  {totalPages > 1 && (
+                    <div className="flex items-center justify-between pt-4 border-t border-border mt-4">
+                      <span className="text-xs text-muted-foreground">
+                        Showing {startIndex + 1} to {Math.min(startIndex + itemsPerPage, filteredInvoices.length)} of {filteredInvoices.length} entries
+                      </span>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
+                          disabled={currentPage === 1}
+                        >
+                          Previous
+                        </Button>
+                        <span className="text-xs font-semibold px-2">
+                          Page {currentPage} of {totalPages}
+                        </span>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
+                          disabled={currentPage === totalPages}
+                        >
+                          Next
+                        </Button>
+                      </div>
+                    </div>
+                  )}
                 </div>
-              ))
-            )}
+              );
+            })()}
           </div>
         </>
       )}

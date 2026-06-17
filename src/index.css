@@ -187,3 +187,15 @@
         padding-left: 2.5rem !important;
     }
 }
+
+@layer base {
+  .hero-title {
+    font-size: clamp(1.92rem, 4.8vw, 3.36rem);
+    font-weight: 700;
+    color: #ffffff;
+    line-height: 1.08;
+    letter-spacing: -0.025em;
+    margin-bottom: 1.25rem;
+    font-family: "Sansation", sans-serif;
+  }
+}

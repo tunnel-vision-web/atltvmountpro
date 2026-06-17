@@ -64,8 +64,8 @@ const SERVICES = {
         label: 'Cable Management',
         type: 'select',
         choices: [
-          { label: 'Basic (surface cover)', value: 0 },
-          { label: 'In-wall concealment', value: 85 },
+          { label: 'Basic (surface cover)', value: 50 },
+          { label: 'In-wall concealment', value: 100 },
         ],
       },
       {

@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { Link } from "react-router-dom";
 import {
   Dialog,
   DialogContent,
@@ -23,6 +24,7 @@ const ClientAuthModal = () => {
   const [accountType, setAccountType] = useState("customer");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [agreeTerms, setAgreeTerms] = useState(false);
   const [form, setForm] = useState({
     name: "",
     email: "",
@@ -52,6 +54,7 @@ const ClientAuthModal = () => {
           preferredChannel: "Email",
         });
         setShowPassword(false);
+        setAgreeTerms(false);
       }, 300);
     }
   }, [authModalOpen]);
@@ -71,6 +74,10 @@ const ClientAuthModal = () => {
 
   const handleSignup = async (e) => {
     e.preventDefault();
+    if (!agreeTerms) {
+      toast.error("Please accept the Terms of Service and Privacy Policy to register.");
+      return;
+    }
     if (form.password !== form.confirmPassword) {
       toast.error("Passwords do not match.");
       return;
@@ -307,9 +314,32 @@ const ClientAuthModal = () => {
                   placeholder="••••••••"
                 />
               </div>
+              <div className="flex items-start gap-2.5 py-1 text-xs select-none">
+                <input
+                  type="checkbox"
+                  id="su-agree"
+                  checked={agreeTerms}
+                  onChange={(e) => setAgreeTerms(e.target.checked)}
+                  className="rounded border-border text-primary focus:ring-primary h-4 w-4 bg-muted/40 cursor-pointer mt-0.5"
+                  required
+                />
+                <Label htmlFor="su-agree" className="text-muted-foreground font-normal leading-normal cursor-pointer">
+                  I agree to the{" "}
+                  <Link to="/terms-of-service" target="_blank" className="text-primary hover:underline font-semibold">Terms of Service</Link>
+                  {" "}and{" "}
+                  <Link to="/privacy-policy" target="_blank" className="text-primary hover:underline font-semibold">Privacy Policy</Link>
+                  {accountType === "tech" && (
+                    <>
+                      {" "}and{" "}
+                      <Link to="/technician-terms" target="_blank" className="text-primary hover:underline font-semibold">Technician Membership Terms</Link>
+                    </>
+                  )}
+                  .
+                </Label>
+              </div>
               <Button
                 type="submit"
-                className="w-full bg-primary hover:bg-primary/90 text-primary-foreground"
+                className="w-full bg-primary hover:bg-primary/90 text-primary-foreground mt-2"
                 disabled={loading}
               >
                 {loading ? "Creating account…" : "Create Account"}

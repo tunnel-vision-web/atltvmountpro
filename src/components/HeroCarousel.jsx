@@ -39,7 +39,7 @@ const HeroCarousel = () => {
   const { openBookingModal, openQuoteModal } = useUI();
   const [carouselSlides, setCarouselSlides] = useState(DEFAULT_SLIDES);
   const [emblaRef, emblaApi] = useEmblaCarousel({ loop: true }, [
-    Autoplay({ delay: 5500, stopOnInteraction: false }),
+    Autoplay({ delay: 9500, stopOnInteraction: false }),
   ]);
 
   const scrollPrev = useCallback(() => {
@@ -262,8 +262,8 @@ const HeroCarousel = () => {
         /* Slide-in from right + fade */
         .hero-content {
           will-change: opacity, transform;
-          transition: opacity 0.55s cubic-bezier(0.22, 1, 0.36, 1),
-                      transform 0.55s cubic-bezier(0.22, 1, 0.36, 1);
+          transition: opacity 1.2s cubic-bezier(0.22, 1, 0.36, 1),
+                      transform 1.2s cubic-bezier(0.22, 1, 0.36, 1);
         }
         .hero-content--hidden {
           opacity: 0;
@@ -276,16 +276,16 @@ const HeroCarousel = () => {
 
         /* Stagger children — each element cascades one after the other */
         .hero-content--visible .hero-eyebrow {
-          animation: slideRight 0.6s 0.15s cubic-bezier(0.22,1,0.36,1) both;
+          animation: slideRight 1.2s 0.3s cubic-bezier(0.22,1,0.36,1) both;
         }
         .hero-content--visible .hero-title {
-          animation: slideRight 0.65s 0.45s cubic-bezier(0.22,1,0.36,1) both;
+          animation: slideRight 1.2s 0.7s cubic-bezier(0.22,1,0.36,1) both;
         }
         .hero-content--visible .hero-desc {
-          animation: slideRight 0.65s 0.75s cubic-bezier(0.22,1,0.36,1) both;
+          animation: slideRight 1.2s 1.1s cubic-bezier(0.22,1,0.36,1) both;
         }
         .hero-content--visible .hero-cta {
-          animation: slideRight 0.65s 1.05s cubic-bezier(0.22,1,0.36,1) both;
+          animation: slideRight 1.2s 1.5s cubic-bezier(0.22,1,0.36,1) both;
         }
 
         @keyframes slideRight {

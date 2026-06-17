@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
+import { Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import usePageTitle from "@/hooks/usePageTitle";
 import useEmblaCarousel from "embla-carousel-react";
@@ -116,6 +117,7 @@ export default function JoinPage() {
     notes: "",
     bgConsent: false,
     authorized: false,
+    termsConsent: false,
   });
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -150,6 +152,10 @@ export default function JoinPage() {
     e.preventDefault();
     if (!formData.bgConsent || !formData.authorized) {
       toast.error("You must authorize the background check and certify authorization to work.");
+      return;
+    }
+    if (!formData.termsConsent) {
+      toast.error("You must agree to the Terms of Service, Privacy Policy, and Technician Membership Terms.");
       return;
     }
 
@@ -528,7 +534,7 @@ export default function JoinPage() {
             <ShieldCheck className="w-8 h-8" />
           </div>
           <div>
-            <h3 className="font-bold text-lg mb-2">Puls-Level Trust & Screening</h3>
+            <h3 className="font-bold text-lg mb-2">PRO-Level Trust & Screening</h3>
             <p className="text-muted-foreground text-xs leading-relaxed">
               We stand for premium quality. To protect our customers and provide total peace of mind, all network technicians must undergo a mandatory criminal and identity background check. There are no fees to you for this check, and it is processed securely in compliance with the FCRA.
             </p>
@@ -789,6 +795,20 @@ export default function JoinPage() {
                       />
                       <label htmlFor="t-auth" className="text-[11px] text-muted-foreground leading-snug cursor-pointer select-none">
                         I certify that I am at least 18 years of age and legally authorized to work in the United States. *
+                      </label>
+                    </div>
+
+                    <div className="flex items-start gap-2.5">
+                      <input
+                        type="checkbox"
+                        id="t-termsConsent"
+                        checked={formData.termsConsent}
+                        onChange={(e) => setFormData({ ...formData, termsConsent: e.target.checked })}
+                        className="rounded border-border text-primary focus:ring-primary h-4.5 w-4.5 bg-muted/40 cursor-pointer mt-0.5"
+                        required
+                      />
+                      <label htmlFor="t-termsConsent" className="text-[11px] text-muted-foreground leading-snug cursor-pointer select-none">
+                        I have read and agree to the <Link to="/terms-of-service" className="text-primary hover:underline font-semibold" target="_blank" rel="noopener noreferrer">Terms of Service</Link>, <Link to="/privacy-policy" className="text-primary hover:underline font-semibold" target="_blank" rel="noopener noreferrer">Privacy Policy</Link>, and <Link to="/technician-terms" className="text-primary hover:underline font-semibold" target="_blank" rel="noopener noreferrer">Technician Membership Terms</Link>. *
                       </label>
                     </div>
                   </div>

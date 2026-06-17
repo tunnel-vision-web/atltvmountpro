@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Save, Loader2, Sparkles, Wrench, Info, Mail, Activity } from 'lucide-react';
+import { Save, Loader2, Sparkles, Wrench, Info, Mail, Activity, Plus, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { useAllCMS } from '@/hooks/useCMS';
@@ -290,35 +290,62 @@ export default function CMSEditor() {
               </CMSCard>
 
               <CMSCard title="FAQs">
-                {(formData.faqs || []).map((faq, idx) => (
-                  <div key={idx} className="border border-border rounded-lg p-4 space-y-3">
-                    <div>
-                      <label className="text-xs font-medium text-muted-foreground mb-1 block">Question</label>
-                      <input
-                        value={faq.question || ''}
-                        onChange={(e) => {
-                          const updated = [...(formData.faqs || [])];
-                          updated[idx] = { ...updated[idx], question: e.target.value };
-                          updateField('faqs', updated);
-                        }}
-                        className="input-base w-full"
-                      />
+                <div className="space-y-4">
+                  {(formData.faqs || []).map((faq, idx) => (
+                    <div key={idx} className="border border-border rounded-lg p-4 space-y-3 relative">
+                      <div className="flex justify-between items-center">
+                        <span className="text-xs font-semibold text-primary">FAQ #{idx + 1}</span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const updated = (formData.faqs || []).filter((_, i) => i !== idx);
+                            updateField('faqs', updated);
+                          }}
+                          className="text-destructive hover:text-destructive/80 transition-colors text-xs font-semibold flex items-center gap-1 cursor-pointer"
+                        >
+                          <Trash2 size={13} /> Remove FAQ
+                        </button>
+                      </div>
+                      <div>
+                        <label className="text-xs font-medium text-muted-foreground mb-1 block">Question</label>
+                        <input
+                          value={faq.question || ''}
+                          onChange={(e) => {
+                            const updated = [...(formData.faqs || [])];
+                            updated[idx] = { ...updated[idx], question: e.target.value };
+                            updateField('faqs', updated);
+                          }}
+                          className="input-base w-full"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs font-medium text-muted-foreground mb-1 block">Answer</label>
+                        <textarea
+                          value={faq.answer || ''}
+                          onChange={(e) => {
+                            const updated = [...(formData.faqs || [])];
+                            updated[idx] = { ...updated[idx], answer: e.target.value };
+                            updateField('faqs', updated);
+                          }}
+                          rows={3}
+                          className="input-base w-full resize-none"
+                        />
+                      </div>
                     </div>
-                    <div>
-                      <label className="text-xs font-medium text-muted-foreground mb-1 block">Answer</label>
-                      <textarea
-                        value={faq.answer || ''}
-                        onChange={(e) => {
-                          const updated = [...(formData.faqs || [])];
-                          updated[idx] = { ...updated[idx], answer: e.target.value };
-                          updateField('faqs', updated);
-                        }}
-                        rows={3}
-                        className="input-base w-full resize-none"
-                      />
-                    </div>
-                  </div>
-                ))}
+                  ))}
+                  <Button
+                    type="button"
+                    onClick={() => {
+                      const updated = [...(formData.faqs || [])];
+                      updated.push({ question: "", answer: "" });
+                      updateField('faqs', updated);
+                    }}
+                    variant="outline"
+                    className="w-full flex items-center justify-center gap-1.5 border-dashed border-border"
+                  >
+                    <Plus size={14} /> Add FAQ Item
+                  </Button>
+                </div>
               </CMSCard>
             </div>
           )}

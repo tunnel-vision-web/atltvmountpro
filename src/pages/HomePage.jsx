@@ -452,6 +452,36 @@ const HomePage = () => {
         </div>
       </section>
 
+      {/* ── Recruitment CTA ── */}
+      <section className="py-20 bg-slate-900 text-white relative overflow-hidden">
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(120,119,198,0.15),rgba(255,255,255,0))]" />
+        <div className="max-w-[1140px] mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+          <div className="bg-slate-800/50 backdrop-blur-md border border-slate-700/50 rounded-3xl p-8 md:p-12 flex flex-col md:flex-row items-center justify-between gap-8">
+            <div className="max-w-xl text-center md:text-left space-y-4">
+              <span className="text-xs bg-primary/20 text-primary px-3 py-1 rounded-full font-bold uppercase tracking-wider">
+                We're Hiring Handymen & Techs
+              </span>
+              <h2 className="text-3xl md:text-4xl font-extrabold tracking-tight text-white leading-tight">
+                Grow Your Business &amp; Join the PRO Team
+              </h2>
+              <p className="text-slate-300 text-base md:text-lg leading-relaxed">
+                Are you an experienced TV mounting technician or general handyman in the Atlanta area? Get steady jobs, weekly direct deposits, and work on your own schedule.
+              </p>
+            </div>
+            <div className="flex-shrink-0 flex flex-col sm:flex-row gap-4 w-full md:w-auto justify-center">
+              <Link to="/join" className="w-full sm:w-auto">
+                <Button
+                  size="lg"
+                  className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-bold shadow-lg shadow-primary/20 transition-all duration-200 active:scale-[0.98]"
+                >
+                  Apply to Join <ArrowRight size={16} className="ml-2" />
+                </Button>
+              </Link>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* ── Newsletter ── */}
       <section className="py-20" style={{ backgroundColor: "#e6b377" }}>
         <div className="max-w-[1140px] mx-auto px-4 sm:px-6 lg:px-8">

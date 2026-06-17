@@ -152,18 +152,27 @@ const PERMISSIONS = {
 function hasPermission(roleOrUser, action, resource) {
   if (!roleOrUser) return false;
   
+  const getNormalizedRole = (r) => {
+    if (!r) return "";
+    return r.trim().toLowerCase();
+  };
+  
   // If roleOrUser is a string (legacy/direct role check)
   if (typeof roleOrUser === "string") {
-    if (roleOrUser === ROLES.Admin) return true;
-    return PERMISSIONS[roleOrUser]?.[action]?.includes(resource) ?? false;
+    const roleStr = getNormalizedRole(roleOrUser);
+    if (roleStr === "admin") return true;
+    
+    const matchedKey = Object.keys(PERMISSIONS).find(k => k.toLowerCase() === roleStr);
+    return matchedKey ? (PERMISSIONS[matchedKey]?.[action]?.includes(resource) ?? false) : false;
   }
   
   // If roleOrUser is a user object
   const user = roleOrUser;
   const role = user.role || ROLES.Viewer;
+  const roleStr = getNormalizedRole(role);
   
   // Admins always have all permissions
-  if (role === ROLES.Admin) return true;
+  if (roleStr === "admin") return true;
   
   // Check custom_permissions
   let customPerms = {};
@@ -184,7 +193,8 @@ function hasPermission(roleOrUser, action, resource) {
   }
   
   // Fallback to role permissions
-  return PERMISSIONS[role]?.[action]?.includes(resource) ?? false;
+  const matchedKey = Object.keys(PERMISSIONS).find(k => k.toLowerCase() === roleStr);
+  return matchedKey ? (PERMISSIONS[matchedKey]?.[action]?.includes(resource) ?? false) : false;
 }
 
 // ── Login screen ──────────────────────────────────────────────────────────────
@@ -1042,6 +1052,28 @@ const AdminPage = () => {
   const [userDialogOpen, setUserDialogOpen] = useState(false);
   const [isEditingProfile, setIsEditingProfile] = useState(false);
 
+  // Pagination States
+  const [bookingsPage, setBookingsPage] = useState(1);
+  const bookingsItemsPerPage = 10;
+
+  const [quotesPage, setQuotesPage] = useState(1);
+  const quotesItemsPerPage = 10;
+
+  const [teamPage, setTeamPage] = useState(1);
+  const teamItemsPerPage = 6;
+
+  const [appsPage, setAppsPage] = useState(1);
+  const appsItemsPerPage = 10;
+
+  useEffect(() => {
+    setBookingsPage(1);
+    setQuotesPage(1);
+  }, [searchQuery, statusFilter]);
+
+  useEffect(() => {
+    setAppsPage(1);
+  }, [appFilter, appSearch]);
+
   // --- Fetch methods ---
 
   const fetchProjects = useCallback(async () => {
@@ -1705,6 +1737,37 @@ const AdminPage = () => {
     status: (b.status || "Pending").toLowerCase(),
   }));
 
+  const filteredBookings = getFilteredBookings();
+  const totalBookingsPages = Math.ceil(filteredBookings.length / bookingsItemsPerPage) || 1;
+  const bookingsStartIndex = (bookingsPage - 1) * bookingsItemsPerPage;
+  const paginatedBookings = filteredBookings.slice(bookingsStartIndex, bookingsStartIndex + bookingsItemsPerPage);
+
+  const filteredQuotes = getFilteredQuotes();
+  const totalQuotesPages = Math.ceil(filteredQuotes.length / quotesItemsPerPage) || 1;
+  const quotesStartIndex = (quotesPage - 1) * quotesItemsPerPage;
+  const paginatedQuotes = filteredQuotes.slice(quotesStartIndex, quotesStartIndex + quotesItemsPerPage);
+
+  const totalTeamPages = Math.ceil(teamMembers.length / teamItemsPerPage) || 1;
+  const teamStartIndex = (teamPage - 1) * teamItemsPerPage;
+  const paginatedTeam = teamMembers.slice(teamStartIndex, teamStartIndex + teamItemsPerPage);
+
+  const getFilteredApplications = () => {
+    return applications.filter((app) => {
+      const matchesFilter = appFilter === "All" || app.status === appFilter;
+      const matchesSearch =
+        app.name.toLowerCase().includes(appSearch.toLowerCase()) ||
+        app.email.toLowerCase().includes(appSearch.toLowerCase()) ||
+        app.zip.includes(appSearch) ||
+        app.city.toLowerCase().includes(appSearch.toLowerCase());
+      return matchesFilter && matchesSearch;
+    });
+  };
+
+  const filteredApps = getFilteredApplications();
+  const totalAppsPages = Math.ceil(filteredApps.length / appsItemsPerPage) || 1;
+  const appsStartIndex = (appsPage - 1) * appsItemsPerPage;
+  const paginatedApps = filteredApps.slice(appsStartIndex, appsStartIndex + appsItemsPerPage);
+
   return (
     <>
       <div className="min-h-screen bg-background flex flex-col md:flex-row">
@@ -2169,7 +2232,7 @@ const AdminPage = () => {
                     teamMembers={teamMembers}
                     onUpdateBooking={handleUpdateBooking}
                   />
-                ) : getFilteredBookings().length === 0 ? (
+                ) : filteredBookings.length === 0 ? (
                   <div className="text-center py-16 border border-dashed border-border rounded-xl text-muted-foreground text-sm">
                     No matching appointment bookings found.
                   </div>
@@ -2200,7 +2263,7 @@ const AdminPage = () => {
                           </tr>
                         </thead>
                         <tbody>
-                          {getFilteredBookings().map((b) => (
+                          {paginatedBookings.map((b) => (
                             <tr
                               key={b.id}
                               className="border-b border-border last:border-0 hover:bg-muted/20"
@@ -2364,9 +2427,39 @@ const AdminPage = () => {
                         </tbody>
                       </table>
                     </div>
+                    {totalBookingsPages > 1 && (
+                      <div className="flex items-center justify-between p-4 border-t border-border bg-muted/20">
+                        <span className="text-xs text-muted-foreground">
+                          Showing {bookingsStartIndex + 1} to {Math.min(bookingsStartIndex + bookingsItemsPerPage, filteredBookings.length)} of {filteredBookings.length} bookings
+                        </span>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setBookingsPage((p) => Math.max(p - 1, 1))}
+                            disabled={bookingsPage === 1}
+                            className="h-8 text-xs"
+                          >
+                            Previous
+                          </Button>
+                          <span className="text-xs font-semibold px-2">
+                            Page {bookingsPage} of {totalBookingsPages}
+                          </span>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setBookingsPage((p) => Math.min(p + 1, totalBookingsPages))}
+                            disabled={bookingsPage === totalBookingsPages}
+                            className="h-8 text-xs"
+                          >
+                            Next
+                          </Button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )
-              ) : getFilteredQuotes().length === 0 ? (
+              ) : filteredQuotes.length === 0 ? (
                 <div className="text-center py-16 border border-dashed border-border rounded-xl text-muted-foreground text-sm">
                   No matching quote inquiries found.
                 </div>
@@ -2394,7 +2487,7 @@ const AdminPage = () => {
                         </tr>
                       </thead>
                       <tbody>
-                        {getFilteredQuotes().map((q) => (
+                        {paginatedQuotes.map((q) => (
                           <tr
                             key={q.id}
                             className="border-b border-border last:border-0 hover:bg-muted/20"
@@ -2493,6 +2586,36 @@ const AdminPage = () => {
                       </tbody>
                     </table>
                   </div>
+                  {totalQuotesPages > 1 && (
+                    <div className="flex items-center justify-between p-4 border-t border-border bg-muted/20">
+                      <span className="text-xs text-muted-foreground">
+                        Showing {quotesStartIndex + 1} to {Math.min(quotesStartIndex + quotesItemsPerPage, filteredQuotes.length)} of {filteredQuotes.length} quotes
+                      </span>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setQuotesPage((p) => Math.max(p - 1, 1))}
+                          disabled={quotesPage === 1}
+                          className="h-8 text-xs"
+                        >
+                          Previous
+                        </Button>
+                        <span className="text-xs font-semibold px-2">
+                          Page {quotesPage} of {totalQuotesPages}
+                        </span>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setQuotesPage((p) => Math.min(p + 1, totalQuotesPages))}
+                          disabled={quotesPage === totalQuotesPages}
+                          className="h-8 text-xs"
+                        >
+                          Next
+                        </Button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -2550,74 +2673,104 @@ const AdminPage = () => {
                   </Button>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {teamMembers.map((tech) => (
-                    <div
-                      key={tech.id}
-                      className="bg-card border border-border rounded-xl p-5 flex flex-col justify-between shadow-sm"
-                    >
-                      <div className="flex gap-4">
-                        <img
-                          src={
-                            tech.photo || "/images/team/team-placeholder.jpg"
-                          }
-                          alt={tech.name}
-                          className="w-16 h-16 rounded-full object-cover border border-border"
-                        />
-                        <div className="space-y-1">
-                          <h3 className="font-bold text-foreground">
-                            {tech.name}
-                          </h3>
-                          <p className="text-xs text-muted-foreground line-clamp-3">
-                            {tech.bio}
-                          </p>
+                <>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {paginatedTeam.map((tech) => (
+                      <div
+                        key={tech.id}
+                        className="bg-card border border-border rounded-xl p-5 flex flex-col justify-between shadow-sm"
+                      >
+                        <div className="flex gap-4">
+                          <img
+                            src={
+                              tech.photo || "/images/team/team-placeholder.jpg"
+                            }
+                            alt={tech.name}
+                            className="w-16 h-16 rounded-full object-cover border border-border"
+                          />
+                          <div className="space-y-1">
+                            <h3 className="font-bold text-foreground">
+                              {tech.name}
+                            </h3>
+                            <p className="text-xs text-muted-foreground line-clamp-3">
+                              {tech.bio}
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="mt-4 pt-3 border-t border-border/50">
+                          <div className="flex flex-wrap gap-1 mb-3">
+                            {tech.skills?.map((s, idx) => (
+                              <span
+                                key={idx}
+                                className="text-[10px] bg-muted text-muted-foreground px-2 py-0.5 rounded font-medium"
+                              >
+                                {s}
+                              </span>
+                            ))}
+                          </div>
+                          <div className="flex justify-end gap-2">
+                            {hasPermission(
+                              currentUser?.role,
+                              "canEdit",
+                              "team",
+                            ) && (
+                              <button
+                                onClick={() => {
+                                  setEditingTech(tech);
+                                  setTechDialogOpen(true);
+                                }}
+                                className="text-xs bg-muted text-foreground hover:bg-muted/80 px-2.5 py-1.5 rounded font-medium flex items-center gap-1"
+                              >
+                                <Pencil size={12} /> Edit
+                              </button>
+                            )}
+                            {hasPermission(
+                              currentUser?.role,
+                              "canDelete",
+                              "team",
+                            ) && (
+                              <button
+                                onClick={() => handleDeleteTech(tech.id)}
+                                className="text-xs bg-destructive/10 text-destructive hover:bg-destructive hover:text-destructive-foreground px-2.5 py-1.5 rounded font-medium flex items-center gap-1"
+                              >
+                                <Trash2 size={12} /> Delete
+                              </button>
+                            )}
+                          </div>
                         </div>
                       </div>
-
-                      <div className="mt-4 pt-3 border-t border-border/50">
-                        <div className="flex flex-wrap gap-1 mb-3">
-                          {tech.skills?.map((s, idx) => (
-                            <span
-                              key={idx}
-                              className="text-[10px] bg-muted text-muted-foreground px-2 py-0.5 rounded font-medium"
-                            >
-                              {s}
-                            </span>
-                          ))}
-                        </div>
-                        <div className="flex justify-end gap-2">
-                          {hasPermission(
-                            currentUser?.role,
-                            "canEdit",
-                            "team",
-                          ) && (
-                            <button
-                              onClick={() => {
-                                setEditingTech(tech);
-                                setTechDialogOpen(true);
-                              }}
-                              className="text-xs bg-muted text-foreground hover:bg-muted/80 px-2.5 py-1.5 rounded font-medium flex items-center gap-1"
-                            >
-                              <Pencil size={12} /> Edit
-                            </button>
-                          )}
-                          {hasPermission(
-                            currentUser?.role,
-                            "canDelete",
-                            "team",
-                          ) && (
-                            <button
-                              onClick={() => handleDeleteTech(tech.id)}
-                              className="text-xs bg-destructive/10 text-destructive hover:bg-destructive hover:text-destructive-foreground px-2.5 py-1.5 rounded font-medium flex items-center gap-1"
-                            >
-                              <Trash2 size={12} /> Delete
-                            </button>
-                          )}
-                        </div>
+                    ))}
+                  </div>
+                  {totalTeamPages > 1 && (
+                    <div className="flex items-center justify-between pt-6 border-t border-border mt-6">
+                      <span className="text-xs text-muted-foreground">
+                        Showing {teamStartIndex + 1} to {Math.min(teamStartIndex + teamItemsPerPage, teamMembers.length)} of {teamMembers.length} team members
+                      </span>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setTeamPage((p) => Math.max(p - 1, 1))}
+                          disabled={teamPage === 1}
+                        >
+                          Previous
+                        </Button>
+                        <span className="text-xs font-semibold px-2">
+                          Page {teamPage} of {totalTeamPages}
+                        </span>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setTeamPage((p) => Math.min(p + 1, totalTeamPages))}
+                          disabled={teamPage === totalTeamPages}
+                        >
+                          Next
+                        </Button>
                       </div>
                     </div>
-                  ))}
-                </div>
+                  )}
+                </>
               )}
             </div>
           )}
@@ -2812,7 +2965,7 @@ const AdminPage = () => {
                                 <span className="text-[10px] text-muted-foreground font-semibold italic">Full Administrative Access</span>
                               ) : (
                                 <div className="flex flex-wrap gap-4">
-                                  {["crm", "finance", "media", "cms"].map((res) => {
+                                  {["projects", "orders", "team", "recruitment", "crm", "finance", "media", "cms"].map((res) => {
                                     let customPerms = {};
                                     if (u.custom_permissions) {
                                       if (typeof u.custom_permissions === "string") {
@@ -2956,28 +3109,14 @@ const AdminPage = () => {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-border/60">
-                        {(() => {
-                          const filtered = applications.filter((app) => {
-                            const matchesFilter = appFilter === "All" || app.status === appFilter;
-                            const matchesSearch =
-                              app.name.toLowerCase().includes(appSearch.toLowerCase()) ||
-                              app.email.toLowerCase().includes(appSearch.toLowerCase()) ||
-                              app.zip.includes(appSearch) ||
-                              app.city.toLowerCase().includes(appSearch.toLowerCase());
-                            return matchesFilter && matchesSearch;
-                          });
-
-                          if (filtered.length === 0) {
-                            return (
-                              <tr>
-                                <td colSpan={6} className="text-center py-12 text-muted-foreground text-sm">
-                                  No technician applications found matching criteria.
-                                </td>
-                              </tr>
-                            );
-                          }
-
-                          return filtered.map((app) => (
+                        {filteredApps.length === 0 ? (
+                          <tr>
+                            <td colSpan={6} className="text-center py-12 text-muted-foreground text-sm">
+                              No technician applications found matching criteria.
+                            </td>
+                          </tr>
+                        ) : (
+                          paginatedApps.map((app) => (
                             <tr key={app.id} className="hover:bg-muted/20 transition-all">
                               <td className="px-6 py-4">
                                 <div className="font-semibold text-foreground">{app.name}</div>
@@ -3036,11 +3175,41 @@ const AdminPage = () => {
                                 </div>
                               </td>
                             </tr>
-                          ));
-                        })()}
+                          ))
+                        )}
                       </tbody>
                     </table>
                   </div>
+                  {totalAppsPages > 1 && (
+                    <div className="flex items-center justify-between p-4 border-t border-border bg-muted/20">
+                      <span className="text-xs text-muted-foreground">
+                        Showing {appsStartIndex + 1} to {Math.min(appsStartIndex + appsItemsPerPage, filteredApps.length)} of {filteredApps.length} applications
+                      </span>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setAppsPage((p) => Math.max(p - 1, 1))}
+                          disabled={appsPage === 1}
+                          className="h-8 text-xs"
+                        >
+                          Previous
+                        </Button>
+                        <span className="text-xs font-semibold px-2">
+                          Page {appsPage} of {totalAppsPages}
+                        </span>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setAppsPage((p) => Math.min(p + 1, totalAppsPages))}
+                          disabled={appsPage === totalAppsPages}
+                          className="h-8 text-xs"
+                        >
+                          Next
+                        </Button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
