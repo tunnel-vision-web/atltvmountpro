@@ -73,6 +73,9 @@ const FinanceModule = ({ initialData = null, currentUser = null }) => {
   const [taxPage, setTaxPage] = useState(1);
   const taxItemsPerPage = 10;
 
+  const [taxYear, setTaxYear] = useState("2026");
+  const [taxQuarter, setTaxQuarter] = useState("all");
+
   useEffect(() => {
     setCurrentPage(1);
   }, [filterStatus]);
@@ -80,9 +83,6 @@ const FinanceModule = ({ initialData = null, currentUser = null }) => {
   useEffect(() => {
     setTaxPage(1);
   }, [taxYear, taxQuarter]);
-
-  const [taxYear, setTaxYear] = useState("2026");
-  const [taxQuarter, setTaxQuarter] = useState("all");
 
   const [showDirectoryPicker, setShowDirectoryPicker] = useState(false);
   const [directorySearch, setDirectorySearch] = useState("");
