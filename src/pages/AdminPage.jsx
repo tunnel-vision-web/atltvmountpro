@@ -65,7 +65,26 @@ import {
   autoCreateInvoiceForBooking,
   getInvoiceForBooking,
   sendInvoiceVia,
+  getInvoices,
 } from "@/lib/invoiceUtils";
+import {
+  ResponsiveContainer,
+  AreaChart,
+  Area,
+  BarChart,
+  Bar,
+  LineChart,
+  Line,
+  PieChart,
+  Pie,
+  Cell,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend
+} from "recharts";
+import { LayoutDashboard, TrendingUp, Coins, ArrowUpRight, AlertCircle } from "lucide-react";
 import DUMMY_PROJECTS from "@/data/dummyProjects";
 
 const ADMIN_KEY_STORAGE = "atltvmountpro_admin_key";
@@ -629,7 +648,7 @@ const TechFormDialog = ({ open, onClose, initial, onSaved }) => {
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-w-md bg-card border border-border">
+      <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto bg-card border border-border">
         <DialogHeader>
           <DialogTitle>
             {initial ? "Edit Tech Details" : "Add New Technician"}
@@ -699,7 +718,7 @@ const TechFormDialog = ({ open, onClose, initial, onSaved }) => {
 };
 
 // ── User Form Dialog ──────────────────────────────────────────────────────────
-const UserFormDialog = ({ open, onClose, onSaved }) => {
+const UserFormDialog = ({ open, onClose, initial, onSaved }) => {
   const [form, setForm] = useState({
     username: "",
     email: "",
@@ -708,44 +727,73 @@ const UserFormDialog = ({ open, onClose, onSaved }) => {
   });
   const [saving, setSaving] = useState(false);
 
+  useEffect(() => {
+    if (open) {
+      setForm(
+        initial
+          ? {
+              username: initial.username || "",
+              email: initial.email || "",
+              password: "",
+              role: initial.role || "Admin",
+            }
+          : { username: "", email: "", password: "", role: "Admin" }
+      );
+    }
+  }, [open, initial]);
+
   const submit = async (e) => {
     e.preventDefault();
     setSaving(true);
+    const payload = {
+      username: form.username,
+      email: form.email,
+      role: form.role,
+    };
+    if (form.password) {
+      payload.password = form.password;
+      payload.passwordConfirm = form.password;
+    }
+
     try {
-      const payload = {
-        username: form.username,
-        email: form.email,
-        password: form.password,
-        passwordConfirm: form.password,
-        role: form.role,
-      };
-      const savedUser = await pb.collection("users").create(payload);
-      onSaved(savedUser);
+      let savedUser;
+      if (initial?.id && !initial.id.startsWith("local_")) {
+        savedUser = await pb.collection("users").update(initial.id, payload);
+      } else {
+        if (!initial && !payload.password) {
+          payload.password = "default123";
+          payload.passwordConfirm = "default123";
+        }
+        savedUser = await pb.collection("users").create(payload);
+      }
+      onSaved(savedUser, !!initial);
       onClose();
-      toast.success("Admin user created successfully.");
+      toast.success(initial ? "User updated successfully." : "Admin user created successfully.");
     } catch (err) {
-      console.warn("PocketBase user creation failed, saving locally:", err);
+      console.warn("PocketBase user action failed, using local update:", err);
       const mockUser = {
-        id: "local_" + Math.random().toString(36).substr(2, 9),
-        username: form.username,
-        email: form.email,
-        role: form.role,
-        created: new Date().toISOString(),
+        ...payload,
+        id: initial?.id || "local_" + Math.random().toString(36).substr(2, 9),
+        created: initial?.created || new Date().toISOString(),
       };
-      onSaved(mockUser);
+      if (mockUser.password) delete mockUser.password;
+      if (mockUser.passwordConfirm) delete mockUser.passwordConfirm;
+      onSaved(mockUser, !!initial);
       onClose();
-      toast.success("User created locally.");
+      toast.success(initial ? "User updated locally." : "User created locally.");
     } finally {
       setSaving(false);
-      setForm({ username: "", email: "", password: "", role: "Admin" });
+      if (!initial) {
+        setForm({ username: "", email: "", password: "", role: "Admin" });
+      }
     }
   };
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-w-md bg-card border border-border">
+      <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto bg-card border border-border">
         <DialogHeader>
-          <DialogTitle>Add Admin User</DialogTitle>
+          <DialogTitle>{initial ? "Edit System User" : "Add Admin User"}</DialogTitle>
         </DialogHeader>
         <form onSubmit={submit} className="space-y-4 mt-2">
           <div>
@@ -770,12 +818,14 @@ const UserFormDialog = ({ open, onClose, onSaved }) => {
             />
           </div>
           <div>
-            <label className="text-sm font-medium mb-1 block">Password *</label>
+            <label className="text-sm font-medium mb-1 block">
+              Password {initial ? "(leave blank to keep current)" : "*"}
+            </label>
             <input
               type="password"
               value={form.password}
               onChange={(e) => setForm({ ...form, password: e.target.value })}
-              required
+              required={!initial}
               className="input-base w-full"
               placeholder="••••••••"
             />
@@ -806,9 +856,9 @@ const UserFormDialog = ({ open, onClose, onSaved }) => {
               {saving ? (
                 <Loader2 className="w-4 h-4 animate-spin mr-2" />
               ) : (
-                <Plus size={14} className="mr-1.5" />
+                <Save size={14} className="mr-1.5" />
               )}
-              Create User
+              {initial ? "Save Changes" : "Create User"}
             </Button>
           </div>
         </form>
@@ -992,6 +1042,488 @@ const ADMIN_DEMO_TEAM = [
 
 const LOCAL_PROJECTS_STORAGE = "atltvmountpro_local_projects";
 
+// ── Dashboard Overview Component ──────────────────────────────────────────────
+const OverviewDashboard = ({
+  bookings,
+  quotes,
+  teamMembers,
+  projects,
+  applications,
+  invoices,
+  timeframe,
+  setTimeframe,
+  setActiveTab,
+  setSelectedOrder,
+  currentUser,
+}) => {
+  const isWithinTimeframe = (dateStr) => {
+    if (!dateStr) return false;
+    const date = new Date(dateStr);
+    if (isNaN(date.getTime())) return false;
+    
+    const now = new Date();
+    const diffTime = now - date;
+    if (diffTime < 0) return true; // future is ok
+    
+    const diffDays = diffTime / (1000 * 60 * 60 * 24);
+    
+    if (timeframe === "month") return diffDays <= 30;
+    if (timeframe === "quarter") return diffDays <= 90;
+    if (timeframe === "year") return diffDays <= 365;
+    return true; // all
+  };
+
+  const filteredBookings = bookings.filter(b => isWithinTimeframe(b.created || b.Preferred_Date));
+  const filteredQuotes = quotes.filter(q => isWithinTimeframe(q.created));
+  const filteredInvoices = invoices.filter(inv => isWithinTimeframe(inv.date));
+
+  // Revenue & Sales
+  const paidSentInvoices = filteredInvoices.filter(i => i.status === "paid" || i.status === "sent");
+  const totalRevenue = paidSentInvoices.reduce((sum, inv) => sum + (Number(inv.total) || 0), 0);
+  const salesCount = filteredInvoices.filter(i => i.status === "paid").length;
+  const activeBookingsCount = filteredBookings.filter(b => b.status !== "Cancelled").length;
+  const pendingQuotesCount = filteredQuotes.filter(q => q.status === "Pending").length;
+
+  // Additional financial calculations
+  const unpaidInvoices = filteredInvoices.filter(i => i.status !== "paid" && i.status !== "cancelled");
+  const unpaidAmount = unpaidInvoices.reduce((sum, inv) => sum + (Number(inv.total) || 0), 0);
+  const unpaidCount = unpaidInvoices.length;
+  const avgSaleValue = salesCount > 0 ? (totalRevenue / salesCount) : 0;
+
+  // Pie chart data
+  const statusCounts = { Pending: 0, Confirmed: 0, Completed: 0, Cancelled: 0 };
+  filteredBookings.forEach(b => {
+    const status = b.status || "Pending";
+    const normalized = status.charAt(0).toUpperCase() + status.slice(1).toLowerCase();
+    if (statusCounts[normalized] !== undefined) {
+      statusCounts[normalized]++;
+    }
+  });
+  const statusChartData = Object.entries(statusCounts).map(([name, value]) => ({ name, value }));
+  const PIE_COLORS = ["#f59e0b", "#3b82f6", "#10b981", "#ef4444"]; // Pending (amber), Confirmed (blue), Completed (green), Cancelled (red)
+
+  // Bar chart data
+  const categoryCounts = {};
+  projects.forEach(p => {
+    const svcs = p.services || [];
+    svcs.forEach(s => {
+      categoryCounts[s] = (categoryCounts[s] || 0) + 1;
+    });
+  });
+  if (Object.keys(categoryCounts).length === 0) {
+    categoryCounts["TV Mounting"] = 5;
+    categoryCounts["Drywall"] = 3;
+    categoryCounts["Carpentry"] = 2;
+  }
+  const categoryChartData = Object.entries(categoryCounts).map(([name, count]) => ({ name, count }));
+
+  // Ledger line/bar chart data
+  const getChartData = () => {
+    const dataMap = {};
+    if (timeframe === "month") {
+      for (let i = 1; i <= 4; i++) {
+        dataMap[`W${i}`] = { name: `Week ${i}`, Revenue: 0, Sales: 0 };
+      }
+      filteredInvoices.forEach(inv => {
+        const d = new Date(inv.date);
+        const diffDays = Math.ceil(Math.abs(new Date() - d) / (1000 * 60 * 60 * 24));
+        const week = Math.min(Math.ceil(diffDays / 7), 4);
+        const label = `W${5 - week}`;
+        if (dataMap[label]) {
+          dataMap[label].Revenue += Number(inv.total) || 0;
+          if (inv.status === "paid") dataMap[label].Sales += 1;
+        }
+      });
+    } else if (timeframe === "quarter") {
+      for (let i = 1; i <= 12; i++) {
+        dataMap[`W${i}`] = { name: `W${i}`, Revenue: 0, Sales: 0 };
+      }
+      filteredInvoices.forEach(inv => {
+        const d = new Date(inv.date);
+        const diffDays = Math.ceil(Math.abs(new Date() - d) / (1000 * 60 * 60 * 24));
+        const week = Math.min(Math.ceil(diffDays / 7), 12);
+        const label = `W${13 - week}`;
+        if (dataMap[label]) {
+          dataMap[label].Revenue += Number(inv.total) || 0;
+          if (inv.status === "paid") dataMap[label].Sales += 1;
+        }
+      });
+    } else {
+      const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+      months.forEach(m => {
+        dataMap[m] = { name: m, Revenue: 0, Sales: 0 };
+      });
+      filteredInvoices.forEach(inv => {
+        const d = new Date(inv.date);
+        if (isNaN(d.getTime())) return;
+        const monthName = months[d.getMonth()];
+        if (dataMap[monthName]) {
+          dataMap[monthName].Revenue += Number(inv.total) || 0;
+          if (inv.status === "paid") dataMap[monthName].Sales += 1;
+        }
+      });
+    }
+    return Object.values(dataMap);
+  };
+
+  const chartData = getChartData();
+
+  // Recent Requests (Merge and sort bookings + quotes)
+  const recentRequests = [
+    ...bookings.map(b => ({
+      id: b.id,
+      name: b.name,
+      email: b.email,
+      phone: b.phone,
+      type: "booking",
+      service_type: b.service_type || "TV Mounting",
+      status: b.status || "Pending",
+      dateStr: b.created || b.Preferred_Date || new Date().toISOString(),
+      raw: b
+    })),
+    ...quotes.map(q => ({
+      id: q.id,
+      name: q.name,
+      email: q.email,
+      phone: q.phone,
+      type: "quote",
+      service_type: q.service_type || "Job Estimate",
+      status: q.status || "Pending",
+      dateStr: q.created || new Date().toISOString(),
+      raw: q
+    }))
+  ].sort((a, b) => new Date(b.dateStr) - new Date(a.dateStr)).slice(0, 5);
+
+  return (
+    <div className="space-y-6">
+      {/* Header Banner */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-card border border-border p-6 rounded-2xl shadow-sm animate-fade-in">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-2">
+            Dashboard Overview
+          </h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            Welcome back! Here's a live overview of Atlanta TV Mount PRO's operations.
+          </p>
+        </div>
+        <div className="flex items-center gap-3">
+          <Select value={timeframe} onValueChange={setTimeframe}>
+            <SelectTrigger className="w-36 h-9 bg-card border-border text-xs">
+              <SelectValue placeholder="Timeframe" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="month">Last 30 Days</SelectItem>
+              <SelectItem value="quarter">Last 90 Days</SelectItem>
+              <SelectItem value="year">This Year</SelectItem>
+              <SelectItem value="all">All Time</SelectItem>
+            </SelectContent>
+          </Select>
+          <Button onClick={() => setActiveTab("profile")} variant="outline" className="h-9 text-xs font-semibold">
+            My Profile
+          </Button>
+        </div>
+      </div>
+
+      {/* Stats Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Stat 1: Revenue & Sales */}
+        <div 
+          onClick={() => setActiveTab("finance")}
+          className="bg-card border border-border p-5 rounded-2xl hover:shadow-md hover:border-primary/30 transition-all cursor-pointer group relative overflow-hidden"
+        >
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Sales & Revenue</span>
+            <div className="p-2 bg-green-500/10 text-green-500 rounded-xl group-hover:bg-green-500 group-hover:text-white transition-colors">
+              <Coins size={16} />
+            </div>
+          </div>
+          <div className="space-y-1">
+            <h3 className="text-2xl font-bold tracking-tight text-foreground">${totalRevenue.toLocaleString()}</h3>
+            <p className="text-[11px] text-muted-foreground flex items-center gap-1">
+              <TrendingUp size={12} className="text-green-500" />
+              <span>{salesCount} paid transactions</span>
+            </p>
+          </div>
+          <div className="absolute right-3 bottom-3 opacity-0 group-hover:opacity-100 transition-opacity">
+            <ArrowUpRight size={14} className="text-muted-foreground" />
+          </div>
+        </div>
+
+        {/* Stat 2: Active Bookings */}
+        <div 
+          onClick={() => setActiveTab("orders")}
+          className="bg-card border border-border p-5 rounded-2xl hover:shadow-md hover:border-primary/30 transition-all cursor-pointer group relative overflow-hidden"
+        >
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Active Bookings</span>
+            <div className="p-2 bg-blue-500/10 text-blue-500 rounded-xl group-hover:bg-blue-500 group-hover:text-white transition-colors">
+              <ClipboardList size={16} />
+            </div>
+          </div>
+          <div className="space-y-1">
+            <h3 className="text-2xl font-bold tracking-tight text-foreground">{activeBookingsCount}</h3>
+            <p className="text-[11px] text-muted-foreground">
+              <span>{pendingQuotesCount} pending quotes requests</span>
+            </p>
+          </div>
+          <div className="absolute right-3 bottom-3 opacity-0 group-hover:opacity-100 transition-opacity">
+            <ArrowUpRight size={14} className="text-muted-foreground" />
+          </div>
+        </div>
+
+        {/* Stat 3: Team Technicians */}
+        <div 
+          onClick={() => setActiveTab("team")}
+          className="bg-card border border-border p-5 rounded-2xl hover:shadow-md hover:border-primary/30 transition-all cursor-pointer group relative overflow-hidden"
+        >
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Active Team</span>
+            <div className="p-2 bg-purple-500/10 text-purple-500 rounded-xl group-hover:bg-purple-500 group-hover:text-white transition-colors">
+              <Users size={16} />
+            </div>
+          </div>
+          <div className="space-y-1">
+            <h3 className="text-2xl font-bold tracking-tight text-foreground">{teamMembers.length}</h3>
+            <p className="text-[11px] text-muted-foreground">
+              <span>Handymen & mounting pros</span>
+            </p>
+          </div>
+          <div className="absolute right-3 bottom-3 opacity-0 group-hover:opacity-100 transition-opacity">
+            <ArrowUpRight size={14} className="text-muted-foreground" />
+          </div>
+        </div>
+
+        {/* Stat 4: Recruitment Apps */}
+        <div 
+          onClick={() => setActiveTab("recruitment")}
+          className="bg-card border border-border p-5 rounded-2xl hover:shadow-md hover:border-primary/30 transition-all cursor-pointer group relative overflow-hidden"
+        >
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Job Applications</span>
+            <div className="p-2 bg-orange-500/10 text-orange-500 rounded-xl group-hover:bg-orange-500 group-hover:text-white transition-colors">
+              <Briefcase size={16} />
+            </div>
+          </div>
+          <div className="space-y-1">
+            <h3 className="text-2xl font-bold tracking-tight text-foreground">
+              {applications.filter(a => a.status === "Pending").length}
+            </h3>
+            <p className="text-[11px] text-muted-foreground">
+              <span>Pending tech recruitments</span>
+            </p>
+          </div>
+          <div className="absolute right-3 bottom-3 opacity-0 group-hover:opacity-100 transition-opacity">
+            <ArrowUpRight size={14} className="text-muted-foreground" />
+          </div>
+        </div>
+      </div>
+
+      {/* Financial Metrics & Sales Analytics Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 bg-card border border-border p-5 rounded-2xl shadow-sm bg-gradient-to-br from-card to-background/50">
+        <div className="space-y-1">
+          <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider">Gross Revenue</span>
+          <h4 className="text-xl font-extrabold text-foreground flex items-center gap-1">
+            <Coins size={18} className="text-primary/70 animate-pulse" />
+            ${totalRevenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+          </h4>
+          <p className="text-[10px] text-muted-foreground">Total invoiced amount (paid & sent)</p>
+        </div>
+        
+        <div className="space-y-1 border-t md:border-t-0 md:border-l border-border/60 pt-3 md:pt-0 md:pl-4">
+          <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider">Number of Sales</span>
+          <h4 className="text-xl font-extrabold text-green-500 flex items-center gap-1">
+            <TrendingUp size={18} className="text-green-500/70" />
+            {salesCount} <span className="text-xs font-normal text-muted-foreground">Paid Invoices</span>
+          </h4>
+          <p className="text-[10px] text-muted-foreground">Volume of successful transactions</p>
+        </div>
+
+        <div className="space-y-1 border-t lg:border-t-0 lg:border-l border-border/60 pt-3 lg:pt-0 lg:pl-4">
+          <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider">Average Sale Value</span>
+          <h4 className="text-xl font-extrabold text-blue-500 flex items-center gap-1">
+            <DollarSign size={18} className="text-blue-500/70" />
+            ${avgSaleValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+          </h4>
+          <p className="text-[10px] text-muted-foreground">Average size of paid ticket orders</p>
+        </div>
+
+        <div className="space-y-1 border-t lg:border-t-0 lg:border-l border-border/60 pt-3 lg:pt-0 lg:pl-4">
+          <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider">Outstanding Balance</span>
+          <h4 className="text-xl font-extrabold text-orange-500 flex items-center gap-1">
+            <AlertCircle size={18} className="text-orange-500/70" />
+            ${unpaidAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+          </h4>
+          <p className="text-[10px] text-muted-foreground">{unpaidCount} unpaid pending invoices</p>
+        </div>
+      </div>
+
+      {/* Charts Block */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Ledger Trend Line Chart */}
+        <div className="lg:col-span-2 bg-card border border-border p-6 rounded-2xl shadow-sm space-y-4">
+          <div>
+            <h3 className="font-bold text-foreground">Ledger & Transaction Trends</h3>
+            <p className="text-xs text-muted-foreground">Visual graph of revenue ($) and paid sales over the filtered period.</p>
+          </div>
+          <div className="h-72 w-full text-xs">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="colorRev" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.2}/>
+                    <stop offset="95%" stopColor="#3b82f6" stopOpacity={0.01}/>
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" className="stroke-border/40" />
+                <XAxis dataKey="name" stroke="#64748b" fontSize={10} tickLine={false} axisLine={false} />
+                <YAxis stroke="#64748b" fontSize={10} tickLine={false} axisLine={false} />
+                <Tooltip />
+                <Legend verticalAlign="top" height={36} />
+                <Area name="Revenue ($)" type="monotone" dataKey="Revenue" stroke="#3b82f6" strokeWidth={2} fillOpacity={1} fill="url(#colorRev)" />
+                <Bar name="Paid Sales" dataKey="Sales" fill="#10b981" radius={[4, 4, 0, 0]} maxBarSize={20} />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        {/* Bookings Status Pie Chart */}
+        <div className="bg-card border border-border p-6 rounded-2xl shadow-sm flex flex-col justify-between">
+          <div>
+            <h3 className="font-bold text-foreground">Booking Status Share</h3>
+            <p className="text-xs text-muted-foreground">Distribution of service requests by current workflow status.</p>
+          </div>
+          <div className="h-56 w-full relative flex items-center justify-center">
+            {activeBookingsCount === 0 && filteredQuotes.length === 0 ? (
+              <span className="text-xs text-muted-foreground italic">No booking data available</span>
+            ) : (
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={statusChartData.filter(d => d.value > 0)}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={55}
+                    outerRadius={75}
+                    paddingAngle={3}
+                    dataKey="value"
+                  >
+                    {statusChartData.filter(d => d.value > 0).map((entry, index) => {
+                      const idx = ["Pending", "Confirmed", "Completed", "Cancelled"].indexOf(entry.name);
+                      return <Cell key={`cell-${index}`} fill={PIE_COLORS[idx !== -1 ? idx : 0]} />;
+                    })}
+                  </Pie>
+                  <Tooltip />
+                </PieChart>
+              </ResponsiveContainer>
+            )}
+            <div className="absolute flex flex-col items-center justify-center">
+              <span className="text-2xl font-bold text-foreground">{filteredBookings.length}</span>
+              <span className="text-[10px] uppercase font-bold text-muted-foreground">Total Jobs</span>
+            </div>
+          </div>
+          <div className="flex flex-wrap gap-x-4 gap-y-2 justify-center text-[10px] font-semibold text-muted-foreground border-t border-border/50 pt-4 mt-2">
+            {["Pending", "Confirmed", "Completed", "Cancelled"].map((status, i) => (
+              <div key={status} className="flex items-center gap-1.5">
+                <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: PIE_COLORS[i] }} />
+                <span>{status} ({statusCounts[status]})</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Lower Grid: Showcase Categories & Recent Requests */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Showcase Categories */}
+        <div className="bg-card border border-border p-6 rounded-2xl shadow-sm space-y-4">
+          <div>
+            <h3 className="font-bold text-foreground">Project Category Showcase</h3>
+            <p className="text-xs text-muted-foreground">Breakdown of landing-page projects by categories.</p>
+          </div>
+          <div className="h-64 w-full text-xs">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={categoryChartData} layout="vertical" margin={{ left: -10, right: 10, top: 0, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" className="stroke-border/40" horizontal={false} />
+                <XAxis type="number" stroke="#64748b" fontSize={10} tickLine={false} axisLine={false} />
+                <YAxis type="category" dataKey="name" stroke="#64748b" fontSize={9} tickLine={false} axisLine={false} width={80} />
+                <Tooltip />
+                <Bar dataKey="count" fill="#8b5cf6" radius={[0, 4, 4, 0]} maxBarSize={16} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        {/* Recent Bookings and Quotes */}
+        <div className="lg:col-span-2 bg-card border border-border p-6 rounded-2xl shadow-sm space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="font-bold text-foreground">Recent Requests Activity</h3>
+              <p className="text-xs text-muted-foreground">Latest bookings and quotes inquiries received.</p>
+            </div>
+            <Button onClick={() => setActiveTab("orders")} variant="ghost" className="h-8 text-xs text-primary font-bold">
+              View All
+            </Button>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs text-left">
+              <thead>
+                <tr className="border-b border-border/60 text-muted-foreground font-semibold">
+                  <th className="pb-2">Client</th>
+                  <th className="pb-2">Type</th>
+                  <th className="pb-2">Service</th>
+                  <th className="pb-2">Status</th>
+                  <th className="pb-2 text-right">Action</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border/40">
+                {recentRequests.map((req) => (
+                  <tr key={req.id} className="hover:bg-muted/10">
+                    <td className="py-2.5">
+                      <div className="font-bold text-foreground">{req.name}</div>
+                      <div className="text-[10px] text-muted-foreground">{req.email}</div>
+                    </td>
+                    <td className="py-2.5">
+                      <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                        req.type === "booking" ? "bg-blue-500/10 text-blue-500" : "bg-purple-500/10 text-purple-500"
+                      }`}>
+                        {req.type === "booking" ? "Booking" : "Quote"}
+                      </span>
+                    </td>
+                    <td className="py-2.5 capitalize text-foreground">{req.service_type}</td>
+                    <td className="py-2.5">
+                      <span className="bg-primary/10 text-primary px-1.5 py-0.5 rounded text-[10px] font-bold capitalize">
+                        {req.status}
+                      </span>
+                    </td>
+                    <td className="py-2.5 text-right">
+                      <Button 
+                        onClick={() => setSelectedOrder(req.raw)}
+                        variant="outline" 
+                        className="h-7 px-2 text-[10px] font-bold"
+                      >
+                        View
+                      </Button>
+                    </td>
+                  </tr>
+                ))}
+                {recentRequests.length === 0 && (
+                  <tr>
+                    <td colSpan={5} className="py-8 text-center text-muted-foreground italic">
+                      No recent requests found.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+
+
 // ── Main Admin Panel ──────────────────────────────────────────────────────────
 const AdminPage = () => {
   usePageTitle({
@@ -1003,7 +1535,10 @@ const AdminPage = () => {
   const [authed, setAuthed] = useState(false);
   const [checking, setChecking] = useState(true);
   const [loading, setLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState("projects");
+  const [activeTab, setActiveTab] = useState("overview");
+  const [timeframe, setTimeframe] = useState("year");
+  const [invoices, setInvoices] = useState([]);
+  const [editingUser, setEditingUser] = useState(null);
 
   // Sidebar navigation toggler for mobile
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -1451,7 +1986,7 @@ const AdminPage = () => {
   // Redirect if current activeTab is not allowed
   useEffect(() => {
     if (authed && currentUser) {
-      const allowed = [];
+      const allowed = ["overview"];
       if (hasPermission(currentUser, "canView", "projects")) allowed.push("projects");
       if (hasPermission(currentUser, "canView", "orders")) allowed.push("orders");
       if (hasPermission(currentUser, "canView", "team")) allowed.push("team");
@@ -1468,9 +2003,29 @@ const AdminPage = () => {
     }
   }, [authed, currentUser, activeTab]);
 
+  // Sync profileData when currentUser is loaded/updated
+  useEffect(() => {
+    if (currentUser) {
+      setProfileData({
+        name: currentUser.username || currentUser.name || "ATL Admin",
+        email: currentUser.email || "info@atltvmountpro.com",
+        avatar: currentUser.avatar || "/images/admin/admin-avatar.jpg",
+        role: currentUser.role || "Lead Administrator",
+      });
+    }
+  }, [currentUser]);
+
   // Load specific tab data
   useEffect(() => {
     if (!authed) return;
+    if (activeTab === "overview") {
+      fetchProjects();
+      fetchBookingsAndQuotes();
+      fetchTeam();
+      fetchApplications();
+      fetchUsers();
+      setInvoices(getInvoices());
+    }
     if (activeTab === "projects") fetchProjects();
     if (activeTab === "orders") {
       fetchBookingsAndQuotes();
@@ -1804,12 +2359,14 @@ const AdminPage = () => {
   };
 
   // --- Profile / User callbacks ---
-  const handleUserSaved = (saved) => {
+  const handleUserSaved = (saved, isEdit = false) => {
     if (!hasPermission(currentUser, "canEdit", "users")) {
-      toast.error("You do not have permission to create users.");
+      toast.error(isEdit ? "You do not have permission to edit users." : "You do not have permission to create users.");
       return;
     }
-    const updated = [...users, saved];
+    const updated = isEdit
+      ? users.map((u) => (u.id === saved.id ? saved : u))
+      : [...users, saved];
     setUsers(updated);
     localStorage.setItem(LOCAL_USERS_STORAGE, JSON.stringify(updated));
   };
@@ -1831,10 +2388,49 @@ const AdminPage = () => {
     }
   };
 
-  const handleUpdateProfile = (e) => {
+  const handleUpdateProfile = async (e) => {
     e.preventDefault();
-    setIsEditingProfile(false);
-    toast.success("Profile updated.");
+    try {
+      const payload = {
+        username: profileData.name,
+        email: profileData.email,
+      };
+      let updatedUser;
+      if (currentUser?.id && !currentUser.id.startsWith("local_")) {
+        updatedUser = await pb.collection("users").update(currentUser.id, payload);
+      } else {
+        updatedUser = {
+          ...currentUser,
+          ...payload,
+        };
+      }
+      
+      localStorage.setItem("atltvmountpro_auth_user", JSON.stringify(updatedUser));
+      setCurrentUser(updatedUser);
+      
+      const updatedList = users.map((u) => (u.id === currentUser.id ? { ...u, ...payload } : u));
+      setUsers(updatedList);
+      localStorage.setItem(LOCAL_USERS_STORAGE, JSON.stringify(updatedList));
+
+      setIsEditingProfile(false);
+      toast.success("Profile updated successfully.");
+    } catch (err) {
+      console.warn("Profile update failed, updating locally:", err);
+      const updatedUser = {
+        ...currentUser,
+        username: profileData.name,
+        email: profileData.email,
+      };
+      localStorage.setItem("atltvmountpro_auth_user", JSON.stringify(updatedUser));
+      setCurrentUser(updatedUser);
+      
+      const updatedList = users.map((u) => (u.id === currentUser.id ? { ...u, username: profileData.name, email: profileData.email } : u));
+      setUsers(updatedList);
+      localStorage.setItem(LOCAL_USERS_STORAGE, JSON.stringify(updatedList));
+      
+      setIsEditingProfile(false);
+      toast.success("Profile updated locally.");
+    }
   };
 
   const handleChangeAdminKey = (newKey) => {
@@ -1950,7 +2546,7 @@ const AdminPage = () => {
         <aside
           className={`fixed md:sticky top-0 z-50 h-screen w-64 bg-card border-r border-border flex flex-col justify-between transition-transform duration-300 md:translate-x-0 ${sidebarOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"}`}
         >
-          <div className="p-5 flex-1 flex flex-col">
+          <div className="p-5 flex-1 flex flex-col overflow-y-auto">
             {/* Sidebar Branding */}
             <div className="relative flex items-center justify-center mb-8 pb-4 border-b border-border/50">
               <img
@@ -1968,6 +2564,17 @@ const AdminPage = () => {
 
             {/* Menu Links with Flat Icons */}
             <nav className="space-y-1.5 flex-1">
+              <button
+                onClick={() => {
+                  setActiveTab("overview");
+                  setSidebarOpen(false);
+                }}
+                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 ${activeTab === "overview" ? "bg-primary text-primary-foreground shadow-sm shadow-primary/20" : "text-muted-foreground hover:bg-muted hover:text-foreground"}`}
+              >
+                <LayoutDashboard size={18} className="flex-shrink-0" />
+                <span>Dashboard Overview</span>
+              </button>
+
               {hasPermission(currentUser, "canView", "projects") && (
                 <button
                   onClick={() => {
@@ -2125,6 +2732,23 @@ const AdminPage = () => {
                 administrator for editing access.
               </span>
             </div>
+          )}
+
+          {/* TAB CONTENT: OVERVIEW DASHBOARD */}
+          {activeTab === "overview" && (
+            <OverviewDashboard
+              bookings={bookings}
+              quotes={quotes}
+              teamMembers={teamMembers}
+              projects={projects}
+              applications={applications}
+              invoices={invoices}
+              timeframe={timeframe}
+              setTimeframe={setTimeframe}
+              setActiveTab={setActiveTab}
+              setSelectedOrder={setSelectedOrder}
+              currentUser={currentUser}
+            />
           )}
 
           {/* TAB CONTENT: PROJECTS */}
@@ -3228,18 +3852,33 @@ const AdminPage = () => {
                               {new Date(u.created).toLocaleDateString()}
                             </td>
                             <td className="px-4 py-3 text-right">
-                              {hasPermission(
-                                currentUser,
-                                "canDelete",
-                                "users",
-                              ) && (
-                                <button
-                                  onClick={() => handleDeleteUser(u.id)}
-                                  className="text-muted-foreground hover:text-destructive p-1 rounded-md"
-                                >
-                                  <Trash2 size={13} />
-                                </button>
-                              )}
+                              <div className="flex justify-end gap-1.5">
+                                {hasPermission(currentUser, "canEdit", "users") && (
+                                  <button
+                                    onClick={() => {
+                                      setEditingUser(u);
+                                      setUserDialogOpen(true);
+                                    }}
+                                    className="text-muted-foreground hover:text-primary p-1 rounded-md"
+                                    title="Edit User"
+                                  >
+                                    <Pencil size={13} />
+                                  </button>
+                                )}
+                                {hasPermission(
+                                  currentUser,
+                                  "canDelete",
+                                  "users",
+                                ) && (
+                                  <button
+                                    onClick={() => handleDeleteUser(u.id)}
+                                    className="text-muted-foreground hover:text-destructive p-1 rounded-md"
+                                    title="Delete User"
+                                  >
+                                    <Trash2 size={13} />
+                                  </button>
+                                )}
+                              </div>
                             </td>
                           </tr>
                         ))}
@@ -3487,7 +4126,11 @@ const AdminPage = () => {
 
       <UserFormDialog
         open={userDialogOpen}
-        onClose={() => setUserDialogOpen(false)}
+        onClose={() => {
+          setUserDialogOpen(false);
+          setEditingUser(null);
+        }}
+        initial={editingUser}
         onSaved={handleUserSaved}
       />
 
@@ -3497,7 +4140,7 @@ const AdminPage = () => {
           open={!!selectedOrder}
           onOpenChange={() => setSelectedOrder(null)}
         >
-          <DialogContent className="max-w-md bg-card border border-border">
+          <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto bg-card border border-border">
             <DialogHeader>
               <DialogTitle className="capitalize">
                 {selectedOrder.type} Details
@@ -3687,7 +4330,7 @@ const AdminPage = () => {
           open={!!editingOrder}
           onOpenChange={() => setEditingOrder(null)}
         >
-          <DialogContent className="max-w-md bg-card border border-border">
+          <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto bg-card border border-border">
             <DialogHeader>
               <DialogTitle className="capitalize">
                 Edit {editingOrder.type === "appointment" ? "Booking" : "Quote"}
@@ -3874,7 +4517,7 @@ const AdminPage = () => {
           open={!!selectedApplication}
           onOpenChange={() => setSelectedApplication(null)}
         >
-          <DialogContent className="max-w-md bg-card border border-border">
+          <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto bg-card border border-border">
             <DialogHeader>
               <DialogTitle>Application Details</DialogTitle>
             </DialogHeader>

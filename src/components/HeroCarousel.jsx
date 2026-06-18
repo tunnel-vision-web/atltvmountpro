@@ -59,20 +59,23 @@ const HeroCarousel = () => {
       try {
         let homeCms;
         try {
-          homeCms = await pb.collection('cms_pages').getFirstListItem('page="home"');
+          const record = await pb.collection('cms_pages').getFirstListItem('page="home"');
+          homeCms = record?.data || record;
         } catch {
-          const stored = localStorage.getItem('atltvmountpro_local_cms');
+          const stored = localStorage.getItem('atltvmountpro_cms_data');
           if (stored) {
             homeCms = JSON.parse(stored).home;
           }
         }
-        if (homeCms && (homeCms.hero_title || homeCms.hero_subtitle)) {
+        if (homeCms && (homeCms.heroTitle || homeCms.heroSubtitle || homeCms.heroVideo || homeCms.heroImage)) {
           setCarouselSlides((prev) => {
             const copy = [...prev];
             copy[0] = {
               ...copy[0],
-              title: homeCms.hero_title || copy[0].title,
-              description: homeCms.hero_subtitle || copy[0].description,
+              title: homeCms.heroTitle || copy[0].title,
+              description: homeCms.heroSubtitle || copy[0].description,
+              image: homeCms.heroImage || copy[0].image,
+              video: homeCms.heroVideo || null,
             };
             return copy;
           });
@@ -116,23 +119,44 @@ const HeroCarousel = () => {
     <div className="relative overflow-hidden w-full">
       {/* Image layer — absolutely positioned, crossfades only */}
       <div className="absolute inset-0">
-        {carouselSlides.map((slide, index) => (
-          <div
-            key={index}
-            className="absolute inset-0 w-full h-full transition-opacity duration-700 ease-in-out"
-            style={{ opacity: index === selectedIndex ? 1 : 0 }}
-          >
-            <img
-              src={slide.image}
-              alt={slide.title}
-              className="w-full h-full object-cover"
-              onError={(e) => {
-                e.target.onerror = null;
-                e.target.src = slide.fallback;
-              }}
-            />
-          </div>
-        ))}
+        {carouselSlides.map((slide, index) => {
+          const isVideo = slide.video && (
+            slide.video.endsWith(".mp4") || 
+            slide.video.endsWith(".webm") || 
+            slide.video.endsWith(".ogg") || 
+            slide.video.endsWith(".mov") || 
+            slide.video.includes("/video/")
+          );
+          
+          return (
+            <div
+              key={index}
+              className="absolute inset-0 w-full h-full transition-opacity duration-700 ease-in-out"
+              style={{ opacity: index === selectedIndex ? 1 : 0 }}
+            >
+              {isVideo && index === selectedIndex ? (
+                <video
+                  src={slide.video}
+                  autoPlay
+                  loop
+                  muted
+                  playsInline
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <img
+                  src={slide.image}
+                  alt={slide.title}
+                  className="w-full h-full object-cover"
+                  onError={(e) => {
+                    e.target.onerror = null;
+                    e.target.src = slide.fallback;
+                  }}
+                />
+              )}
+            </div>
+          );
+        })}
       </div>
 
       {/* Gradient overlay */}
