@@ -202,6 +202,12 @@ export default function MediaLibrary({ open, onClose, onSelect, filter = 'all' }
   const [activeTab, setActiveTab] = useState(filter);
   const [search, setSearch] = useState('');
   const [showUploader, setShowUploader] = useState(false);
+  const [page, setPage] = useState(1);
+  const itemsPerPage = 12;
+
+  useEffect(() => {
+    setPage(1);
+  }, [search, activeTab]);
 
   // Load / seed library whenever the dialog opens
   useEffect(() => {
@@ -250,6 +256,10 @@ export default function MediaLibrary({ open, onClose, onSelect, filter = 'all' }
     const matchesSearch = item.name.toLowerCase().includes(search.toLowerCase());
     return matchesTab && matchesSearch;
   });
+
+  const totalPages = Math.ceil(filtered.length / itemsPerPage) || 1;
+  const startIndex = (page - 1) * itemsPerPage;
+  const paginatedItems = filtered.slice(startIndex, startIndex + itemsPerPage);
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose?.()}>
@@ -316,15 +326,45 @@ export default function MediaLibrary({ open, onClose, onSelect, filter = 'all' }
 
           {/* Grid */}
           {filtered.length > 0 ? (
-            <div className="grid grid-cols-3 md:grid-cols-5 lg:grid-cols-6 gap-2">
-              {filtered.map((item) => (
-                <MediaCell
-                  key={item.id}
-                  item={item}
-                  onSelect={handleSelect}
-                  onDelete={handleDelete}
-                />
-              ))}
+            <div className="space-y-4">
+              <div className="grid grid-cols-3 md:grid-cols-5 lg:grid-cols-6 gap-2">
+                {paginatedItems.map((item) => (
+                  <MediaCell
+                    key={item.id}
+                    item={item}
+                    onSelect={handleSelect}
+                    onDelete={handleDelete}
+                  />
+                ))}
+              </div>
+              <div className="flex items-center justify-between pt-4 border-t border-border mt-4">
+                <span className="text-xs text-muted-foreground">
+                  Showing {startIndex + 1} to {Math.min(startIndex + itemsPerPage, filtered.length)} of {filtered.length} items
+                </span>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setPage((p) => Math.max(p - 1, 1))}
+                    disabled={page === 1}
+                    className="h-8 text-xs"
+                  >
+                    Previous
+                  </Button>
+                  <span className="text-xs font-semibold px-2 text-foreground">
+                    Page {page} of {totalPages}
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setPage((p) => Math.min(p + 1, totalPages))}
+                    disabled={page === totalPages}
+                    className="h-8 text-xs"
+                  >
+                    Next
+                  </Button>
+                </div>
+              </div>
             </div>
           ) : (
             <div className="flex flex-col items-center justify-center py-16 gap-3 text-center">

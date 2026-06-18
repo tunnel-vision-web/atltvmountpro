@@ -4,12 +4,15 @@ import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { useAllCMS } from '@/hooks/useCMS';
 import MediaPickerButton from '@/components/MediaPickerButton';
+import RichTextEditor from '@/components/RichTextEditor';
 
 const PAGES = [
   { id: 'home', label: 'Home Page' },
   { id: 'services', label: 'Services' },
   { id: 'about', label: 'About Page' },
   { id: 'contact', label: 'Contact Page' },
+  { id: 'footer', label: 'Footer Settings' },
+  { id: 'cta', label: 'CTA Sections' },
 ];
 
 export default function CMSEditor() {
@@ -62,6 +65,25 @@ export default function CMSEditor() {
             "Ensure phone formatting matches active SMS invite and dispatch requirements.",
             "Map Embed URLs must resolve to clean iframe sources for proper rendering.",
             "Address fields propagate to search index profiles for localized local SEO matching."
+          ]
+        };
+      case 'footer':
+        return {
+          title: "Footer Settings",
+          icon: Info,
+          description: "Manage footer brand tagline, quick links status, contact options, copyright details, and social anchors.",
+          tips: [
+            "Keep the copyright text updated with the current year (e.g. © 2026).",
+            "Verify the service area matches contact coordinates so local SEO remains optimized."
+          ]
+        };
+      case 'cta':
+        return {
+          title: "Hiring CTA Section Settings",
+          icon: Sparkles,
+          description: "Manage homepage hiring spotlight headers, custom buttons, and detail taglines.",
+          tips: [
+            "Make CTA button texts action-oriented (e.g. 'Apply to Join' or 'Start Earning Now')."
           ]
         };
       default:
@@ -206,11 +228,9 @@ export default function CMSEditor() {
                 </div>
                 <div>
                   <label className="text-xs font-medium text-muted-foreground mb-1 block">Hero Description</label>
-                  <textarea
+                  <RichTextEditor
                     value={formData.heroDescription || ''}
-                    onChange={(e) => updateField('heroDescription', e.target.value)}
-                    rows={3}
-                    className="input-base w-full resize-none"
+                    onChange={(val) => updateField('heroDescription', val)}
                     placeholder="Short description for SEO/meta..."
                   />
                 </div>
@@ -254,15 +274,14 @@ export default function CMSEditor() {
                     </div>
                     <div>
                       <label className="text-xs font-medium text-muted-foreground mb-1 block">Description</label>
-                      <textarea
+                      <RichTextEditor
                         value={svc.description || ''}
-                        onChange={(e) => {
+                        onChange={(val) => {
                           const updated = [...(formData.featuredServices || [])];
-                          updated[idx] = { ...updated[idx], description: e.target.value };
+                          updated[idx] = { ...updated[idx], description: val };
                           updateField('featuredServices', updated);
                         }}
-                        rows={2}
-                        className="input-base w-full resize-none"
+                        placeholder="Brief description..."
                       />
                     </div>
                     <MediaPickerButton
@@ -320,15 +339,14 @@ export default function CMSEditor() {
                       </div>
                       <div>
                         <label className="text-xs font-medium text-muted-foreground mb-1 block">Answer</label>
-                        <textarea
+                        <RichTextEditor
                           value={faq.answer || ''}
-                          onChange={(e) => {
+                          onChange={(val) => {
                             const updated = [...(formData.faqs || [])];
-                            updated[idx] = { ...updated[idx], answer: e.target.value };
+                            updated[idx] = { ...updated[idx], answer: val };
                             updateField('faqs', updated);
                           }}
-                          rows={3}
-                          className="input-base w-full resize-none"
+                          placeholder="Answer body..."
                         />
                       </div>
                     </div>
@@ -388,15 +406,14 @@ export default function CMSEditor() {
                 {(formData.storyParagraphs || []).map((para, idx) => (
                   <div key={idx}>
                     <label className="text-xs font-medium text-muted-foreground mb-1 block">Paragraph {idx + 1}</label>
-                    <textarea
+                    <RichTextEditor
                       value={para || ''}
-                      onChange={(e) => {
+                      onChange={(val) => {
                         const updated = [...(formData.storyParagraphs || [])];
-                        updated[idx] = e.target.value;
+                        updated[idx] = val;
                         updateField('storyParagraphs', updated);
                       }}
-                      rows={4}
-                      className="input-base w-full resize-none"
+                      placeholder="Write history block..."
                     />
                   </div>
                 ))}
@@ -450,15 +467,14 @@ export default function CMSEditor() {
                     </div>
                     <div>
                       <label className="text-xs font-medium text-muted-foreground mb-1 block">Description</label>
-                      <textarea
+                      <RichTextEditor
                         value={item.description || ''}
-                        onChange={(e) => {
+                        onChange={(val) => {
                           const updated = [...(formData.whyChooseUs || [])];
-                          updated[idx] = { ...updated[idx], description: e.target.value };
+                          updated[idx] = { ...updated[idx], description: val };
                           updateField('whyChooseUs', updated);
                         }}
-                        rows={2}
-                        className="input-base w-full resize-none"
+                        placeholder="Reason details..."
                       />
                     </div>
                   </div>
@@ -533,11 +549,9 @@ export default function CMSEditor() {
                 </div>
                 <div>
                   <label className="text-xs font-medium text-muted-foreground mb-1 block">Hours</label>
-                  <textarea
+                  <RichTextEditor
                     value={formData.hours || ''}
-                    onChange={(e) => updateField('hours', e.target.value)}
-                    rows={3}
-                    className="input-base w-full resize-none"
+                    onChange={(val) => updateField('hours', val)}
                     placeholder="Monday - Saturday: 8:00 AM - 6:00 PM"
                   />
                 </div>
@@ -632,11 +646,9 @@ export default function CMSEditor() {
 
                   <div>
                     <label className="text-xs font-medium text-muted-foreground mb-1 block">Detailed Description (Services Page)</label>
-                    <textarea
+                    <RichTextEditor
                       value={svc.details || ''}
-                      onChange={(e) => updateServiceField(idx, 'details', e.target.value)}
-                      rows={3}
-                      className="input-base w-full resize-none"
+                      onChange={(val) => updateServiceField(idx, 'details', val)}
                       placeholder="Full description of what this service covers..."
                     />
                   </div>
@@ -698,6 +710,117 @@ export default function CMSEditor() {
                   <p className="text-muted-foreground text-sm">No services defined. Click "+ Add New Service" to start.</p>
                 </div>
               )}
+            </div>
+          )}
+
+          {/* Footer Page Editor */}
+          {activePage === 'footer' && (
+            <div className="space-y-6">
+              <CMSCard title="Brand & Copywriting Info">
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground mb-1 block">Brand Description</label>
+                  <RichTextEditor
+                    value={formData.brandDescription || ''}
+                    onChange={(val) => updateField('brandDescription', val)}
+                    placeholder="Describe your company services for the footer..."
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground mb-1 block">Copyright Text</label>
+                  <input
+                    value={formData.copyrightText || ''}
+                    onChange={(e) => updateField('copyrightText', e.target.value)}
+                    className="input-base w-full"
+                    placeholder="e.g. © 2026 Atlanta TV Mount PRO. All rights reserved."
+                  />
+                </div>
+              </CMSCard>
+
+              <CMSCard title="Contact Coordinates">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-xs font-medium text-muted-foreground mb-1 block">Phone Number</label>
+                    <input
+                      value={formData.phone || ''}
+                      onChange={(e) => updateField('phone', e.target.value)}
+                      className="input-base w-full"
+                      placeholder="e.g. 770-374-3203"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-muted-foreground mb-1 block">Email Address</label>
+                    <input
+                      value={formData.email || ''}
+                      onChange={(e) => updateField('email', e.target.value)}
+                      className="input-base w-full"
+                      placeholder="e.g. info@atltvmountpro.com"
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-xs font-medium text-muted-foreground mb-1 block">Service Area</label>
+                    <input
+                      value={formData.serviceArea || ''}
+                      onChange={(e) => updateField('serviceArea', e.target.value)}
+                      className="input-base w-full"
+                      placeholder="e.g. Atlanta metro area and Georgia"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-muted-foreground mb-1 block">Hours of Operation</label>
+                    <input
+                      value={formData.hours || ''}
+                      onChange={(e) => updateField('hours', e.target.value)}
+                      className="input-base w-full"
+                      placeholder="e.g. Mon–Sat 8:00 AM – 7:00 PM"
+                    />
+                  </div>
+                </div>
+              </CMSCard>
+            </div>
+          )}
+
+          {/* CTA Sections Editor */}
+          {activePage === 'cta' && (
+            <div className="space-y-6">
+              <CMSCard title="Hiring Spotlight Banner (Homepage)">
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground mb-1 block">Hiring Tagline (Pill badge)</label>
+                  <input
+                    value={formData.hiringTagline || ''}
+                    onChange={(e) => updateField('hiringTagline', e.target.value)}
+                    className="input-base w-full"
+                    placeholder="e.g. We're Hiring Handymen & Techs"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground mb-1 block">Spotlight Title</label>
+                  <input
+                    value={formData.hiringTitle || ''}
+                    onChange={(e) => updateField('hiringTitle', e.target.value)}
+                    className="input-base w-full"
+                    placeholder="e.g. Grow Your Business & Join the PRO Team"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground mb-1 block">Spotlight Description</label>
+                  <RichTextEditor
+                    value={formData.hiringDescription || ''}
+                    onChange={(val) => updateField('hiringDescription', val)}
+                    placeholder="Describe benefits of joining the technician program..."
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground mb-1 block">Button Call To Action Text</label>
+                  <input
+                    value={formData.hiringButtonText || ''}
+                    onChange={(e) => updateField('hiringButtonText', e.target.value)}
+                    className="input-base w-full"
+                    placeholder="e.g. Apply to Join"
+                  />
+                </div>
+              </CMSCard>
             </div>
           )}
         </div>

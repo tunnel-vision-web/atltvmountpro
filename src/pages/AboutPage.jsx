@@ -103,12 +103,11 @@ const AboutPage = () => {
             >
               <h2 className="text-3xl font-bold mb-4">{cmsAbout?.storyTitle || cmsAbout?.story_title || "Our story"}</h2>
               {storyParagraphs.map((para, idx) => (
-                <p
+                <div
                   key={idx}
-                  className="text-muted-foreground leading-relaxed mb-4"
-                >
-                  {para}
-                </p>
+                  className="text-muted-foreground leading-relaxed mb-4 prose dark:prose-invert"
+                  dangerouslySetInnerHTML={{ __html: para }}
+                />
               ))}
             </motion.div>
           </div>
@@ -149,9 +148,10 @@ const AboutPage = () => {
               {whyChooseUs.map((item, idx) => (
                 <div key={idx}>
                   <h3 className="text-xl font-semibold mb-2">{item.title}</h3>
-                  <p className="text-primary-foreground/90">
-                    {item.description}
-                  </p>
+                  <div 
+                    className="text-primary-foreground/90"
+                    dangerouslySetInnerHTML={{ __html: item.description }}
+                  />
                 </div>
               ))}
             </div>

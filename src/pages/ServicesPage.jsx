@@ -183,9 +183,10 @@ const ServicesPage = () => {
                         <p className="text-lg text-muted-foreground mb-4">
                           {service.description}
                         </p>
-                        <p className="text-card-foreground leading-relaxed mb-6">
-                          {service.details}
-                        </p>
+                        <div 
+                          className="text-card-foreground leading-relaxed mb-6 prose dark:prose-invert max-w-none"
+                          dangerouslySetInnerHTML={{ __html: service.details }}
+                        />
                         {service.benefits && service.benefits.length > 0 && (
                           <ul className="space-y-2 mb-6">
                             {service.benefits.map((benefit, i) => (

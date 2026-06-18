@@ -227,6 +227,20 @@ export const DEFAULT_CMS_DATA = {
         isCore: false
       }
     ]
+  },
+  footer: {
+    brandDescription: "Professional TV mounting and handyman services in the Atlanta metro area and throughout Georgia.",
+    phone: "770-374-3203",
+    serviceArea: "Atlanta metro area and Georgia",
+    hours: "Mon–Sat 8:00 AM – 7:00 PM",
+    email: "info@atltvmountpro.com",
+    copyrightText: "© 2025 Atlanta TV Mount PRO. All rights reserved."
+  },
+  cta: {
+    hiringTagline: "We're Hiring Handymen & Techs",
+    hiringTitle: "Grow Your Business & Join the PRO Team",
+    hiringDescription: "Are you an experienced TV mounting technician or general handyman in the Atlanta area? Get steady jobs, weekly direct deposits, and work on your own schedule.",
+    hiringButtonText: "Apply to Join"
   }
 };
 

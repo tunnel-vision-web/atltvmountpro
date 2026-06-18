@@ -41,7 +41,7 @@ const ProjectCard = ({ project, index = 0 }) => {
               {project.title}
             </h3>
             <p className="text-muted-foreground text-sm line-clamp-2 mb-4 leading-relaxed">
-              {project.description}
+              {project.description ? project.description.replace(/<[^>]*>/g, "") : ""}
             </p>
             <div className="flex flex-wrap gap-1.5">
               {project.services.slice(0, 3).map((s, i) => (

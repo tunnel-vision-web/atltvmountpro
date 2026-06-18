@@ -108,6 +108,7 @@ const HomePage = () => {
   const { openQuoteModal, openBookingModal } = useUI();
   const { data: cmsHome } = useCMS("home");
   const { data: cmsServicesData } = useCMS("services");
+  const { data: ctaData } = useCMS("cta");
  
   const [projects, setProjects] = React.useState([]);
  
@@ -285,9 +286,10 @@ const HomePage = () => {
                     <h3 className="text-xl font-bold text-white mb-2 leading-snug">
                       {svc.title}
                     </h3>
-                    <p className="text-white/75 text-sm leading-relaxed mb-5">
-                      {svc.description}
-                    </p>
+                    <div 
+                      className="text-white/75 text-sm leading-relaxed mb-5 prose prose-invert prose-sm"
+                      dangerouslySetInnerHTML={{ __html: svc.description }}
+                    />
                     <Link
                       to="/services"
                       className="inline-flex items-center gap-1.5 text-sm font-semibold text-white/90 hover:text-white transition-colors duration-200"
@@ -444,7 +446,7 @@ const HomePage = () => {
                   {faq.question}
                 </AccordionTrigger>
                 <AccordionContent className="text-muted-foreground">
-                  {faq.answer}
+                  <div dangerouslySetInnerHTML={{ __html: faq.answer }} />
                 </AccordionContent>
               </AccordionItem>
             ))}
@@ -459,14 +461,15 @@ const HomePage = () => {
           <div className="bg-slate-800/50 backdrop-blur-md border border-slate-700/50 rounded-3xl p-8 md:p-12 flex flex-col md:flex-row items-center justify-between gap-8">
             <div className="max-w-xl text-center md:text-left space-y-4">
               <span className="text-xs bg-primary/20 text-primary px-3 py-1 rounded-full font-bold uppercase tracking-wider">
-                We're Hiring Handymen & Techs
+                {ctaData.hiringTagline || "We're Hiring Handymen & Techs"}
               </span>
               <h2 className="text-3xl md:text-4xl font-extrabold tracking-tight text-white leading-tight">
-                Grow Your Business &amp; Join the PRO Team
+                {ctaData.hiringTitle || "Grow Your Business & Join the PRO Team"}
               </h2>
-              <p className="text-slate-300 text-base md:text-lg leading-relaxed">
-                Are you an experienced TV mounting technician or general handyman in the Atlanta area? Get steady jobs, weekly direct deposits, and work on your own schedule.
-              </p>
+              <div 
+                className="text-slate-300 text-base md:text-lg leading-relaxed prose prose-invert max-w-none"
+                dangerouslySetInnerHTML={{ __html: ctaData.hiringDescription || "Are you an experienced TV mounting technician or general handyman in the Atlanta area? Get steady jobs, weekly direct deposits, and work on your own schedule." }}
+              />
             </div>
             <div className="flex-shrink-0 flex flex-col sm:flex-row gap-4 w-full md:w-auto justify-center">
               <Link to="/join" className="w-full sm:w-auto">
@@ -474,7 +477,7 @@ const HomePage = () => {
                   size="lg"
                   className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-bold shadow-lg shadow-primary/20 transition-all duration-200 active:scale-[0.98]"
                 >
-                  Apply to Join <ArrowRight size={16} className="ml-2" />
+                  {ctaData.hiringButtonText || "Apply to Join"} <ArrowRight size={16} className="ml-2" />
                 </Button>
               </Link>
             </div>

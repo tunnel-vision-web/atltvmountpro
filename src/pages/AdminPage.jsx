@@ -59,6 +59,7 @@ import FinanceModule from "@/components/FinanceModule";
 import CRMModule from "@/components/CRMModule";
 import MediaLibraryAdmin from "@/components/MediaLibraryAdmin";
 import MediaPickerButton from "@/components/MediaPickerButton";
+import RichTextEditor from "@/components/RichTextEditor";
 import AppointmentsCalendar from "@/components/AppointmentsCalendar";
 import {
   autoCreateInvoiceForBooking,
@@ -429,11 +430,9 @@ const ProjectFormDialog = ({ open, onClose, initial, onSaved }) => {
             <label className="text-sm font-medium mb-1.5 block text-foreground">
               Description
             </label>
-            <textarea
+            <RichTextEditor
               value={form.description}
-              onChange={(e) => field("description", e.target.value)}
-              rows={4}
-              className="input-base w-full resize-none"
+              onChange={(val) => field("description", val)}
               placeholder="Describe the project scope and outcome..."
             />
           </div>
@@ -1065,6 +1064,14 @@ const AdminPage = () => {
   const [appsPage, setAppsPage] = useState(1);
   const appsItemsPerPage = 10;
 
+  const [projectsPage, setProjectsPage] = useState(1);
+  const projectsItemsPerPage = 8;
+
+  const [usersPage, setUsersPage] = useState(1);
+  const usersItemsPerPage = 5;
+
+  const [editingOrder, setEditingOrder] = useState(null);
+
   useEffect(() => {
     setBookingsPage(1);
     setQuotesPage(1);
@@ -1073,6 +1080,11 @@ const AdminPage = () => {
   useEffect(() => {
     setAppsPage(1);
   }, [appFilter, appSearch]);
+
+  useEffect(() => {
+    setProjectsPage(1);
+    setUsersPage(1);
+  }, [activeTab]);
 
   // --- Fetch methods ---
 
@@ -1109,6 +1121,10 @@ const AdminPage = () => {
         preferred_date: a.Preferred_Date || a.preferred_date || "",
         preferred_time: a.Preferred_Time || a.preferred_time || "",
         project_description: a.Project_Description || a.project_description || "",
+        status: a.status || "Pending",
+        assignedTechId: a.assignedTechId || null,
+        assignedTechName: a.assignedTechName || null,
+        service_type: a.service_type || "TV Mounting",
       }));
       setBookings(normalized);
       localStorage.setItem(LOCAL_BOOKINGS_STORAGE, JSON.stringify(normalized));
@@ -1536,28 +1552,96 @@ const AdminPage = () => {
   };
 
   const handleUpdateBooking = async (id, updates) => {
-    const payload = { ...updates };
-    if (payload.status) payload.status = normalizeStatus(payload.status);
+    const rawPayload = { ...updates };
+    if (rawPayload.status) rawPayload.status = normalizeStatus(rawPayload.status);
+
+    const payload = {};
+    if ('Name' in rawPayload) payload.Name = rawPayload.Name;
+    if ('name' in rawPayload) payload.Name = rawPayload.name;
+    
+    if ('Email' in rawPayload) payload.Email = rawPayload.Email;
+    if ('email' in rawPayload) payload.Email = rawPayload.email;
+    
+    if ('Phone_Number' in rawPayload) payload.Phone_Number = rawPayload.Phone_Number;
+    if ('phone' in rawPayload) payload.Phone_Number = rawPayload.phone;
+    
+    if ('Preferred_Date' in rawPayload) payload.Preferred_Date = rawPayload.Preferred_Date;
+    if ('preferred_date' in rawPayload) payload.Preferred_Date = rawPayload.preferred_date;
+    
+    if ('Preferred_Time' in rawPayload) payload.Preferred_Time = rawPayload.Preferred_Time;
+    if ('preferred_time' in rawPayload) payload.Preferred_Time = rawPayload.preferred_time;
+    
+    if ('Project_Description' in rawPayload) payload.Project_Description = rawPayload.Project_Description;
+    if ('project_description' in rawPayload) payload.Project_Description = rawPayload.project_description;
+    
+    if ('status' in rawPayload) payload.status = rawPayload.status;
+    if ('assignedTechId' in rawPayload) payload.assignedTechId = rawPayload.assignedTechId;
+    if ('assignedTechName' in rawPayload) payload.assignedTechName = rawPayload.assignedTechName;
+    if ('service_type' in rawPayload) payload.service_type = rawPayload.service_type;
 
     const booking = bookings.find((b) => b.id === id);
     if (!booking) return;
 
+    const mergeUpdates = (b) => ({
+      ...b,
+      ...updates,
+      name: updates.name || updates.Name || b.name,
+      email: updates.email || updates.Email || b.email,
+      phone: updates.phone || updates.Phone_Number || b.phone,
+      preferred_date: updates.preferred_date || updates.Preferred_Date || b.preferred_date,
+      preferred_time: updates.preferred_time || updates.Preferred_Time || b.preferred_time,
+      project_description: updates.project_description || updates.Project_Description || b.project_description,
+      status: updates.status || b.status,
+      assignedTechId: updates.assignedTechId === "unassigned" ? null : (updates.assignedTechId || b.assignedTechId),
+      assignedTechName: updates.assignedTechId === "unassigned" ? null : (updates.assignedTechName || b.assignedTechName),
+      service_type: updates.service_type || b.service_type,
+    });
+
     try {
       await pb.collection("appointment_bookings").update(id, payload);
       const updated = bookings.map((b) =>
-        b.id === id ? { ...b, ...payload } : b,
+        b.id === id ? mergeUpdates(b) : b,
       );
       persistBookings(updated);
-      maybeCreateInvoiceForBooking({ ...booking, ...payload }, payload.status);
+      maybeCreateInvoiceForBooking(mergeUpdates(booking), payload.status);
       toast.success("Booking updated.");
     } catch (err) {
       console.warn("PocketBase booking update failed, updating locally:", err);
       const updated = bookings.map((b) =>
-        b.id === id ? { ...b, ...payload } : b,
+        b.id === id ? mergeUpdates(b) : b,
       );
       persistBookings(updated);
-      maybeCreateInvoiceForBooking({ ...booking, ...payload }, payload.status);
+      maybeCreateInvoiceForBooking(mergeUpdates(booking), rawPayload.status);
       toast.success("Booking updated locally.");
+    }
+  };
+
+  const handleUpdateQuote = async (id, updates) => {
+    const payload = {};
+    if ('name' in updates) payload.name = updates.name;
+    if ('email' in updates) payload.email = updates.email;
+    if ('phone' in updates) payload.phone = updates.phone;
+    if ('service_type' in updates) payload.service_type = updates.service_type;
+    if ('project_details' in updates) payload.project_details = updates.project_details;
+    if ('estimated_quote' in updates) payload.estimated_quote = Number(updates.estimated_quote);
+    if ('status' in updates) payload.status = updates.status;
+
+    try {
+      await pb.collection("quote_inquiries").update(id, payload);
+      const updated = quotes.map((q) =>
+        q.id === id ? { ...q, ...payload } : q,
+      );
+      setQuotes(updated);
+      localStorage.setItem(LOCAL_QUOTES_STORAGE, JSON.stringify(updated));
+      toast.success("Quote updated.");
+    } catch (err) {
+      console.warn("PocketBase quote update failed, updating locally:", err);
+      const updated = quotes.map((q) =>
+        q.id === id ? { ...q, ...payload } : q,
+      );
+      setQuotes(updated);
+      localStorage.setItem(LOCAL_QUOTES_STORAGE, JSON.stringify(updated));
+      toast.success("Quote updated locally.");
     }
   };
 
@@ -1768,9 +1852,17 @@ const AdminPage = () => {
   const appsStartIndex = (appsPage - 1) * appsItemsPerPage;
   const paginatedApps = filteredApps.slice(appsStartIndex, appsStartIndex + appsItemsPerPage);
 
+  const totalProjectsPages = Math.ceil(projects.length / projectsItemsPerPage) || 1;
+  const projectsStartIndex = (projectsPage - 1) * projectsItemsPerPage;
+  const paginatedProjects = projects.slice(projectsStartIndex, projectsStartIndex + projectsItemsPerPage);
+
+  const totalUsersPages = Math.ceil(users.length / usersItemsPerPage) || 1;
+  const usersStartIndex = (usersPage - 1) * usersItemsPerPage;
+  const paginatedUsers = users.slice(usersStartIndex, usersStartIndex + usersItemsPerPage);
+
   return (
     <>
-      <div className="min-h-screen bg-background flex flex-col md:flex-row">
+      <div className="min-h-screen md:h-screen md:overflow-hidden bg-background flex flex-col md:flex-row">
         {/* MOBILE HEADER */}
         <header className="md:hidden sticky top-0 z-40 bg-card border-b border-border px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -1960,7 +2052,8 @@ const AdminPage = () => {
         </aside>
 
         {/* MAIN DISPLAY CONTENT */}
-        <main className="flex-1 min-h-screen px-4 sm:px-6 lg:px-8 py-8 md:py-10 max-w-[1200px] w-full">
+        <div className="flex-1 flex flex-col min-w-0 w-full overflow-x-hidden md:h-full md:overflow-y-auto">
+          <main className="flex-1 px-4 sm:px-6 lg:px-8 py-8 md:py-10 max-w-[1200px] w-full mx-auto min-w-0">
           {currentUser?.role === ROLES.Viewer && (
             <div className="mb-4 flex items-center gap-2 bg-yellow-500/10 text-yellow-600 border border-yellow-500/20 rounded-lg px-4 py-2.5 text-sm">
               <Lock size={14} />
@@ -2047,7 +2140,7 @@ const AdminPage = () => {
                         </tr>
                       </thead>
                       <tbody>
-                        {projects.map((project, i) => (
+                        {paginatedProjects.map((project, i) => (
                           <tr
                             key={project.id || i}
                             className="border-b border-border last:border-0 hover:bg-muted/20"
@@ -2138,6 +2231,36 @@ const AdminPage = () => {
                       </tbody>
                     </table>
                   </div>
+                  {projects.length > 0 && (
+                    <div className="flex items-center justify-between p-4 border-t border-border bg-muted/20">
+                      <span className="text-xs text-muted-foreground">
+                        Showing {projectsStartIndex + 1} to {Math.min(projectsStartIndex + projectsItemsPerPage, projects.length)} of {projects.length} projects
+                      </span>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setProjectsPage((p) => Math.max(p - 1, 1))}
+                          disabled={projectsPage === 1}
+                          className="h-8 text-xs"
+                        >
+                          Previous
+                        </Button>
+                        <span className="text-xs font-semibold px-2">
+                          Page {projectsPage} of {totalProjectsPages}
+                        </span>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setProjectsPage((p) => Math.min(p + 1, totalProjectsPages))}
+                          disabled={projectsPage === totalProjectsPages}
+                          className="h-8 text-xs"
+                        >
+                          Next
+                        </Button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -2378,6 +2501,24 @@ const AdminPage = () => {
                                     currentUser?.role,
                                     "canEdit",
                                     "orders",
+                                  ) && (
+                                    <button
+                                      onClick={() =>
+                                        setEditingOrder({
+                                          ...b,
+                                          type: "appointment",
+                                        })
+                                      }
+                                      className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted"
+                                      title="Edit Booking"
+                                    >
+                                      <Pencil size={14} />
+                                    </button>
+                                  )}
+                                  {hasPermission(
+                                    currentUser?.role,
+                                    "canEdit",
+                                    "orders",
                                   ) ? (
                                     <select
                                       value={b.status || "Pending"}
@@ -2427,7 +2568,7 @@ const AdminPage = () => {
                         </tbody>
                       </table>
                     </div>
-                    {totalBookingsPages > 1 && (
+                    {filteredBookings.length > 0 && (
                       <div className="flex items-center justify-between p-4 border-t border-border bg-muted/20">
                         <span className="text-xs text-muted-foreground">
                           Showing {bookingsStartIndex + 1} to {Math.min(bookingsStartIndex + bookingsItemsPerPage, filteredBookings.length)} of {filteredBookings.length} bookings
@@ -2543,6 +2684,24 @@ const AdminPage = () => {
                                   currentUser?.role,
                                   "canEdit",
                                   "orders",
+                                ) && (
+                                  <button
+                                    onClick={() =>
+                                      setEditingOrder({
+                                        ...q,
+                                        type: "quote",
+                                      })
+                                    }
+                                    className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted"
+                                    title="Edit Quote"
+                                  >
+                                    <Pencil size={14} />
+                                  </button>
+                                )}
+                                {hasPermission(
+                                  currentUser?.role,
+                                  "canEdit",
+                                  "orders",
                                 ) ? (
                                   <select
                                     value={q.status || "Pending"}
@@ -2586,7 +2745,7 @@ const AdminPage = () => {
                       </tbody>
                     </table>
                   </div>
-                  {totalQuotesPages > 1 && (
+                  {filteredQuotes.length > 0 && (
                     <div className="flex items-center justify-between p-4 border-t border-border bg-muted/20">
                       <span className="text-xs text-muted-foreground">
                         Showing {quotesStartIndex + 1} to {Math.min(quotesStartIndex + quotesItemsPerPage, filteredQuotes.length)} of {filteredQuotes.length} quotes
@@ -2742,7 +2901,7 @@ const AdminPage = () => {
                       </div>
                     ))}
                   </div>
-                  {totalTeamPages > 1 && (
+                  {teamMembers.length > 0 && (
                     <div className="flex items-center justify-between pt-6 border-t border-border mt-6">
                       <span className="text-xs text-muted-foreground">
                         Showing {teamStartIndex + 1} to {Math.min(teamStartIndex + teamItemsPerPage, teamMembers.length)} of {teamMembers.length} team members
@@ -2942,7 +3101,7 @@ const AdminPage = () => {
                         </tr>
                       </thead>
                       <tbody>
-                        {users.map((u) => (
+                        {paginatedUsers.map((u) => (
                           <tr
                             key={u.id}
                             className="border-b border-border last:border-0 hover:bg-muted/20"
@@ -3023,6 +3182,36 @@ const AdminPage = () => {
                         ))}
                       </tbody>
                     </table>
+                    {users.length > 0 && (
+                      <div className="flex items-center justify-between p-4 border-t border-border bg-muted/20">
+                        <span className="text-xs text-muted-foreground">
+                          Showing {usersStartIndex + 1} to {Math.min(usersStartIndex + usersItemsPerPage, users.length)} of {users.length} users
+                        </span>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setUsersPage((p) => Math.max(p - 1, 1))}
+                            disabled={usersPage === 1}
+                            className="h-8 text-xs"
+                          >
+                            Previous
+                          </Button>
+                          <span className="text-xs font-semibold px-2">
+                            Page {usersPage} of {totalUsersPages}
+                          </span>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setUsersPage((p) => Math.min(p + 1, totalUsersPages))}
+                            disabled={usersPage === totalUsersPages}
+                            className="h-8 text-xs"
+                          >
+                            Next
+                          </Button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -3180,7 +3369,7 @@ const AdminPage = () => {
                       </tbody>
                     </table>
                   </div>
-                  {totalAppsPages > 1 && (
+                  {filteredApps.length > 0 && (
                     <div className="flex items-center justify-between p-4 border-t border-border bg-muted/20">
                       <span className="text-xs text-muted-foreground">
                         Showing {appsStartIndex + 1} to {Math.min(appsStartIndex + appsItemsPerPage, filteredApps.length)} of {filteredApps.length} applications
@@ -3216,6 +3405,7 @@ const AdminPage = () => {
           )}
         </main>
       </div>
+    </div>
 
       {/* MODALS */}
       <ProjectFormDialog
@@ -3408,9 +3598,168 @@ const AdminPage = () => {
                       <Send size={14} className="mr-1" /> Send Invoice
                     </Button>
                   )}
+                {hasPermission(currentUser?.role, "canEdit", "orders") && (
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setEditingOrder(selectedOrder);
+                      setSelectedOrder(null);
+                    }}
+                  >
+                    <Pencil size={14} className="mr-1" /> Edit
+                  </Button>
+                )}
                 <Button onClick={() => setSelectedOrder(null)}>Close</Button>
               </div>
             </div>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {/* EDIT MODAL FOR BOOKINGS AND QUOTES */}
+      {editingOrder && (
+        <Dialog
+          open={!!editingOrder}
+          onOpenChange={() => setEditingOrder(null)}
+        >
+          <DialogContent className="max-w-md bg-card border border-border">
+            <DialogHeader>
+              <DialogTitle className="capitalize">
+                Edit {editingOrder.type === "appointment" ? "Booking" : "Quote"}
+              </DialogTitle>
+            </DialogHeader>
+            <form
+              onSubmit={async (e) => {
+                e.preventDefault();
+                const formData = new FormData(e.currentTarget);
+                const name = formData.get("name");
+                const email = formData.get("email");
+                const phone = formData.get("phone");
+                const service_type = formData.get("service_type");
+                const status = formData.get("status");
+
+                const updates = {
+                  name,
+                  Name: name,
+                  email,
+                  Email: email,
+                  phone,
+                  Phone_Number: phone,
+                  service_type,
+                  status,
+                };
+
+                if (editingOrder.type === "appointment") {
+                  updates.preferred_date = formData.get("preferred_date");
+                  updates.preferred_time = formData.get("preferred_time");
+                  updates.project_description = formData.get("project_description");
+                  updates.Project_Description = updates.project_description;
+
+                  const assignedTechId = formData.get("assignedTechId");
+                  if (assignedTechId === "unassigned") {
+                    updates.assignedTechId = null;
+                    updates.assignedTechName = null;
+                  } else {
+                    const tech = teamMembers.find((t) => String(t.id) === assignedTechId);
+                    if (tech) {
+                      updates.assignedTechId = tech.id;
+                      updates.assignedTechName = tech.name;
+                    }
+                  }
+
+                  await handleUpdateBooking(editingOrder.id, updates);
+                } else {
+                  updates.estimated_quote = Number(formData.get("estimated_quote"));
+                  updates.project_details = formData.get("project_details");
+                  await handleUpdateQuote(editingOrder.id, updates);
+                }
+
+                setEditingOrder(null);
+                fetchBookingsAndQuotes();
+              }}
+              className="space-y-4 mt-2"
+            >
+              <div>
+                <label className="text-xs font-medium text-muted-foreground mb-1 block">Customer Name</label>
+                <input name="name" defaultValue={editingOrder.name || editingOrder.Name || ""} required className="input-base w-full" />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground mb-1 block">Email</label>
+                  <input name="email" type="email" defaultValue={editingOrder.email || editingOrder.Email || ""} required className="input-base w-full" />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground mb-1 block">Phone</label>
+                  <input name="phone" defaultValue={editingOrder.phone || editingOrder.Phone_Number || ""} required className="input-base w-full" />
+                </div>
+              </div>
+              <div>
+                <label className="text-xs font-medium text-muted-foreground mb-1 block">Service Type</label>
+                <input name="service_type" defaultValue={editingOrder.service_type || ""} required className="input-base w-full" />
+              </div>
+
+              {editingOrder.type === "appointment" ? (
+                <>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-xs font-medium text-muted-foreground mb-1 block">Preferred Date</label>
+                      <input name="preferred_date" type="text" placeholder="YYYY-MM-DD" defaultValue={editingOrder.preferred_date || ""} className="input-base w-full" />
+                    </div>
+                    <div>
+                      <label className="text-xs font-medium text-muted-foreground mb-1 block">Preferred Time</label>
+                      <input name="preferred_time" type="text" placeholder="e.g. 10:00 AM" defaultValue={editingOrder.preferred_time || ""} className="input-base w-full" />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-muted-foreground mb-1 block">Assigned Technician</label>
+                    <select
+                      name="assignedTechId"
+                      defaultValue={editingOrder.assignedTechId || "unassigned"}
+                      className="w-full bg-background border border-border rounded-lg p-2 text-xs text-foreground"
+                    >
+                      <option value="unassigned">Unassigned</option>
+                      {teamMembers.map((t) => (
+                        <option key={t.id} value={t.id}>{t.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-muted-foreground mb-1 block">Project Description</label>
+                    <textarea name="project_description" defaultValue={editingOrder.project_description || editingOrder.Project_Description || ""} rows={3} className="input-base w-full resize-none" />
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div>
+                    <label className="text-xs font-medium text-muted-foreground mb-1 block">Estimated Cost ($)</label>
+                    <input name="estimated_quote" type="number" defaultValue={editingOrder.estimated_quote || 0} className="input-base w-full" />
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-muted-foreground mb-1 block">Scope Details</label>
+                    <textarea name="project_details" defaultValue={editingOrder.project_details || ""} rows={3} className="input-base w-full resize-none" />
+                  </div>
+                </>
+              )}
+
+              <div>
+                <label className="text-xs font-medium text-muted-foreground mb-1 block">Status</label>
+                <select
+                  name="status"
+                  defaultValue={editingOrder.status || "Pending"}
+                  className="w-full bg-background border border-border rounded-lg p-2 text-xs text-foreground capitalize"
+                >
+                  <option value="Pending">Pending</option>
+                  <option value="Confirmed">Confirmed</option>
+                  <option value="Completed">Completed</option>
+                  <option value="Cancelled">Cancelled</option>
+                </select>
+              </div>
+
+              <div className="flex justify-end gap-2 pt-3">
+                <Button type="button" variant="outline" onClick={() => setEditingOrder(null)}>Cancel</Button>
+                <Button type="submit">Save Changes</Button>
+              </div>
+            </form>
           </DialogContent>
         </Dialog>
       )}

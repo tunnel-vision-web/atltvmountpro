@@ -48,6 +48,7 @@ import {
   autoCreateInvoiceForBooking,
   statusColors,
   sendInvoiceVia,
+  updateInvoice,
 } from "@/lib/invoiceUtils";
 import pb from "@/lib/pocketbaseClient";
 
@@ -60,6 +61,7 @@ const FinanceModule = ({ initialData = null, currentUser = null }) => {
   const [showSend, setShowSend] = useState(false);
   const [selectedInvoice, setSelectedInvoice] = useState(null);
   const [filterStatus, setFilterStatus] = useState("all");
+  const [editingInvoiceId, setEditingInvoiceId] = useState(null);
 
   // Accountant and Tax updates
   const role = currentUser?.role || pb.authStore.record?.role || "Admin";
@@ -249,6 +251,26 @@ const FinanceModule = ({ initialData = null, currentUser = null }) => {
       phone: form.clientPhone,
     });
 
+    if (editingInvoiceId) {
+      const updated = updateInvoice(editingInvoiceId, {
+        clientName: form.clientName,
+        clientEmail: form.clientEmail,
+        clientPhone: form.clientPhone,
+        items: form.items,
+        notes: form.notes,
+        jobDate: form.jobDate || null,
+        dueDate: form.dueDate || null,
+      });
+      if (updated) {
+        setInvoices(getInvoices());
+        toast.success(`Invoice ${updated.number} updated.`);
+      }
+      setEditingInvoiceId(null);
+      setShowCreate(false);
+      setForm(blankForm);
+      return;
+    }
+
     const subtotal = calculateTotal(form.items);
     const tax = subtotal * 0.07;
     const total = subtotal + tax;
@@ -278,6 +300,22 @@ const FinanceModule = ({ initialData = null, currentUser = null }) => {
     setShowCreate(false);
     setForm(blankForm);
     toast.success(`Invoice ${invoice.number} created.`);
+  };
+
+  const openEditInvoice = (inv) => {
+    setForm({
+      clientName: inv.clientName || "",
+      clientEmail: inv.clientEmail || "",
+      clientPhone: inv.clientPhone || "",
+      items: inv.items || [{ description: "", quantity: 1, rate: 0 }],
+      notes: inv.notes || "",
+      jobDate: inv.jobDate || "",
+      dueDate: inv.dueDate || "",
+      bookingId: inv.bookingId || null,
+    });
+    setEditingInvoiceId(inv.id);
+    setShowViewInvoice(false);
+    setShowCreate(true);
   };
 
   const deleteInvoice = (id) => {
@@ -738,7 +776,7 @@ const FinanceModule = ({ initialData = null, currentUser = null }) => {
             </div>
             {(() => {
               const totalTaxPages = Math.ceil(taxPaidInvoices.length / taxItemsPerPage) || 1;
-              if (totalTaxPages > 1) {
+              if (taxPaidInvoices.length > 0) {
                 return (
                   <div className="flex items-center justify-between pt-4 border-t border-border">
                     <span className="text-xs text-muted-foreground">
@@ -975,7 +1013,7 @@ const FinanceModule = ({ initialData = null, currentUser = null }) => {
                     </div>
                   ))}
 
-                  {totalPages > 1 && (
+                  {filteredInvoices.length > 0 && (
                     <div className="flex items-center justify-between pt-4 border-t border-border mt-4">
                       <span className="text-xs text-muted-foreground">
                         Showing {startIndex + 1} to {Math.min(startIndex + itemsPerPage, filteredInvoices.length)} of {filteredInvoices.length} entries
@@ -1019,14 +1057,20 @@ const FinanceModule = ({ initialData = null, currentUser = null }) => {
             setShowDirectoryPicker(false);
             setShowNewClientForm(false);
             setDirectorySearch("");
+            setEditingInvoiceId(null);
+            setForm(blankForm);
           }
         }}
       >
         <DialogContent className="w-full max-w-[560px] max-h-[90vh] flex flex-col p-0 gap-0 overflow-hidden">
           <DialogHeader className="px-6 pt-6 pb-4 border-b border-border flex-shrink-0">
-            <DialogTitle className="text-lg">Create Invoice</DialogTitle>
+            <DialogTitle className="text-lg">
+              {editingInvoiceId ? "Edit Invoice" : "Create Invoice"}
+            </DialogTitle>
             <DialogDescription className="text-sm mt-0.5">
-              Pick a client from your directory or add a new one.
+              {editingInvoiceId
+                ? "Update your invoice details below."
+                : "Pick a client from your directory or add a new one."}
             </DialogDescription>
           </DialogHeader>
           <div className="overflow-y-auto flex-1 px-6 py-5 space-y-4">
@@ -1276,7 +1320,7 @@ const FinanceModule = ({ initialData = null, currentUser = null }) => {
               className="bg-primary hover:bg-primary/90 text-primary-foreground"
               onClick={createInvoice}
             >
-              Create Invoice
+              {editingInvoiceId ? "Save Changes" : "Create Invoice"}
             </Button>
           </div>
         </DialogContent>
@@ -1665,6 +1709,15 @@ const FinanceModule = ({ initialData = null, currentUser = null }) => {
                 >
                   <Printer size={14} /> Print Invoice
                 </Button>
+                {role !== "Viewer" && (
+                  <Button
+                    variant="outline"
+                    onClick={() => openEditInvoice(selectedInvoice)}
+                    className="gap-1.5"
+                  >
+                    <Pencil size={14} /> Edit Invoice
+                  </Button>
+                )}
                 <Button onClick={() => setShowViewInvoice(false)}>Close</Button>
               </div>
             </div>

@@ -127,9 +127,10 @@ const ProjectDetailPage = () => {
             </div>
 
             {/* Description */}
-            <p className="text-muted-foreground leading-relaxed text-base mb-10">
-              {project.description}
-            </p>
+            <div
+              className="text-muted-foreground leading-relaxed text-base mb-10 prose dark:prose-invert max-w-none"
+              dangerouslySetInnerHTML={{ __html: project.description }}
+            />
 
             {/* Services */}
             <div className="border-t border-border pt-8 mb-10">

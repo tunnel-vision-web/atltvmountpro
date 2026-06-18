@@ -57,6 +57,7 @@ export default function CRMModule() {
   const contactsItemsPerPage = 10;
   const [blastsPage, setBlastsPage] = useState(1);
   const blastsItemsPerPage = 5;
+  const [selectedBlast, setSelectedBlast] = useState(null);
 
   useEffect(() => {
     setContactsPage(1);
@@ -564,7 +565,7 @@ export default function CRMModule() {
             </div>
 
             {/* Contacts Table */}
-            <div className="border border-border/80 rounded-lg overflow-hidden bg-background">
+            <div className="border border-border/80 rounded-lg overflow-x-auto bg-background">
               <table className="w-full text-xs text-left">
                 <thead className="bg-muted/80 text-muted-foreground font-semibold border-b border-border">
                   <tr>
@@ -614,9 +615,9 @@ export default function CRMModule() {
                       >
                         <td className="px-4 py-3.5">
                           <div className="font-bold text-foreground">{c.name}</div>
-                          <div className="text-muted-foreground text-[10px] flex items-center gap-1.5 mt-0.5">
+                          <div className="text-muted-foreground text-[10px] flex flex-wrap items-center gap-1.5 mt-0.5 break-all">
                             <span>{c.email}</span>
-                            {c.phone && <span className="before:content-['•'] before:mr-1.5">{c.phone}</span>}
+                            {c.phone && <span className="before:content-['•'] before:mr-1.5 shrink-0">{c.phone}</span>}
                           </div>
                         </td>
                         <td className="px-4 py-3.5">
@@ -682,7 +683,7 @@ export default function CRMModule() {
             {(() => {
               const totalContactsPages = Math.ceil(filteredContacts.length / contactsItemsPerPage) || 1;
               const contactsStartIndex = (contactsPage - 1) * contactsItemsPerPage;
-              if (totalContactsPages > 1) {
+              if (filteredContacts.length > 0) {
                 return (
                   <div className="flex items-center justify-between pt-4 border-t border-border">
                     <span className="text-xs text-muted-foreground">
@@ -975,9 +976,16 @@ export default function CRMModule() {
                   }
                   
                   return (
-                    <div key={b.id} className="bg-background border border-border p-3.5 rounded-lg space-y-2 relative group">
+                    <div 
+                      key={b.id} 
+                      onClick={() => setSelectedBlast(b)}
+                      className="bg-background border border-border p-3.5 rounded-lg space-y-2 relative group cursor-pointer hover:border-primary transition-all text-left"
+                    >
                       <button
-                        onClick={() => handleDeleteBlast(b.id)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteBlast(b.id);
+                        }}
                         className="absolute right-2 top-2 p-1 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
                         title="Delete Log"
                       >
@@ -994,7 +1002,7 @@ export default function CRMModule() {
                       </div>
 
                       {b.subject && <div className="text-[11px] font-bold text-foreground line-clamp-1">{b.subject}</div>}
-                      <p className="text-[10px] text-muted-foreground line-clamp-2 italic">"{b.body}"</p>
+                      <p className="text-[10px] text-muted-foreground line-clamp-2 italic">"{b.body ? b.body.replace(/<[^>]*>/g, "") : ""}"</p>
 
                       <div className="flex justify-between items-center text-[10px] pt-1.5 border-t border-border/40">
                         <span className="text-muted-foreground">Sent by: {b.sent_by?.split("@")[0]}</span>
@@ -1012,7 +1020,7 @@ export default function CRMModule() {
 
             {(() => {
               const totalBlastsPages = Math.ceil(blasts.length / blastsItemsPerPage) || 1;
-              if (totalBlastsPages > 1) {
+              if (blasts.length > 0) {
                 return (
                   <div className="flex items-center justify-between pt-4 border-t border-border mt-4">
                     <span className="text-xs text-muted-foreground">
@@ -1288,6 +1296,94 @@ export default function CRMModule() {
             <Button onClick={() => setShowPreviewModal(false)} size="sm">
               Back to Editor
             </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── HISTORICAL BLAST DETAILS DIALOG ──────────────────────────────────── */}
+      <Dialog open={!!selectedBlast} onOpenChange={(open) => !open && setSelectedBlast(null)}>
+        <DialogContent className="max-w-2xl bg-card border border-border p-0 overflow-hidden max-h-[85vh] flex flex-col text-foreground">
+          <DialogHeader className="px-5 py-4 border-b border-border flex flex-row items-center justify-between shrink-0 space-y-0">
+            <DialogTitle className="text-base font-extrabold flex items-center gap-1.5">
+              <History size={18} className="text-primary" /> Logged Broadcast Details
+            </DialogTitle>
+            <Button variant="ghost" size="icon" className="h-6 w-6 hover:bg-muted" onClick={() => setSelectedBlast(null)}>
+              <X size={14} />
+            </Button>
+          </DialogHeader>
+
+          {selectedBlast && (
+            <div className="flex-1 overflow-y-auto p-6 space-y-6">
+              {/* Metadata Details */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 bg-muted/30 border border-border/60 rounded-xl text-xs">
+                <div>
+                  <span className="text-muted-foreground font-medium block">Sent Date</span>
+                  <span className="font-bold text-foreground">
+                    {new Date(selectedBlast.sent_date || selectedBlast.created).toLocaleString()}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-muted-foreground font-medium block">Channel</span>
+                  <span className="font-bold text-primary capitalize">{selectedBlast.channel}</span>
+                </div>
+                <div>
+                  <span className="text-muted-foreground font-medium block">Target Segment</span>
+                  <span className="font-bold text-foreground">{selectedBlast.audience}</span>
+                </div>
+                <div>
+                  <span className="text-muted-foreground font-medium block">Sender IP/User</span>
+                  <span className="font-bold text-foreground">{selectedBlast.sent_by}</span>
+                </div>
+              </div>
+
+              {/* Delivery Stats */}
+              <div>
+                <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2">Delivery Results</h4>
+                {(() => {
+                  let stats = { sent: 0, skipped: 0, failed: 0 };
+                  if (selectedBlast.stats) {
+                    stats = typeof selectedBlast.stats === "string" ? JSON.parse(selectedBlast.stats) : selectedBlast.stats;
+                  }
+                  return (
+                    <div className="grid grid-cols-3 gap-2 text-center p-3 bg-background border border-border rounded-lg text-xs">
+                      <div>
+                        <span className="text-[10px] text-emerald-500 font-bold block">✓ Delivered</span>
+                        <span className="text-base font-extrabold text-emerald-500">{stats.sent}</span>
+                      </div>
+                      <div>
+                        <span className="text-[10px] text-amber-500 font-bold block">↷ Skipped</span>
+                        <span className="text-base font-extrabold text-amber-500">{stats.skipped}</span>
+                      </div>
+                      <div>
+                        <span className="text-[10px] text-destructive font-bold block">✗ Failed</span>
+                        <span className="text-base font-extrabold text-destructive">{stats.failed}</span>
+                      </div>
+                    </div>
+                  );
+                })()}
+              </div>
+
+              {/* Message Content */}
+              <div className="space-y-2">
+                <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Message Content</h4>
+                <div className="bg-background border border-border rounded-xl overflow-hidden shadow-sm">
+                  {selectedBlast.channel === "Email" && (
+                    <div className="bg-muted/30 px-4 py-2 text-xs border-b border-border font-mono flex justify-between">
+                      <span className="text-muted-foreground font-bold">Subject:</span>
+                      <span className="text-foreground font-bold">{selectedBlast.subject || "(No Subject)"}</span>
+                    </div>
+                  )}
+                  <div 
+                    className="p-5 text-sm leading-relaxed prose dark:prose-invert max-w-none bg-background overflow-x-auto text-foreground"
+                    dangerouslySetInnerHTML={{ __html: selectedBlast.body || "<p class='text-muted-foreground italic'>(Empty message)</p>" }}
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+
+          <div className="px-5 py-4 border-t border-border flex justify-end shrink-0 bg-muted/10">
+            <Button onClick={() => setSelectedBlast(null)}>Close Details</Button>
           </div>
         </DialogContent>
       </Dialog>
