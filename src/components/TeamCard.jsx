@@ -28,7 +28,7 @@ const TeamCard = ({ photo, photoFallback, name, bio, skills, index }) => {
           <h3 className="text-xl font-semibold mb-2 text-card-foreground">
             {name}
           </h3>
-          <p className="text-muted-foreground mb-4 leading-relaxed">{bio}</p>
+          <div className="text-muted-foreground mb-4 leading-relaxed prose prose-sm max-w-none text-xs dark:prose-invert" dangerouslySetInnerHTML={{ __html: bio }} />
           <div className="flex flex-wrap gap-2">
             {skills.map((skill, i) => (
               <span

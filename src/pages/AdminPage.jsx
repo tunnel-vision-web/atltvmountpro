@@ -657,12 +657,9 @@ const TechFormDialog = ({ open, onClose, initial, onSaved }) => {
           />
           <div>
             <label className="text-sm font-medium mb-1 block">Bio *</label>
-            <textarea
+            <RichTextEditor
               value={form.bio}
-              onChange={(e) => setForm({ ...form, bio: e.target.value })}
-              required
-              rows={3}
-              className="input-base w-full resize-none"
+              onChange={(val) => setForm({ ...form, bio: val })}
               placeholder="A brief bio of the technician..."
             />
           </div>
@@ -1071,6 +1068,18 @@ const AdminPage = () => {
   const usersItemsPerPage = 5;
 
   const [editingOrder, setEditingOrder] = useState(null);
+  const [orderDescContent, setOrderDescContent] = useState("");
+
+  useEffect(() => {
+    if (editingOrder) {
+      const initialContent = editingOrder.type === "appointment"
+        ? (editingOrder.project_description || editingOrder.Project_Description || "")
+        : (editingOrder.project_details || "");
+      setOrderDescContent(initialContent);
+    } else {
+      setOrderDescContent("");
+    }
+  }, [editingOrder]);
 
   useEffect(() => {
     setBookingsPage(1);
@@ -3591,9 +3600,10 @@ const AdminPage = () => {
                   </div>
                   <div className="grid grid-cols-3 border-b border-border/50 py-1.5">
                     <span className="text-muted-foreground">Job Details</span>
-                    <span className="col-span-2 whitespace-pre-wrap">
-                      {selectedOrder.project_description || "None provided"}
-                    </span>
+                    <div 
+                      className="col-span-2 prose prose-sm max-w-none text-xs dark:prose-invert"
+                      dangerouslySetInnerHTML={{ __html: selectedOrder.project_description || "None provided" }}
+                    />
                   </div>
                   {(() => {
                     const hwItems = selectedOrder.hardwareItems || extractHardwareItems(selectedOrder.project_description);
@@ -3626,9 +3636,10 @@ const AdminPage = () => {
                   </div>
                   <div className="grid grid-cols-3 border-b border-border/50 py-1.5">
                     <span className="text-muted-foreground">Scope Details</span>
-                    <span className="col-span-2 whitespace-pre-wrap">
-                      {selectedOrder.project_details || "None provided"}
-                    </span>
+                    <div 
+                      className="col-span-2 prose prose-sm max-w-none text-xs dark:prose-invert"
+                      dangerouslySetInnerHTML={{ __html: selectedOrder.project_details || "None provided" }}
+                    />
                   </div>
                 </>
               )}
@@ -3706,8 +3717,8 @@ const AdminPage = () => {
                 if (editingOrder.type === "appointment") {
                   updates.preferred_date = formData.get("preferred_date");
                   updates.preferred_time = formData.get("preferred_time");
-                  updates.project_description = formData.get("project_description");
-                  updates.Project_Description = updates.project_description;
+                  updates.project_description = orderDescContent;
+                  updates.Project_Description = orderDescContent;
 
                   const assignedTechId = formData.get("assignedTechId");
                   if (assignedTechId === "unassigned") {
@@ -3724,7 +3735,7 @@ const AdminPage = () => {
                   await handleUpdateBooking(editingOrder.id, updates);
                 } else {
                   updates.estimated_quote = Number(formData.get("estimated_quote"));
-                  updates.project_details = formData.get("project_details");
+                  updates.project_details = orderDescContent;
                   await handleUpdateQuote(editingOrder.id, updates);
                 }
 
@@ -3779,7 +3790,11 @@ const AdminPage = () => {
                   </div>
                   <div>
                     <label className="text-xs font-medium text-muted-foreground mb-1 block">Project Description</label>
-                    <textarea name="project_description" defaultValue={editingOrder.project_description || editingOrder.Project_Description || ""} rows={3} className="input-base w-full resize-none" />
+                    <RichTextEditor
+                      value={orderDescContent}
+                      onChange={setOrderDescContent}
+                      placeholder="Describe the project scope and outcome..."
+                    />
                   </div>
                 </>
               ) : (
@@ -3790,7 +3805,11 @@ const AdminPage = () => {
                   </div>
                   <div>
                     <label className="text-xs font-medium text-muted-foreground mb-1 block">Scope Details</label>
-                    <textarea name="project_details" defaultValue={editingOrder.project_details || ""} rows={3} className="input-base w-full resize-none" />
+                    <RichTextEditor
+                      value={orderDescContent}
+                      onChange={setOrderDescContent}
+                      placeholder="Describe the scope details..."
+                    />
                   </div>
                 </>
               )}
