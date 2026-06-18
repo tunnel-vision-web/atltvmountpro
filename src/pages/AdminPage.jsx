@@ -213,19 +213,19 @@ const LoginScreen = ({ onLogin }) => {
 
     const lowerEmail = email.toLowerCase();
     if (password === "admin123" || lowerEmail.includes("admin123") || password === "password") {
-      onLogin({ email: "admin@atltvmountpro.com", role: ROLES.Admin, id: "mock_admin" });
+      onLogin({ email: "info@atltvmountpro.com", role: ROLES.Admin, id: "mock_admin" });
       toast.success("Signed in as Admin (Mock Bypass).");
       setLoading(false);
       return;
     }
     if (password === "mod123" || lowerEmail.includes("mod123")) {
-      onLogin({ email: "mod@atltvmountpro.com", role: ROLES.Moderator, id: "mock_mod" });
+      onLogin({ email: "moderator@atltvmountpro.com", role: ROLES.Moderator, id: "mock_mod" });
       toast.success("Signed in as Moderator (Mock Bypass).");
       setLoading(false);
       return;
     }
     if (password === "view123" || lowerEmail.includes("view123")) {
-      onLogin({ email: "view@atltvmountpro.com", role: ROLES.Viewer, id: "mock_view" });
+      onLogin({ email: "viewer@atltvmountpro.com", role: ROLES.Viewer, id: "mock_view" });
       toast.success("Signed in as Viewer (Mock Bypass).");
       setLoading(false);
       return;
@@ -1188,6 +1188,20 @@ const AdminPage = () => {
                 role: "Admin",
                 created: new Date().toISOString(),
               },
+              {
+                id: "local_2",
+                username: "atlmoderator",
+                email: "moderator@atltvmountpro.com",
+                role: "Moderator",
+                created: new Date().toISOString(),
+              },
+              {
+                id: "local_3",
+                username: "atlviewer",
+                email: "viewer@atltvmountpro.com",
+                role: "Viewer",
+                created: new Date().toISOString(),
+              },
             ],
       );
     }
@@ -1321,6 +1335,10 @@ const AdminPage = () => {
   };
 
   const handleTogglePermission = async (user, resource) => {
+    if (!hasPermission(currentUser, "canEdit", "users")) {
+      toast.error("You do not have permission to edit user permissions.");
+      return;
+    }
     let customPerms = {};
     if (user.custom_permissions) {
       if (typeof user.custom_permissions === "string") {
@@ -1500,6 +1518,10 @@ const AdminPage = () => {
 
   // --- Project callbacks ---
   const handleProjectSaved = (saved, isUpdate) => {
+    if (!hasPermission(currentUser, "canEdit", "projects")) {
+      toast.error("You do not have permission to edit projects.");
+      return;
+    }
     setProjects((prev) => {
       const updated = isUpdate
         ? prev.map((p) => (p.id === saved.id ? saved : p))
@@ -1510,6 +1532,10 @@ const AdminPage = () => {
   };
 
   const handleProjectDelete = async (id) => {
+    if (!hasPermission(currentUser, "canDelete", "projects")) {
+      toast.error("You do not have permission to delete projects.");
+      return;
+    }
     setDeletingProject(id);
     try {
       const res = await fetch(`/api/projects/${id}`, {
@@ -1552,6 +1578,10 @@ const AdminPage = () => {
   };
 
   const handleUpdateBooking = async (id, updates) => {
+    if (!hasPermission(currentUser, "canEdit", "orders")) {
+      toast.error("You do not have permission to edit bookings.");
+      return;
+    }
     const rawPayload = { ...updates };
     if (rawPayload.status) rawPayload.status = normalizeStatus(rawPayload.status);
 
@@ -1617,6 +1647,10 @@ const AdminPage = () => {
   };
 
   const handleUpdateQuote = async (id, updates) => {
+    if (!hasPermission(currentUser, "canEdit", "orders")) {
+      toast.error("You do not have permission to edit quotes.");
+      return;
+    }
     const payload = {};
     if ('name' in updates) payload.name = updates.name;
     if ('email' in updates) payload.email = updates.email;
@@ -1707,6 +1741,10 @@ const AdminPage = () => {
   };
 
   const handleDeleteOrder = async (collection, id) => {
+    if (!hasPermission(currentUser, "canDelete", "orders")) {
+      toast.error("You do not have permission to delete bookings/quotes.");
+      return;
+    }
     try {
       await pb.collection(collection).delete(id);
       toast.success("Booking deleted.");
@@ -1728,6 +1766,10 @@ const AdminPage = () => {
 
   // --- Team callbacks ---
   const handleTechSaved = (saved, isUpdate) => {
+    if (!hasPermission(currentUser, "canEdit", "team")) {
+      toast.error("You do not have permission to edit technicians.");
+      return;
+    }
     const updatedList = isUpdate
       ? teamMembers.map((t) => (t.id === saved.id ? saved : t))
       : [...teamMembers, saved];
@@ -1736,6 +1778,10 @@ const AdminPage = () => {
   };
 
   const handleDeleteTech = async (id) => {
+    if (!hasPermission(currentUser, "canDelete", "team")) {
+      toast.error("You do not have permission to delete technicians.");
+      return;
+    }
     try {
       await pb.collection("team_members").delete(id);
       toast.success("Technician deleted.");
@@ -1750,12 +1796,20 @@ const AdminPage = () => {
 
   // --- Profile / User callbacks ---
   const handleUserSaved = (saved) => {
+    if (!hasPermission(currentUser, "canEdit", "users")) {
+      toast.error("You do not have permission to create users.");
+      return;
+    }
     const updated = [...users, saved];
     setUsers(updated);
     localStorage.setItem(LOCAL_USERS_STORAGE, JSON.stringify(updated));
   };
 
   const handleDeleteUser = async (id) => {
+    if (!hasPermission(currentUser, "canDelete", "users")) {
+      toast.error("You do not have permission to delete users.");
+      return;
+    }
     try {
       await pb.collection("users").delete(id);
       toast.success("User deleted.");

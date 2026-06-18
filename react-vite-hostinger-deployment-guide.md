@@ -166,7 +166,7 @@ Work through this list top-to-bottom before escalating.
 - [x] `react-helmet` replaced/removed (removed; SEO handled via lightweight custom hook)
 - [x] Local `npm.cmd run build` completes without errors
 - [x] `dist/index.html` exists after local build
-- [ ] Changes committed and pushed to `main`
+- [x] Changes committed and pushed to `main`
 - [ ] Hostinger deployment log shows successful build and publish
 - [ ] If previously configured differently: old website entry removed and re-added as Node.js app
 - [ ] Live URL returns 200 and renders the app shell
