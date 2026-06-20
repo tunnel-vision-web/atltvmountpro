@@ -135,6 +135,33 @@
 
     * {
         border-color: hsl(var(--border));
+        scrollbar-width: thin;
+        scrollbar-color: hsl(var(--border)) transparent;
+    }
+
+    /* Custom WebKit Scrollbars */
+    ::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+    }
+    ::-webkit-scrollbar-track {
+        background: transparent;
+    }
+    ::-webkit-scrollbar-thumb {
+        background: hsl(var(--border));
+        border-radius: 9999px;
+        border: 2px solid transparent;
+        background-clip: content-box;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+        background: hsl(var(--primary));
+        border: 2px solid transparent;
+        background-clip: content-box;
+    }
+    ::-webkit-scrollbar-thumb:active {
+        background: hsl(var(--secondary));
+        border: 2px solid transparent;
+        background-clip: content-box;
     }
 
     html {
@@ -185,6 +212,15 @@
     }
     .input-base.pl-10, input.pl-10 {
         padding-left: 2.5rem !important;
+    }
+
+    /* Utility to hide scrollbar but maintain functionality */
+    .scrollbar-none {
+        -ms-overflow-style: none;  /* IE and Edge */
+        scrollbar-width: none;  /* Firefox */
+    }
+    .scrollbar-none::-webkit-scrollbar {
+        display: none; /* Chrome, Safari and Opera */
     }
 }
 

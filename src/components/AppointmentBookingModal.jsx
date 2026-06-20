@@ -92,6 +92,16 @@ const AppointmentBookingModal = () => {
       return;
     }
 
+    const isValidEmail = (email) => {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      return emailRegex.test(email);
+    };
+
+    if (!isValidEmail(formData.email)) {
+      toast.error("Please enter a valid email address.");
+      return;
+    }
+
     setLoading(true);
 
     const hardwareText = selectedHardware.length > 0

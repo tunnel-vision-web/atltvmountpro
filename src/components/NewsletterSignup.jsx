@@ -12,8 +12,13 @@ const NewsletterSignup = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    if (!email) {
-      toast.error('Please enter your email address');
+    const isValidEmail = (email) => {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      return emailRegex.test(email);
+    };
+
+    if (!email || !isValidEmail(email)) {
+      toast.error('Please enter a valid email address.');
       return;
     }
 

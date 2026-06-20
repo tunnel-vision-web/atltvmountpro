@@ -37,6 +37,9 @@ import {
   Eye,
   Printer,
   Receipt,
+  Clock,
+  Shield,
+  AlertTriangle,
 } from "lucide-react";
 import {
   getInvoices,
@@ -51,6 +54,12 @@ import {
   updateInvoice,
 } from "@/lib/invoiceUtils";
 import pb from "@/lib/pocketbaseClient";
+import { 
+  getEscrowLedger, 
+  saveEscrowLedger, 
+  createEscrowEntry, 
+  updateEscrowStatusByBooking 
+} from "@/lib/escrowUtils";
 
 export { autoCreateInvoiceForBooking, sendInvoiceVia, getInvoiceForBooking } from "@/lib/invoiceUtils";
 
@@ -67,6 +76,56 @@ const FinanceModule = ({ initialData = null, currentUser = null }) => {
   const role = currentUser?.role || pb.authStore.record?.role || "Admin";
   const [subTab, setSubTab] = useState("ledger");
   const [showViewInvoice, setShowViewInvoice] = useState(false);
+
+  const [escrowLedger, setEscrowLedger] = useState([]);
+  const [disputedEntry, setDisputedEntry] = useState(null);
+  const [showDisputeModal, setShowDisputeModal] = useState(false);
+
+  const refreshEscrow = () => {
+    setEscrowLedger(getEscrowLedger());
+  };
+
+  useEffect(() => {
+    refreshEscrow();
+  }, [subTab]);
+
+  const handleForceRelease = (bookingId) => {
+    updateEscrowStatusByBooking(bookingId, "Released");
+    refreshEscrow();
+    toast.success("Payout released from escrow successfully!");
+  };
+
+  const handleResolveDispute = (bookingId, forceRelease) => {
+    if (forceRelease) {
+      updateEscrowStatusByBooking(bookingId, "Released");
+      toast.success("Dispute resolved: Payout released to technician.");
+    } else {
+      updateEscrowStatusByBooking(bookingId, "Refunded");
+      
+      const invoice = getInvoices().find(i => i.bookingId === bookingId);
+      if (invoice) {
+        updateInvoice(invoice.id, { status: "refunded" });
+      }
+      
+      try {
+        const bookings = JSON.parse(localStorage.getItem("atltvmountpro_local_bookings") || "[]");
+        const bIdx = bookings.findIndex(b => b.id === bookingId);
+        if (bIdx !== -1) {
+          bookings[bIdx].status = "Refunded";
+          localStorage.setItem("atltvmountpro_local_bookings", JSON.stringify(bookings));
+        }
+      } catch (err) {
+        console.error("Failed to update booking status for refund", err);
+      }
+      
+      // Update parent invoices list state
+      setInvoices(getInvoices());
+      toast.success("Dispute resolved: Refund processed. Ledger updated.");
+    }
+    setShowDisputeModal(false);
+    setDisputedEntry(null);
+    refreshEscrow();
+  };
   const [showViewReceipt, setShowViewReceipt] = useState(false);
 
   // Pagination states
@@ -245,6 +304,16 @@ const FinanceModule = ({ initialData = null, currentUser = null }) => {
       return;
     }
 
+    const isValidEmail = (email) => {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      return emailRegex.test(email);
+    };
+
+    if (!isValidEmail(form.clientEmail)) {
+      toast.error("Please enter a valid client email address.");
+      return;
+    }
+
     saveClientToDirectory({
       name: form.clientName,
       email: form.clientEmail,
@@ -385,6 +454,26 @@ const FinanceModule = ({ initialData = null, currentUser = null }) => {
       
       saveInvoices(all);
       setInvoices(all);
+
+      // Update booking status to completed and create escrow entry
+      try {
+        const stored = localStorage.getItem("atltvmountpro_local_bookings");
+        const bookings = stored ? JSON.parse(stored) : [];
+        const booking = bookings.find(b => b.id === all[idx].bookingId);
+        if (booking) {
+          createEscrowEntry(booking, all[idx], 0);
+          const bIdx = bookings.findIndex(b => b.id === booking.id);
+          if (bIdx !== -1) {
+            bookings[bIdx].status = "completed";
+            localStorage.setItem("atltvmountpro_local_bookings", JSON.stringify(bookings));
+          }
+        }
+      } catch (err) {
+        console.warn("Failed to create escrow entry on recorded payment:", err);
+      }
+      
+      refreshEscrow();
+
       toast.success(
         `Payment of $${all[idx].total.toFixed(2)} received via ${method}. Receipt generated.`,
       );
@@ -440,6 +529,14 @@ const FinanceModule = ({ initialData = null, currentUser = null }) => {
   const addNewClientAndUse = () => {
     if (!newClient.name || !newClient.email) {
       toast.error("Name and email are required.");
+      return;
+    }
+    const isValidEmail = (email) => {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      return emailRegex.test(email);
+    };
+    if (!isValidEmail(newClient.email)) {
+      toast.error("Please enter a valid email address.");
       return;
     }
     const saved = saveClientToDirectory(newClient);
@@ -816,6 +913,170 @@ const FinanceModule = ({ initialData = null, currentUser = null }) => {
     );
   };
 
+  const renderEscrowTab = () => {
+    const totalHolding = escrowLedger
+      .filter(e => e.status === "Holding")
+      .reduce((sum, e) => sum + (parseFloat(e.baseCommission) || 0) + (parseFloat(e.tipAmount) || 0), 0);
+
+    const totalReleased = escrowLedger
+      .filter(e => e.status === "Released")
+      .reduce((sum, e) => sum + (parseFloat(e.baseCommission) || 0) + (parseFloat(e.tipAmount) || 0), 0);
+
+    const frozenDisputes = escrowLedger.filter(e => e.status === "Frozen");
+    const frozenAmount = frozenDisputes.reduce((sum, e) => sum + (parseFloat(e.baseCommission) || 0) + (parseFloat(e.tipAmount) || 0), 0);
+
+    return (
+      <div className="space-y-6 animate-fade-in">
+        {/* Header card */}
+        <div className="bg-card border border-border rounded-xl p-5">
+          <h2 className="text-lg font-bold text-foreground">Escrow Holds & Payouts</h2>
+          <p className="text-xs text-muted-foreground">Monitor technician payouts, release schedule, tips, and active disputes.</p>
+        </div>
+
+        {/* Holdings board cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="bg-card border border-border rounded-xl p-4 shadow-sm">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="w-8 h-8 rounded-lg bg-orange-500/10 flex items-center justify-center">
+                <Clock size={16} className="text-orange-500" />
+              </div>
+              <span className="text-sm text-muted-foreground">Total Escrowed (Holding)</span>
+            </div>
+            <p className="text-2xl font-bold">${totalHolding.toFixed(2)}</p>
+          </div>
+
+          <div className="bg-card border border-border rounded-xl p-4 shadow-sm">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center">
+                <CheckCircle2 size={16} className="text-emerald-500" />
+              </div>
+              <span className="text-sm text-muted-foreground">Total Released</span>
+            </div>
+            <p className="text-2xl font-bold">${totalReleased.toFixed(2)}</p>
+          </div>
+
+          <div className="bg-card border border-border rounded-xl p-4 shadow-sm">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="w-8 h-8 rounded-lg bg-red-500/10 flex items-center justify-center">
+                <AlertTriangle size={16} className="text-red-500" />
+              </div>
+              <span className="text-sm text-muted-foreground">Disputed / Frozen ({frozenDisputes.length})</span>
+            </div>
+            <p className="text-2xl font-bold text-red-500">${frozenAmount.toFixed(2)}</p>
+          </div>
+        </div>
+
+        {/* Holdings Table */}
+        <div className="bg-card border border-border rounded-xl overflow-hidden shadow-sm">
+          <div className="px-5 py-4 border-b border-border/60">
+            <h3 className="font-bold text-sm">Holdings & Payout Ledger</h3>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs border-collapse">
+              <thead>
+                <tr className="bg-muted/50 text-muted-foreground font-semibold border-b border-border">
+                  <th className="px-5 py-3">Job ID</th>
+                  <th className="px-5 py-3">Client</th>
+                  <th className="px-5 py-3">Technician</th>
+                  <th className="px-5 py-3">Invoice Total</th>
+                  <th className="px-5 py-3">Commission (70%)</th>
+                  <th className="px-5 py-3">Client Tip</th>
+                  <th className="px-5 py-3">Total Payout</th>
+                  <th className="px-5 py-3">Status</th>
+                  <th className="px-5 py-3">Release Timer</th>
+                  <th className="px-5 py-3 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border/50">
+                {escrowLedger.length === 0 ? (
+                  <tr>
+                    <td colSpan={10} className="text-center py-8 text-muted-foreground">
+                      No escrow holdings found.
+                    </td>
+                  </tr>
+                ) : (
+                  escrowLedger.map((e) => {
+                    const diffMs = e.releaseTime - Date.now();
+                    const remainingHours = Math.max(0, Math.ceil(diffMs / 3600000));
+                    const releaseStr = diffMs <= 0 ? "Ready" : `${remainingHours}h remaining`;
+                    
+                    return (
+                      <tr key={e.id} className="hover:bg-muted/10 transition-colors">
+                        <td className="px-5 py-3.5 font-mono text-muted-foreground">#{e.bookingId?.slice(-6)}</td>
+                        <td className="px-5 py-3.5">
+                          <span className="font-medium text-foreground block">{e.clientName}</span>
+                          <span className="text-[10px] text-muted-foreground">{e.clientEmail}</span>
+                        </td>
+                        <td className="px-5 py-3.5 font-medium text-foreground">{e.techName}</td>
+                        <td className="px-5 py-3.5 font-mono">${(e.invoiceTotal || 0).toFixed(2)}</td>
+                        <td className="px-5 py-3.5 font-mono text-emerald-500 font-semibold">${(e.baseCommission || 0).toFixed(2)}</td>
+                        <td className="px-5 py-3.5 font-mono text-indigo-400 font-semibold">${(e.tipAmount || 0).toFixed(2)}</td>
+                        <td className="px-5 py-3.5 font-mono font-bold text-foreground">${(e.totalPayout || 0).toFixed(2)}</td>
+                        <td className="px-5 py-3.5">
+                          <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold border ${
+                            e.status === "Released"
+                              ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/20"
+                              : e.status === "Frozen"
+                                ? "bg-red-500/10 text-red-500 border-red-500/20"
+                                : e.status === "Refunded"
+                                  ? "bg-gray-500/10 text-gray-500 border-gray-500/20"
+                                  : "bg-orange-500/10 text-orange-500 border-orange-500/20"
+                          }`}>
+                            {e.status === "Holding" ? "Holding" : e.status === "Frozen" ? "Disputed / Frozen" : e.status}
+                          </span>
+                        </td>
+                        <td className="px-5 py-3.5 text-muted-foreground">
+                          {e.status === "Holding" ? releaseStr : e.status === "Frozen" ? "Paused (Disputed)" : "N/A"}
+                        </td>
+                        <td className="px-5 py-3.5 text-right space-x-2">
+                          {e.status === "Holding" && (
+                            <>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleForceRelease(e.bookingId)}
+                                className="bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-500 border-emerald-500/30"
+                              >
+                                Force Release
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="destructive"
+                                onClick={() => {
+                                  updateEscrowStatusByBooking(e.bookingId, "Frozen");
+                                  refreshEscrow();
+                                  toast.warning("Payout frozen due to dispute.");
+                                }}
+                              >
+                                Freeze
+                              </Button>
+                            </>
+                          )}
+                          {e.status === "Frozen" && (
+                            <Button
+                              size="sm"
+                              className="bg-primary hover:bg-primary/90 text-primary-foreground"
+                              onClick={() => {
+                                setDisputedEntry(e);
+                                setShowDisputeModal(true);
+                              }}
+                            >
+                               Manage Dispute
+                            </Button>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="space-y-6">
       {/* Subtab selection - only visible if Admin or Accountant */}
@@ -832,6 +1093,16 @@ const FinanceModule = ({ initialData = null, currentUser = null }) => {
             Invoices Ledger
           </button>
           <button
+            onClick={() => setSubTab("escrow")}
+            className={`px-4 py-2.5 border-b-2 font-semibold text-sm transition-all duration-150 ${
+              subTab === "escrow"
+                ? "border-primary text-primary"
+                : "border-transparent text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            Escrow Holds & Payouts
+          </button>
+          <button
             onClick={() => setSubTab("tax")}
             className={`px-4 py-2.5 border-b-2 font-semibold text-sm transition-all duration-150 ${
               subTab === "tax"
@@ -846,6 +1117,8 @@ const FinanceModule = ({ initialData = null, currentUser = null }) => {
 
       {subTab === "tax" && (role === "Admin" || role === "Accountant") ? (
         renderTaxTab()
+      ) : subTab === "escrow" && (role === "Admin" || role === "Accountant") ? (
+        renderEscrowTab()
       ) : (
         <>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -1851,6 +2124,80 @@ const FinanceModule = ({ initialData = null, currentUser = null }) => {
                   <Printer size={14} /> Print Receipt
                 </Button>
                 <Button onClick={() => setShowViewReceipt(false)}>Close</Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* DISPUTE RESOLUTION DIALOG */}
+      <Dialog open={showDisputeModal} onOpenChange={setShowDisputeModal}>
+        <DialogContent className="max-w-md border border-border shadow-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-lg font-bold">Resolve Dispute</DialogTitle>
+            <DialogDescription className="text-xs text-muted-foreground">
+              A support claim has been filed. Please choose how to resolve this payout hold.
+            </DialogDescription>
+          </DialogHeader>
+          
+          {disputedEntry && (
+            <div className="space-y-4 my-2 text-sm">
+              <div className="bg-muted/40 p-4 rounded-xl space-y-2 border border-border">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Job Reference:</span>
+                  <span className="font-mono font-semibold">#{disputedEntry.bookingId?.slice(-6)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Client Name:</span>
+                  <span className="font-semibold">{disputedEntry.clientName}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Technician:</span>
+                  <span className="font-semibold">{disputedEntry.techName}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Service:</span>
+                  <span className="font-semibold">{disputedEntry.serviceType}</span>
+                </div>
+                <div className="border-t border-border/60 my-2 pt-2" />
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Tech Commission (70%):</span>
+                  <span className="font-mono font-semibold">${(disputedEntry.baseCommission || 0).toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Client Tip (100%):</span>
+                  <span className="font-mono font-semibold">${(disputedEntry.tipAmount || 0).toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between text-base font-bold text-foreground border-t border-border/60 pt-2 mt-1">
+                  <span>Total Payout:</span>
+                  <span className="font-mono text-primary">${(disputedEntry.totalPayout || 0).toFixed(2)}</span>
+                </div>
+              </div>
+              
+              <div className="flex flex-col gap-2 pt-2">
+                <Button
+                  onClick={() => handleResolveDispute(disputedEntry.bookingId, true)}
+                  className="bg-emerald-500 hover:bg-emerald-600 text-white w-full shadow-sm"
+                >
+                  Force Release Payout to Tech
+                </Button>
+                <Button
+                  onClick={() => handleResolveDispute(disputedEntry.bookingId, false)}
+                  variant="destructive"
+                  className="w-full shadow-sm"
+                >
+                  Issue Full Refund to Client
+                </Button>
+                <Button
+                  variant="ghost"
+                  onClick={() => {
+                    setShowDisputeModal(false);
+                    setDisputedEntry(null);
+                  }}
+                  className="w-full text-muted-foreground"
+                >
+                  Cancel & Close
+                </Button>
               </div>
             </div>
           )}

@@ -29,6 +29,7 @@ import CustomerAppPage from "./pages/CustomerAppPage";
 import BlogPage from "./pages/BlogPage";
 import BlogPostDetailPage from "./pages/BlogPostDetailPage";
 import TechnicianTermsPage from "./pages/TechnicianTermsPage";
+import SupportPage from "./pages/SupportPage";
 
 function App() {
   React.useEffect(() => {
@@ -102,6 +103,7 @@ function App() {
                       />
                       <Route path="/join" element={<JoinPage />} />
                       <Route path="/technician-terms" element={<TechnicianTermsPage />} />
+                      <Route path="/support" element={<SupportPage />} />
                     </Routes>
                   </main>
                   <Footer />

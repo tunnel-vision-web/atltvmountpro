@@ -1,0 +1,6 @@
+{
+  "appId": "com.atltvmountpro.app",
+  "appName": "Atlanta TV Mount PRO",
+  "webDir": "dist",
+  "bundledWebRuntime": false
+}

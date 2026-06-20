@@ -118,9 +118,30 @@ export default function JoinPage() {
     bgConsent: false,
     authorized: false,
     termsConsent: false,
+    referralCode: "",
   });
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
+
+  useEffect(() => {
+    const getQueryParam = (name) => {
+      const searchParams = new URLSearchParams(window.location.search);
+      if (searchParams.has(name)) return searchParams.get(name);
+      
+      const hash = window.location.hash;
+      const hashQueryIdx = hash.indexOf("?");
+      if (hashQueryIdx !== -1) {
+        const hashParams = new URLSearchParams(hash.slice(hashQueryIdx));
+        if (hashParams.has(name)) return hashParams.get(name);
+      }
+      return "";
+    };
+
+    const ref = getQueryParam("ref");
+    if (ref) {
+      setFormData(prev => ({ ...prev, referralCode: ref }));
+    }
+  }, []);
 
   const toggleSkill = (skill) => {
     setFormData((prev) => ({
@@ -150,6 +171,15 @@ export default function JoinPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    const isValidEmail = (email) => {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      return emailRegex.test(email);
+    };
+
+    if (!isValidEmail(formData.email)) {
+      toast.error("Please enter a valid email address.");
+      return;
+    }
     if (!formData.bgConsent || !formData.authorized) {
       toast.error("You must authorize the background check and certify authorization to work.");
       return;
@@ -170,6 +200,7 @@ export default function JoinPage() {
       skills: formData.skills,
       tools: formData.tools,
       notes: formData.notes,
+      referralCode: formData.referralCode || "",
       status: "Applied", // Initial recruitment stage
       created: new Date().toISOString(),
     };
@@ -186,6 +217,7 @@ export default function JoinPage() {
         skills: JSON.stringify(formData.skills),
         tools: JSON.stringify(formData.tools),
         notes: formData.notes,
+        referralCode: formData.referralCode || "",
         status: "Applied",
       }, { $autoCancel: false });
 
@@ -640,6 +672,17 @@ export default function JoinPage() {
                         required
                       />
                     </div>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label htmlFor="t-ref">Referral / Invite Code (Optional)</Label>
+                    <Input
+                      id="t-ref"
+                      value={formData.referralCode || ""}
+                      onChange={(e) => setFormData({ ...formData, referralCode: e.target.value })}
+                      placeholder="e.g. REF-TECH-1234"
+                      className="font-mono text-xs uppercase"
+                    />
                   </div>
 
                   <div className="flex justify-end pt-4">

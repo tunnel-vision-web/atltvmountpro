@@ -181,6 +181,10 @@ export function updateInvoice(id, updates) {
   const all = getInvoices();
   const idx = all.findIndex((i) => i.id === id);
   if (idx === -1) return null;
+
+  const wasPaid = all[idx].status === "paid";
+  const isRefunded = updates.status === "refunded";
+
   all[idx] = { ...all[idx], ...updates };
   if (updates.items) {
     const subtotal = updates.items.reduce(
@@ -193,6 +197,44 @@ export function updateInvoice(id, updates) {
     all[idx].tax = tax;
     all[idx].total = total;
   }
+
+  // If transitioning to refunded, insert negative transaction into the ledger
+  if (wasPaid && isRefunded) {
+    const original = all[idx];
+    const refundNo = "REF-" + original.number;
+    // Check if refund already exists in all
+    const alreadyRefunded = all.some(inv => inv.number === refundNo);
+    if (!alreadyRefunded) {
+      const refundEntry = {
+        id: "ref_" + Date.now() + "_" + Math.random().toString(36).substr(2, 6),
+        number: refundNo,
+        clientName: original.clientName,
+        clientEmail: original.clientEmail,
+        clientPhone: original.clientPhone || "",
+        clientId: original.clientId || null,
+        bookingId: original.bookingId,
+        jobId: original.jobId,
+        items: [
+          {
+            description: `Refund for ${original.number}`,
+            quantity: 1,
+            rate: -original.total,
+          }
+        ],
+        subtotal: -original.subtotal,
+        tax: -original.tax,
+        total: -original.total,
+        status: "paid", // marked paid so it counts in revenue totals
+        created: new Date().toISOString(),
+        jobDate: original.jobDate,
+        dueDate: original.dueDate,
+        paidDate: new Date().toISOString(),
+        paymentMethod: original.paymentMethod,
+      };
+      all.unshift(refundEntry);
+    }
+  }
+
   saveInvoices(all);
   return all[idx];
 }

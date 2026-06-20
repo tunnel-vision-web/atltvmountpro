@@ -37,6 +37,9 @@ import {
   MessageSquare,
   UserPlus,
   Briefcase,
+  LifeBuoy,
+  Bell,
+  Wrench,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -66,7 +69,9 @@ import {
   getInvoiceForBooking,
   sendInvoiceVia,
   getInvoices,
+  updateInvoice,
 } from "@/lib/invoiceUtils";
+import { updateEscrowStatusByBooking } from "@/lib/escrowUtils";
 import {
   ResponsiveContainer,
   AreaChart,
@@ -217,6 +222,11 @@ function hasPermission(roleOrUser, action, resource) {
   return matchedKey ? (PERMISSIONS[matchedKey]?.[action]?.includes(resource) ?? false) : false;
 }
 
+const isValidEmail = (email) => {
+  if (!email) return false;
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+};
+
 // ── Login screen ──────────────────────────────────────────────────────────────
 const LoginScreen = ({ onLogin }) => {
   const [email, setEmail] = useState("");
@@ -230,21 +240,45 @@ const LoginScreen = ({ onLogin }) => {
     setErr("");
     setLoading(true);
 
+    if (!isValidEmail(email)) {
+      setErr("Please enter a valid email address.");
+      setLoading(false);
+      return;
+    }
+
     const lowerEmail = email.toLowerCase();
     if (password === "admin123" || lowerEmail.includes("admin123") || password === "password") {
-      onLogin({ email: "info@atltvmountpro.com", role: ROLES.Admin, id: "mock_admin" });
+      onLogin({ 
+        email: "info@atltvmountpro.com", 
+        role: ROLES.Admin, 
+        id: "mock_admin",
+        username: "atladmin",
+        name: "ATL Admin"
+      });
       toast.success("Signed in as Admin (Mock Bypass).");
       setLoading(false);
       return;
     }
     if (password === "mod123" || lowerEmail.includes("mod123")) {
-      onLogin({ email: "moderator@atltvmountpro.com", role: ROLES.Moderator, id: "mock_mod" });
+      onLogin({ 
+        email: "moderator@atltvmountpro.com", 
+        role: ROLES.Moderator, 
+        id: "mock_mod",
+        username: "atlmoderator",
+        name: "ATL Moderator"
+      });
       toast.success("Signed in as Moderator (Mock Bypass).");
       setLoading(false);
       return;
     }
     if (password === "view123" || lowerEmail.includes("view123")) {
-      onLogin({ email: "viewer@atltvmountpro.com", role: ROLES.Viewer, id: "mock_view" });
+      onLogin({ 
+        email: "viewer@atltvmountpro.com", 
+        role: ROLES.Viewer, 
+        id: "mock_view",
+        username: "atlviewer",
+        name: "ATL Viewer"
+      });
       toast.success("Signed in as Viewer (Mock Bypass).");
       setLoading(false);
       return;
@@ -256,7 +290,14 @@ const LoginScreen = ({ onLogin }) => {
         .authWithPassword(email, password);
       // Role is already in the auth response record — no extra fetch needed
       const role = authData.record.role || ROLES.Admin;
-      onLogin({ email, role, id: authData.record.id });
+      onLogin({ 
+        id: authData.record.id,
+        email: authData.record.email || email, 
+        role, 
+        username: authData.record.username,
+        name: authData.record.name,
+        avatar: authData.record.avatar ? pb.files.getUrl(authData.record, authData.record.avatar) : null
+      });
       toast.success("Signed in successfully.");
     } catch (error) {
       console.error("Login error:", error);
@@ -292,25 +333,27 @@ const LoginScreen = ({ onLogin }) => {
               required
             />
           </div>
-          <div className="relative">
+          <div>
             <label className="text-xs font-medium text-muted-foreground mb-1 block">
               Password
             </label>
-            <input
-              type={showPassword ? "text" : "password"}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••"
-              className="w-full bg-muted border border-border rounded-lg px-4 py-2.5 pr-10 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
-              required
-            />
-            <button
-              type="button"
-              onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-3 top-[26px] text-muted-foreground hover:text-foreground"
-            >
-              {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
-            </button>
+            <div className="relative">
+              <input
+                type={showPassword ? "text" : "password"}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••"
+                className="w-full bg-muted border border-border rounded-lg px-4 py-2.5 pr-10 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
+                required
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground flex items-center"
+              >
+                {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+              </button>
+            </div>
           </div>
           {err && <p className="text-xs text-destructive">{err}</p>}
           <Button
@@ -726,6 +769,7 @@ const UserFormDialog = ({ open, onClose, initial, onSaved }) => {
     role: "Admin",
   });
   const [saving, setSaving] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => {
     if (open) {
@@ -739,11 +783,16 @@ const UserFormDialog = ({ open, onClose, initial, onSaved }) => {
             }
           : { username: "", email: "", password: "", role: "Admin" }
       );
+      setShowPassword(false);
     }
   }, [open, initial]);
 
   const submit = async (e) => {
     e.preventDefault();
+    if (!isValidEmail(form.email)) {
+      toast.error("Please enter a valid email address.");
+      return;
+    }
     setSaving(true);
     const payload = {
       username: form.username,
@@ -821,14 +870,23 @@ const UserFormDialog = ({ open, onClose, initial, onSaved }) => {
             <label className="text-sm font-medium mb-1 block">
               Password {initial ? "(leave blank to keep current)" : "*"}
             </label>
-            <input
-              type="password"
-              value={form.password}
-              onChange={(e) => setForm({ ...form, password: e.target.value })}
-              required={!initial}
-              className="input-base w-full"
-              placeholder="••••••••"
-            />
+            <div className="relative">
+              <input
+                type={showPassword ? "text" : "password"}
+                value={form.password}
+                onChange={(e) => setForm({ ...form, password: e.target.value })}
+                required={!initial}
+                className="input-base w-full pr-10"
+                placeholder="••••••••"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground flex items-center"
+              >
+                {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+              </button>
+            </div>
           </div>
           <div>
             <label className="text-sm font-medium mb-1 block">Role</label>
@@ -1540,6 +1598,82 @@ const AdminPage = () => {
   const [invoices, setInvoices] = useState([]);
   const [editingUser, setEditingUser] = useState(null);
 
+  // Header dropdown and credentials modal states
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const [credentialsModalOpen, setCredentialsModalOpen] = useState(false);
+  
+  // Profile sub-tabs state
+  const [profileSubTab, setProfileSubTab] = useState("users");
+  const [selectedPermissionUserId, setSelectedPermissionUserId] = useState(null);
+
+  // Technician Invite & Referral Link states
+  const [candidateName, setCandidateName] = useState("");
+  const [candidatePhone, setCandidatePhone] = useState("");
+  const [referralCode, setReferralCode] = useState("");
+  const [generatedLink, setGeneratedLink] = useState("");
+
+  const handleGenerateReferralLink = () => {
+    if (!referralCode.trim()) {
+      toast.error("Please enter or generate a referral code first.");
+      return;
+    }
+    const origin = window.location.origin + window.location.pathname;
+    const link = `${origin}#/join?ref=${encodeURIComponent(referralCode.trim().toUpperCase())}`;
+    setGeneratedLink(link);
+    toast.success("Recruitment link and referral code generated!");
+  };
+
+  const handleCopyLink = () => {
+    if (!generatedLink) return;
+    navigator.clipboard.writeText(generatedLink);
+    toast.success("Invite link copied to clipboard!");
+  };
+
+  const handleShareEmail = () => {
+    if (!generatedLink) return;
+    const subject = encodeURIComponent("Invitation to Join Atlanta TV Mount PRO Team");
+    const body = encodeURIComponent(
+      `Hi ${candidateName || "there"},\n\nWe would love to invite you to apply to join our technician network at Atlanta TV Mount PRO!\n\nYou can submit your experience, skills, and tools here:\n${generatedLink}\n\nReferral Code: ${referralCode.toUpperCase()}\n\nLooking forward to speaking with you!\nAtlanta TV Mount PRO Team`
+    );
+    window.open(`mailto:?subject=${subject}&body=${body}`, "_blank");
+  };
+
+  const handleShareWhatsApp = () => {
+    if (!generatedLink) return;
+    const text = encodeURIComponent(
+      `Hi ${candidateName || "there"},\n\nApply to join our tech network at Atlanta TV Mount PRO:\n${generatedLink}\n\nReferral Code: ${referralCode.toUpperCase()}`
+    );
+    window.open(`https://api.whatsapp.com/send?text=${text}`, "_blank");
+  };
+
+  const handleShareSMS = () => {
+    if (!generatedLink) return;
+    const text = encodeURIComponent(
+      `Apply to Atlanta TV Mount PRO: ${generatedLink} Ref: ${referralCode.toUpperCase()}`
+    );
+    window.open(`sms:${candidatePhone || ""}?body=${text}`, "_blank");
+    toast.success("SMS composer opened!");
+  };
+
+  // Dropdown Refs for click-outside
+  const notificationsRef = React.useRef(null);
+  const profileMenuRef = React.useRef(null);
+
+  // Click outside handler for dropdowns
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (notificationsRef.current && !notificationsRef.current.contains(event.target)) {
+        setShowNotifications(false);
+      }
+      if (profileMenuRef.current && !profileMenuRef.current.contains(event.target)) {
+        setShowProfileMenu(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
   // Sidebar navigation toggler for mobile
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
@@ -1579,6 +1713,19 @@ const AdminPage = () => {
     avatar: "/images/admin/admin-avatar.jpg",
     role: "Lead Administrator",
   });
+  const [profileNewPassword, setProfileNewPassword] = useState("");
+  const [profileConfirmPassword, setProfileConfirmPassword] = useState("");
+  const [credentialsUsername, setCredentialsUsername] = useState("");
+  const [credentialsEmail, setCredentialsEmail] = useState("");
+  const [credentialsPassword, setCredentialsPassword] = useState("");
+  const [credentialsConfirmPassword, setCredentialsConfirmPassword] = useState("");
+  const [showProfileNewPassword, setShowProfileNewPassword] = useState(false);
+  const [showProfileConfirmPassword, setShowProfileConfirmPassword] = useState(false);
+  const [showCredentialsNewPassword, setShowCredentialsNewPassword] = useState(false);
+  const [showCredentialsConfirmPassword, setShowCredentialsConfirmPassword] = useState(false);
+  const [showStandaloneNewPassword, setShowStandaloneNewPassword] = useState(false);
+  const [showStandaloneConfirmPassword, setShowStandaloneConfirmPassword] = useState(false);
+  const [showAdminPasswords, setShowAdminPasswords] = useState(false);
   const [users, setUsers] = useState([]);
   const [userDialogOpen, setUserDialogOpen] = useState(false);
   const [isEditingProfile, setIsEditingProfile] = useState(false);
@@ -1598,6 +1745,20 @@ const AdminPage = () => {
 
   const [projectsPage, setProjectsPage] = useState(1);
   const projectsItemsPerPage = 8;
+
+  // Support states
+  const [supportTickets, setSupportTickets] = useState([]);
+  const [loadingSupport, setLoadingSupport] = useState(false);
+  const [supportFilter, setSupportFilter] = useState("All");
+  const [supportCategoryFilter, setSupportCategoryFilter] = useState("All");
+  const [supportSearch, setSupportSearch] = useState("");
+  const [ticketToLink, setTicketToLink] = useState(null);
+  const [bookingToLink, setBookingToLink] = useState("");
+  const [ticketToRedispatch, setTicketToRedispatch] = useState(null);
+  const [techToRedispatch, setTechToRedispatch] = useState("");
+  const [selectedTicketImg, setSelectedTicketImg] = useState(null);
+  const [ticketToResolve, setTicketToResolve] = useState(null);
+  const [pointsDeducted, setPointsDeducted] = useState(0);
 
   const [usersPage, setUsersPage] = useState(1);
   const usersItemsPerPage = 5;
@@ -1815,6 +1976,204 @@ const AdminPage = () => {
     }
   }, []);
 
+  const fetchSupportTickets = useCallback(async () => {
+    setLoadingSupport(true);
+    try {
+      const tickets = await pb.collection("support_tickets").getFullList({ sort: "-created" });
+      setSupportTickets(tickets);
+      localStorage.setItem("atltv_local_support_tickets", JSON.stringify(tickets));
+    } catch (err) {
+      console.warn("PB support tickets fetch failed, reading localStorage:", err);
+      const stored = localStorage.getItem("atltv_local_support_tickets");
+      setSupportTickets(stored ? JSON.parse(stored) : []);
+    } finally {
+      setLoadingSupport(false);
+    }
+  }, []);
+
+  const handleLinkTicketBooking = async (ticketId, bookingId) => {
+    const bookings = JSON.parse(localStorage.getItem(LOCAL_BOOKINGS_STORAGE) || "[]");
+    const matched = bookings.find(b => b.id === bookingId);
+    if (!matched) {
+      toast.error("Booking not found.");
+      return;
+    }
+
+    try {
+      const updates = {
+        booking_id: matched.id,
+        booking_service: matched.service_type || matched.service,
+        technician_id: matched.assignedTechId || matched.technicianId || null,
+        technician_name: matched.assignedTechName || matched.technicianName || null,
+      };
+
+      try {
+        await pb.collection("support_tickets").update(ticketId, updates);
+      } catch {}
+
+      setSupportTickets(prev => prev.map(t => t.id === ticketId ? { ...t, ...updates } : t));
+      const cached = JSON.parse(localStorage.getItem("atltv_local_support_tickets") || "[]");
+      const idx = cached.findIndex(t => t.id === ticketId);
+      if (idx !== -1) {
+        cached[idx] = { ...cached[idx], ...updates };
+        localStorage.setItem("atltv_local_support_tickets", JSON.stringify(cached));
+      }
+
+      // Freeze corresponding escrow entry
+      try {
+        updateEscrowStatusByBooking(matched.id, "Frozen");
+      } catch (escrowErr) {
+        console.warn("Failed to freeze escrow on ticket link:", escrowErr);
+      }
+
+      toast.success("Ticket successfully linked to booking!");
+      setTicketToLink(null);
+      setBookingToLink("");
+    } catch (err) {
+      toast.error("Failed to link ticket.");
+    }
+  };
+
+  const handleIssueTicketRefund = async (ticket) => {
+    if (!ticket.booking_id) {
+      toast.error("Please link the ticket to a booking first.");
+      return;
+    }
+
+    try {
+      const bookings = JSON.parse(localStorage.getItem(LOCAL_BOOKINGS_STORAGE) || "[]");
+      const bIdx = bookings.findIndex(b => b.id === ticket.booking_id);
+      if (bIdx !== -1) {
+        bookings[bIdx].status = "Refunded";
+        localStorage.setItem(LOCAL_BOOKINGS_STORAGE, JSON.stringify(bookings));
+      }
+
+      try {
+        await pb.collection("support_tickets").update(ticket.id, { status: "Refunded" });
+      } catch {}
+
+      setSupportTickets(prev => prev.map(t => t.id === ticket.id ? { ...t, status: "Refunded" } : t));
+      const cached = JSON.parse(localStorage.getItem("atltv_local_support_tickets") || "[]");
+      const idx = cached.findIndex(t => t.id === ticket.id);
+      if (idx !== -1) {
+        cached[idx] = { ...cached[idx], status: "Refunded" };
+        localStorage.setItem("atltv_local_support_tickets", JSON.stringify(cached));
+      }
+
+      // Sync Refund Hooks: update matching invoice in atltv_invoices to "refunded"
+      const invoice = getInvoiceForBooking(ticket.booking_id);
+      if (invoice) {
+        updateInvoice(invoice.id, { status: "refunded" });
+      }
+      // Escrow Cancellation: update escrow status to Refunded (resets tech payouts)
+      try {
+        updateEscrowStatusByBooking(ticket.booking_id, "Refunded");
+      } catch (escrowErr) {
+        console.warn("Failed to update escrow status to Refunded:", escrowErr);
+      }
+      // Refresh invoices state
+      setInvoices(getInvoices());
+
+      toast.success("Refund processed successfully!");
+    } catch (err) {
+      toast.error("Failed to process refund.");
+    }
+  };
+
+  const handleResolveTicket = async (ticket, pointsDeducted) => {
+    try {
+      if (ticket.technician_id && pointsDeducted > 0) {
+        const team = JSON.parse(localStorage.getItem(LOCAL_TEAM_STORAGE) || "[]");
+        const tIdx = team.findIndex(t => t.id === ticket.technician_id || t.name === ticket.technician_name);
+        if (tIdx !== -1) {
+          const currentTQS = team[tIdx].tqs !== undefined ? team[tIdx].tqs : 100;
+          const newTQS = Math.max(0, currentTQS - pointsDeducted);
+          team[tIdx].tqs = newTQS;
+          if (newTQS < 75) {
+            team[tIdx].isSuspended = true;
+            toast.warning(`Technician ${team[tIdx].name} score dropped to ${newTQS}. Profile has been SUSPENDED.`);
+          } else {
+            toast.info(`Technician ${team[tIdx].name} quality rating updated to ${newTQS}.`);
+          }
+          localStorage.setItem(LOCAL_TEAM_STORAGE, JSON.stringify(team));
+          setTeamMembers(team);
+
+          try {
+            await pb.collection("team_members").update(ticket.technician_id, {
+              tqs: newTQS,
+              isSuspended: newTQS < 75,
+            });
+          } catch {}
+        }
+      }
+
+      try {
+        await pb.collection("support_tickets").update(ticket.id, { status: "Resolved" });
+      } catch {}
+
+      setSupportTickets(prev => prev.map(t => t.id === ticket.id ? { ...t, status: "Resolved" } : t));
+      const cached = JSON.parse(localStorage.getItem("atltv_local_support_tickets") || "[]");
+      const idx = cached.findIndex(t => t.id === ticket.id);
+      if (idx !== -1) {
+        cached[idx] = { ...cached[idx], status: "Resolved" };
+        localStorage.setItem("atltv_local_support_tickets", JSON.stringify(cached));
+      }
+      toast.success("Ticket resolved successfully!");
+    } catch (err) {
+      toast.error("Failed to resolve ticket.");
+    }
+  };
+
+  const handleRedispatchRepair = async (ticket, newTechId) => {
+    const team = JSON.parse(localStorage.getItem(LOCAL_TEAM_STORAGE) || "[]");
+    const newTech = team.find(t => t.id === newTechId);
+    if (!newTech) {
+      toast.error("Selected technician not found.");
+      return;
+    }
+
+    try {
+      const bookings = JSON.parse(localStorage.getItem(LOCAL_BOOKINGS_STORAGE) || "[]");
+      const newBookingId = "BK-" + Math.floor(100000 + Math.random() * 900000);
+      const repairBooking = {
+        id: newBookingId,
+        name: ticket.client_name,
+        email: ticket.client_email,
+        phone: ticket.client_phone,
+        service_type: `${ticket.booking_service || "Mounting"} (Warranty Repair)`,
+        preferred_date: new Date(Date.now() + 86400000).toISOString().split('T')[0],
+        preferred_time: "Anytime",
+        project_description: `Warranty repair redispatch from Ticket ${ticket.id}. Original issues: ${ticket.description}`,
+        estimated_quote: "0.00",
+        assignedTechId: newTech.id,
+        assignedTechName: newTech.name,
+        assignedTechEmail: newTech.email || "",
+        status: "Scheduled",
+        created: new Date().toISOString(),
+      };
+
+      bookings.push(repairBooking);
+      localStorage.setItem(LOCAL_BOOKINGS_STORAGE, JSON.stringify(bookings));
+
+      try {
+        await pb.collection("support_tickets").update(ticket.id, { status: "Scheduled Repair" });
+      } catch {}
+
+      setSupportTickets(prev => prev.map(t => t.id === ticket.id ? { ...t, status: "Scheduled Repair" } : t));
+      const cached = JSON.parse(localStorage.getItem("atltv_local_support_tickets") || "[]");
+      const idx = cached.findIndex(t => t.id === ticket.id);
+      if (idx !== -1) {
+        cached[idx] = { ...cached[idx], status: "Scheduled Repair" };
+        localStorage.setItem("atltv_local_support_tickets", JSON.stringify(cached));
+      }
+      toast.success(`Warranty repair successfully scheduled and dispatched to ${newTech.name}!`);
+      setTicketToRedispatch(null);
+      setTechToRedispatch("");
+    } catch (err) {
+      toast.error("Failed to dispatch repair job.");
+    }
+  };
+
   const handleUpdateApplicationStatus = async (appId, newStatus) => {
     try {
       if (appId && !appId.startsWith("local_")) {
@@ -1878,7 +2237,7 @@ const AdminPage = () => {
     }
   };
 
-  const handleTogglePermission = async (user, resource) => {
+  const handleTogglePermission = async (user, resource, action = "canView") => {
     if (!hasPermission(currentUser, "canEdit", "users")) {
       toast.error("You do not have permission to edit user permissions.");
       return;
@@ -1900,14 +2259,22 @@ const AdminPage = () => {
     if (!customPerms.canEdit) customPerms.canEdit = [];
     if (!customPerms.canDelete) customPerms.canDelete = [];
 
-    if (customPerms.canView.includes(resource)) {
-      customPerms.canView = customPerms.canView.filter((r) => r !== resource);
-      customPerms.canEdit = customPerms.canEdit.filter((r) => r !== resource);
-      customPerms.canDelete = customPerms.canDelete.filter((r) => r !== resource);
+    const actionArray = customPerms[action] || [];
+    if (actionArray.includes(resource)) {
+      customPerms[action] = actionArray.filter((r) => r !== resource);
+      // If we remove view, we also remove edit and delete for this resource
+      if (action === "canView") {
+        customPerms.canEdit = (customPerms.canEdit || []).filter((r) => r !== resource);
+        customPerms.canDelete = (customPerms.canDelete || []).filter((r) => r !== resource);
+      }
     } else {
-      customPerms.canView.push(resource);
-      customPerms.canEdit.push(resource);
-      customPerms.canDelete.push(resource);
+      customPerms[action] = [...actionArray, resource];
+      // If we add edit or delete, we must also add view
+      if (action === "canEdit" || action === "canDelete") {
+        if (!customPerms.canView.includes(resource)) {
+          customPerms.canView.push(resource);
+        }
+      }
     }
 
     try {
@@ -1960,6 +2327,9 @@ const AdminPage = () => {
         setCurrentUser({
           id: record.id,
           email: record.email,
+          username: record.username,
+          name: record.name,
+          avatar: record.avatar ? pb.files.getUrl(record, record.avatar) : null,
           role,
           custom_permissions: record.custom_permissions,
         });
@@ -1988,7 +2358,10 @@ const AdminPage = () => {
     if (authed && currentUser) {
       const allowed = ["overview"];
       if (hasPermission(currentUser, "canView", "projects")) allowed.push("projects");
-      if (hasPermission(currentUser, "canView", "orders")) allowed.push("orders");
+      if (hasPermission(currentUser, "canView", "orders")) {
+        allowed.push("orders");
+        allowed.push("support");
+      }
       if (hasPermission(currentUser, "canView", "team")) allowed.push("team");
       if (hasPermission(currentUser, "canView", "crm")) allowed.push("crm");
       if (hasPermission(currentUser, "canView", "profile")) allowed.push("profile");
@@ -2015,6 +2388,101 @@ const AdminPage = () => {
     }
   }, [currentUser]);
 
+  // Sync credentials modal fields when opened
+  useEffect(() => {
+    if (credentialsModalOpen && currentUser) {
+      setCredentialsUsername(currentUser.username || "");
+      setCredentialsEmail(currentUser.email || "");
+      setCredentialsPassword("");
+      setCredentialsConfirmPassword("");
+    }
+  }, [credentialsModalOpen, currentUser]);
+
+  const handleUpdateCredentials = async (e) => {
+    e.preventDefault();
+    if (!isValidEmail(credentialsEmail)) {
+      toast.error("Please enter a valid email address.");
+      return;
+    }
+    if (credentialsPassword && credentialsPassword !== credentialsConfirmPassword) {
+      toast.error("Passwords do not match.");
+      return;
+    }
+
+    try {
+      const payload = {
+        username: credentialsUsername,
+        email: credentialsEmail,
+        ...(credentialsPassword && {
+          password: credentialsPassword,
+          passwordConfirm: credentialsConfirmPassword,
+        })
+      };
+      
+      let updatedUser;
+      if (currentUser?.id && !currentUser.id.startsWith("local_")) {
+        const record = await pb.collection("users").update(currentUser.id, payload);
+        updatedUser = {
+          id: record.id,
+          email: record.email,
+          username: record.username,
+          name: record.name,
+          avatar: record.avatar ? pb.files.getUrl(record, record.avatar) : null,
+          role: record.role || currentUser.role,
+          custom_permissions: record.custom_permissions,
+        };
+      } else {
+        updatedUser = {
+          ...currentUser,
+          ...payload,
+        };
+        if (credentialsPassword) {
+          updatedUser.password = credentialsPassword;
+        }
+      }
+
+      localStorage.setItem("atltvmountpro_auth_user", JSON.stringify(updatedUser));
+      setCurrentUser(updatedUser);
+
+      // Update in users list
+      const updatedList = users.map((u) => (u.id === currentUser.id ? { 
+        ...u, 
+        username: credentialsUsername, 
+        email: credentialsEmail,
+        ...(credentialsPassword && { password: credentialsPassword })
+      } : u));
+      setUsers(updatedList);
+      localStorage.setItem(LOCAL_USERS_STORAGE, JSON.stringify(updatedList));
+
+      setCredentialsModalOpen(false);
+      toast.success("Credentials updated successfully.");
+    } catch (err) {
+      console.warn("Credentials update failed, updating locally:", err);
+      const updatedUser = {
+        ...currentUser,
+        username: credentialsUsername,
+        email: credentialsEmail,
+      };
+      if (credentialsPassword) {
+        updatedUser.password = credentialsPassword;
+      }
+      localStorage.setItem("atltvmountpro_auth_user", JSON.stringify(updatedUser));
+      setCurrentUser(updatedUser);
+
+      const updatedList = users.map((u) => (u.id === currentUser.id ? { 
+        ...u, 
+        username: credentialsUsername, 
+        email: credentialsEmail,
+        ...(credentialsPassword && { password: credentialsPassword })
+      } : u));
+      setUsers(updatedList);
+      localStorage.setItem(LOCAL_USERS_STORAGE, JSON.stringify(updatedList));
+
+      setCredentialsModalOpen(false);
+      toast.success("Credentials updated locally.");
+    }
+  };
+
   // Load specific tab data
   useEffect(() => {
     if (!authed) return;
@@ -2024,10 +2492,16 @@ const AdminPage = () => {
       fetchTeam();
       fetchApplications();
       fetchUsers();
+      fetchSupportTickets();
       setInvoices(getInvoices());
     }
     if (activeTab === "projects") fetchProjects();
     if (activeTab === "orders") {
+      fetchBookingsAndQuotes();
+      fetchTeam();
+    }
+    if (activeTab === "support") {
+      fetchSupportTickets();
       fetchBookingsAndQuotes();
       fetchTeam();
     }
@@ -2042,6 +2516,7 @@ const AdminPage = () => {
     fetchTeam,
     fetchUsers,
     fetchApplications,
+    fetchSupportTickets,
   ]);
 
   // Seed demo data into localStorage if collections are empty
@@ -2388,31 +2863,87 @@ const AdminPage = () => {
     }
   };
 
+  const handleAdminAvatarChange = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 1024 * 1024) {
+      toast.error("Image size exceeds 1MB limit.");
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setProfileData((prev) => ({
+        ...prev,
+        avatar: reader.result,
+      }));
+      toast.success("Photo uploaded! Click 'Save Profile Settings' to save.");
+    };
+    reader.readAsDataURL(file);
+  };
+
   const handleUpdateProfile = async (e) => {
     e.preventDefault();
+    
+    if (!isValidEmail(profileData.email)) {
+      toast.error("Please enter a valid email address.");
+      return;
+    }
+    
+    if (profileNewPassword && profileNewPassword !== profileConfirmPassword) {
+      toast.error("Passwords do not match.");
+      return;
+    }
+
     try {
       const payload = {
         username: profileData.name,
         email: profileData.email,
+        avatar: profileData.avatar,
+        ...(profileNewPassword && {
+          password: profileNewPassword,
+          passwordConfirm: profileConfirmPassword,
+        })
       };
       let updatedUser;
       if (currentUser?.id && !currentUser.id.startsWith("local_")) {
-        updatedUser = await pb.collection("users").update(currentUser.id, payload);
+        const record = await pb.collection("users").update(currentUser.id, payload);
+        updatedUser = {
+          id: record.id,
+          email: record.email,
+          username: record.username,
+          name: record.name,
+          avatar: record.avatar ? (record.avatar.startsWith("data:") ? record.avatar : pb.files.getUrl(record, record.avatar)) : null,
+          role: record.role || currentUser.role,
+          custom_permissions: record.custom_permissions,
+        };
       } else {
         updatedUser = {
           ...currentUser,
           ...payload,
         };
+        if (profileNewPassword) {
+          updatedUser.password = profileNewPassword;
+        }
       }
       
       localStorage.setItem("atltvmountpro_auth_user", JSON.stringify(updatedUser));
       setCurrentUser(updatedUser);
       
-      const updatedList = users.map((u) => (u.id === currentUser.id ? { ...u, ...payload } : u));
+      const updatedList = users.map((u) => (u.id === currentUser.id ? { 
+        ...u, 
+        username: profileData.name, 
+        email: profileData.email,
+        avatar: profileData.avatar,
+        ...(profileNewPassword && { password: profileNewPassword })
+      } : u));
       setUsers(updatedList);
       localStorage.setItem(LOCAL_USERS_STORAGE, JSON.stringify(updatedList));
 
       setIsEditingProfile(false);
+      setProfileNewPassword("");
+      setProfileConfirmPassword("");
       toast.success("Profile updated successfully.");
     } catch (err) {
       console.warn("Profile update failed, updating locally:", err);
@@ -2420,24 +2951,90 @@ const AdminPage = () => {
         ...currentUser,
         username: profileData.name,
         email: profileData.email,
+        avatar: profileData.avatar,
       };
+      if (profileNewPassword) {
+        updatedUser.password = profileNewPassword;
+      }
       localStorage.setItem("atltvmountpro_auth_user", JSON.stringify(updatedUser));
       setCurrentUser(updatedUser);
       
-      const updatedList = users.map((u) => (u.id === currentUser.id ? { ...u, username: profileData.name, email: profileData.email } : u));
+      const updatedList = users.map((u) => (u.id === currentUser.id ? { 
+        ...u, 
+        username: profileData.name, 
+        email: profileData.email,
+        avatar: profileData.avatar,
+        ...(profileNewPassword && { password: profileNewPassword })
+      } : u));
       setUsers(updatedList);
       localStorage.setItem(LOCAL_USERS_STORAGE, JSON.stringify(updatedList));
       
       setIsEditingProfile(false);
+      setProfileNewPassword("");
+      setProfileConfirmPassword("");
       toast.success("Profile updated locally.");
     }
   };
 
-  const handleChangeAdminKey = (newKey) => {
-    if (!newKey) return;
-    localStorage.setItem(ADMIN_KEY_STORAGE, newKey);
-    setAdminKey(newKey);
-    toast.success("Admin access key updated locally.");
+  const handleStandaloneUpdatePassword = async (newPassword) => {
+    if (!newPassword || newPassword.length < 6) {
+      toast.error("Password must be at least 6 characters.");
+      return;
+    }
+    try {
+      const payload = {
+        username: currentUser.username,
+        email: currentUser.email,
+        password: newPassword,
+        passwordConfirm: newPassword,
+      };
+      let updatedUser;
+      if (currentUser?.id && !currentUser.id.startsWith("local_")) {
+        const record = await pb.collection("users").update(currentUser.id, payload);
+        updatedUser = {
+          id: record.id,
+          email: record.email,
+          username: record.username,
+          name: record.name,
+          avatar: record.avatar ? pb.files.getUrl(record, record.avatar) : null,
+          role: record.role || currentUser.role,
+          custom_permissions: record.custom_permissions,
+        };
+      } else {
+        updatedUser = {
+          ...currentUser,
+          password: newPassword,
+        };
+      }
+      
+      localStorage.setItem("atltvmountpro_auth_user", JSON.stringify(updatedUser));
+      setCurrentUser(updatedUser);
+      
+      const updatedList = users.map((u) => (u.id === currentUser.id ? { 
+        ...u, 
+        password: newPassword 
+      } : u));
+      setUsers(updatedList);
+      localStorage.setItem(LOCAL_USERS_STORAGE, JSON.stringify(updatedList));
+      
+      toast.success("Password updated successfully.");
+    } catch (err) {
+      console.warn("Password update failed, updating locally:", err);
+      const updatedUser = {
+        ...currentUser,
+        password: newPassword,
+      };
+      localStorage.setItem("atltvmountpro_auth_user", JSON.stringify(updatedUser));
+      setCurrentUser(updatedUser);
+      
+      const updatedList = users.map((u) => (u.id === currentUser.id ? { 
+        ...u, 
+        password: newPassword 
+      } : u));
+      setUsers(updatedList);
+      localStorage.setItem(LOCAL_USERS_STORAGE, JSON.stringify(updatedList));
+      toast.success("Password updated locally.");
+    }
   };
 
   if (checking) {
@@ -2519,28 +3116,14 @@ const AdminPage = () => {
   const usersStartIndex = (usersPage - 1) * usersItemsPerPage;
   const paginatedUsers = users.slice(usersStartIndex, usersStartIndex + usersItemsPerPage);
 
+  const unassignedCount = bookings.filter(b => !b.assignedTechId && !b.assignedTechName && b.status !== "Cancelled").length;
+  const unlinkedTicketsCount = supportTickets.filter(t => !t.booking_id && t.status !== "Resolved").length;
+  const pendingAppsCount = applications.filter(a => a.status === "Applied" || a.status === "Screening").length;
+  const adminAlertsCount = unassignedCount + unlinkedTicketsCount + pendingAppsCount;
+
   return (
     <>
       <div className="min-h-screen md:h-screen md:overflow-hidden bg-background flex flex-col md:flex-row">
-        {/* MOBILE HEADER */}
-        <header className="md:hidden sticky top-0 z-40 bg-card border-b border-border px-4 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <img
-              src="/images/logo/logo.png"
-              alt="Atlanta TV Mount Pro"
-              className="h-9"
-            />
-            <span className="text-xs bg-primary/20 text-primary px-2 py-0.5 rounded font-medium">
-              Admin
-            </span>
-          </div>
-          <button
-            onClick={() => setSidebarOpen(!sidebarOpen)}
-            className="p-1.5 rounded-lg border border-border text-foreground hover:bg-muted"
-          >
-            <Menu size={18} />
-          </button>
-        </header>
 
         {/* SIDE NAVIGATION PANEL */}
         <aside
@@ -2598,6 +3181,19 @@ const AdminPage = () => {
                 >
                   <ClipboardList size={18} className="flex-shrink-0" />
                   <span>Bookings & Orders</span>
+                </button>
+              )}
+
+              {hasPermission(currentUser, "canView", "orders") && (
+                <button
+                  onClick={() => {
+                    setActiveTab("support");
+                    setSidebarOpen(false);
+                  }}
+                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 ${activeTab === "support" ? "bg-primary text-primary-foreground shadow-sm shadow-primary/20" : "text-muted-foreground hover:bg-muted hover:text-foreground"}`}
+                >
+                  <LifeBuoy size={18} className="flex-shrink-0" />
+                  <span>Support Desk</span>
                 </button>
               )}
 
@@ -2723,6 +3319,185 @@ const AdminPage = () => {
 
         {/* MAIN DISPLAY CONTENT */}
         <div className="flex-1 flex flex-col min-w-0 w-full overflow-x-hidden md:h-full md:overflow-y-auto">
+          {/* ADMIN TOP HEADER BAR */}
+          <header className="bg-card border-b border-border py-3 px-6 sticky top-0 z-40 backdrop-blur-md bg-card/85 flex items-center justify-between">
+            {/* Left: Menu toggler for mobile & breadcrumbs / active tab */}
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => setSidebarOpen(true)}
+                className="p-1.5 rounded-lg border border-border text-foreground hover:bg-muted md:hidden"
+              >
+                <Menu size={16} />
+              </button>
+              <div className="flex items-center gap-2">
+                <Shield size={14} className="text-primary" />
+                <span className="text-xs font-bold tracking-tight text-foreground uppercase">
+                  Admin Panel / <span className="text-primary">{activeTab}</span>
+                </span>
+              </div>
+            </div>
+
+            {/* Right: notifications dropdown & profile dropdown */}
+            <div className="flex items-center gap-4">
+              {/* Notifications Dropdown */}
+              <div className="relative" ref={notificationsRef}>
+                <button 
+                  onClick={() => {
+                    setShowNotifications(!showNotifications);
+                    setShowProfileMenu(false);
+                  }}
+                  className="relative p-2 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground transition-all cursor-pointer"
+                >
+                  <Bell size={16} />
+                  {adminAlertsCount > 0 && (
+                    <span className="absolute -top-0.5 -right-0.5 bg-primary text-primary-foreground text-[8px] font-bold h-3.5 w-3.5 rounded-full flex items-center justify-center animate-pulse">
+                      {adminAlertsCount}
+                    </span>
+                  )}
+                </button>
+                
+                {/* Dropdown Box */}
+                <div className={`absolute right-0 mt-2 w-72 rounded-xl bg-card border border-border shadow-xl transition-all duration-200 z-50 p-2 space-y-1 ${showNotifications ? "opacity-100 visible" : "opacity-0 invisible"}`}>
+                  <h4 className="font-bold text-[10px] text-muted-foreground uppercase tracking-wider px-2 py-1.5 border-b border-border/50">System Actions</h4>
+                  {adminAlertsCount === 0 ? (
+                    <p className="text-[11px] text-muted-foreground text-center py-4">No pending actions</p>
+                  ) : (
+                    <div className="max-h-60 overflow-y-auto space-y-1">
+                      {unassignedCount > 0 && (
+                        <button 
+                          onClick={() => {
+                            setActiveTab("orders");
+                            setShowNotifications(false);
+                          }}
+                          className="w-full text-left p-2 rounded-lg hover:bg-muted/50 transition-colors flex items-start gap-2 text-[11px]"
+                        >
+                          <Wrench size={13} className="text-yellow-500 mt-0.5 flex-shrink-0" />
+                          <div>
+                            <p className="font-semibold text-foreground text-left">Unassigned Bookings</p>
+                            <p className="text-[9px] text-muted-foreground text-left">{unassignedCount} jobs require assignment.</p>
+                          </div>
+                        </button>
+                      )}
+                      {unlinkedTicketsCount > 0 && (
+                        <button 
+                          onClick={() => {
+                            setActiveTab("support");
+                            setShowNotifications(false);
+                          }}
+                          className="w-full text-left p-2 rounded-lg hover:bg-muted/50 transition-colors flex items-start gap-2 text-[11px]"
+                        >
+                          <LifeBuoy size={13} className="text-primary mt-0.5 flex-shrink-0" />
+                          <div>
+                            <p className="font-semibold text-foreground text-left">Unlinked Tickets</p>
+                            <p className="text-[9px] text-muted-foreground text-left">{unlinkedTicketsCount} claim tickets pending linkage.</p>
+                          </div>
+                        </button>
+                      )}
+                      {pendingAppsCount > 0 && (
+                        <button 
+                          onClick={() => {
+                            setActiveTab("recruitment");
+                            setShowNotifications(false);
+                          }}
+                          className="w-full text-left p-2 rounded-lg hover:bg-muted/50 transition-colors flex items-start gap-2 text-[11px]"
+                        >
+                          <UserPlus size={13} className="text-green-500 mt-0.5 flex-shrink-0" />
+                          <div>
+                            <p className="font-semibold text-foreground text-left">Recruit Screenings</p>
+                            <p className="text-[9px] text-muted-foreground text-left">{pendingAppsCount} recruits pending interview check.</p>
+                          </div>
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Profile Avatar Dropdown */}
+              <div className="relative" ref={profileMenuRef}>
+                <button 
+                  onClick={() => {
+                    setShowProfileMenu(!showProfileMenu);
+                    setShowNotifications(false);
+                  }}
+                  className="flex items-center gap-2 hover:bg-muted/50 p-1 rounded-lg border border-border/45 transition-all text-left cursor-pointer"
+                >
+                  <img 
+                    src={profileData.avatar} 
+                    alt="Admin avatar" 
+                    className="w-6 h-6 rounded-full object-cover border border-border"
+                  />
+                  <span className="text-[11px] font-semibold text-foreground hidden sm:inline">{profileData.name}</span>
+                </button>
+
+                {/* Dropdown Box */}
+                <div className={`absolute right-0 mt-2 w-64 rounded-xl bg-card border border-border shadow-xl transition-all duration-200 z-50 p-3 space-y-2 ${showProfileMenu ? "opacity-100 visible" : "opacity-0 invisible"}`}>
+                  <div className="flex items-center gap-3 pb-2 border-b border-border/50">
+                    <img 
+                      src={profileData.avatar} 
+                      alt="Admin avatar" 
+                      className="w-10 h-10 rounded-full object-cover border border-border"
+                    />
+                    <div className="min-w-0">
+                      <p className="text-xs font-bold text-foreground truncate">{profileData.name}</p>
+                      <p className="text-[10px] text-muted-foreground truncate">{profileData.email}</p>
+                      <span className="inline-block text-[9px] bg-primary/20 text-primary px-1.5 py-0.2 rounded font-bold uppercase mt-0.5">
+                        {currentUser?.role || "Administrator"}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="space-y-1">
+                    <button
+                      onClick={() => {
+                        setActiveTab("overview");
+                        setShowProfileMenu(false);
+                      }}
+                      className="w-full text-left px-2 py-1.5 rounded-lg hover:bg-muted text-xs font-semibold text-foreground flex items-center gap-2 cursor-pointer"
+                    >
+                      <LayoutDashboard size={14} className="text-muted-foreground" />
+                      <span>Dashboard Overview</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        setActiveTab("profile");
+                        setProfileSubTab("profile");
+                        setShowProfileMenu(false);
+                      }}
+                      className="w-full text-left px-2 py-1.5 rounded-lg hover:bg-muted text-xs font-semibold text-foreground flex items-center gap-2 cursor-pointer"
+                    >
+                      <UserCog size={14} className="text-muted-foreground" />
+                      <span>My Profile Settings</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        setCredentialsModalOpen(true);
+                        setShowProfileMenu(false);
+                      }}
+                      className="w-full text-left px-2 py-1.5 rounded-lg hover:bg-muted text-xs font-semibold text-foreground flex items-center gap-2 cursor-pointer"
+                    >
+                      <Key size={14} className="text-muted-foreground" />
+                      <span>Change Credentials</span>
+                    </button>
+                  </div>
+
+                  <div className="border-t border-border/50 pt-2">
+                    <button
+                      onClick={() => {
+                        setShowProfileMenu(false);
+                        handleLogout();
+                      }}
+                      className="w-full flex items-center gap-2 px-2 py-1.5 bg-destructive/10 text-destructive hover:bg-destructive hover:text-destructive-foreground rounded-lg text-xs font-bold transition-all cursor-pointer"
+                    >
+                      <LogOut size={14} />
+                      <span>Sign Out</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </header>
+
           <main className="flex-1 px-4 sm:px-6 lg:px-8 py-8 md:py-10 max-w-[1200px] w-full mx-auto min-w-0">
           {currentUser?.role === ROLES.Viewer && (
             <div className="mb-4 flex items-center gap-2 bg-yellow-500/10 text-yellow-600 border border-yellow-500/20 rounded-lg px-4 py-2.5 text-sm">
@@ -3623,151 +4398,66 @@ const AdminPage = () => {
 
           {/* TAB CONTENT: PROFILE & USER MANAGEMENT */}
           {activeTab === "profile" && (
-            <div className="space-y-8">
-              <div>
-                <h1 className="text-2xl font-bold tracking-tight text-foreground">
-                  Profile & User Management
-                </h1>
-                <p className="text-sm text-muted-foreground mt-1">
-                  Manage your admin profile, reset security access keys, or
-                  manage supplementary administrative users.
-                </p>
+            <div className="space-y-6 animate-fade-in">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-card border border-border p-6 rounded-2xl">
+                <div>
+                  <h2 className="text-2xl font-bold tracking-tight">Profile & System Settings</h2>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Manage your credentials, update admin passwords, and control supplementary administrative users.
+                  </p>
+                </div>
               </div>
 
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                {/* PROFILE INFORMATION */}
-                <div className="lg:col-span-1 bg-card border border-border rounded-xl p-6 space-y-6">
-                  <div className="flex flex-col items-center text-center pb-4 border-b border-border/50">
-                    <img
-                      src={profileData.avatar}
-                      alt={currentUser?.email || profileData.name}
-                      className="w-24 h-24 rounded-full object-cover mb-3 border border-border"
-                    />
-                    <h3 className="font-bold text-lg text-foreground">
-                      {currentUser?.email || profileData.name}
-                    </h3>
-                    <span className="text-xs bg-primary/20 text-primary px-2.5 py-0.5 rounded-full font-semibold">
-                      {currentUser?.role || profileData.role}
-                    </span>
-                  </div>
+              {/* Sub-Tab Navigation Bar */}
+              <div className="flex gap-2 p-1 bg-muted/40 rounded-xl max-w-md mb-6 border border-border/50">
+                <button
+                  onClick={() => setProfileSubTab("users")}
+                  className={`flex-1 text-center py-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+                    profileSubTab === "users"
+                      ? "bg-card text-foreground shadow-sm border border-border/50"
+                      : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                  }`}
+                >
+                  Users & Staff
+                </button>
+                <button
+                  onClick={() => setProfileSubTab("profile")}
+                  className={`flex-1 text-center py-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+                    profileSubTab === "profile"
+                      ? "bg-card text-foreground shadow-sm border border-border/50"
+                      : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                  }`}
+                >
+                  Admin Profile
+                </button>
+                <button
+                  onClick={() => setProfileSubTab("permissions")}
+                  className={`flex-1 text-center py-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+                    profileSubTab === "permissions"
+                      ? "bg-card text-foreground shadow-sm border border-border/50"
+                      : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                  }`}
+                >
+                  Permissions Matrix
+                </button>
+              </div>
 
-                  {!isEditingProfile ? (
-                    <div className="space-y-4">
-                      <div>
-                        <span className="text-xs text-muted-foreground block uppercase font-bold tracking-wide">
-                          Email
-                        </span>
-                        <span className="text-sm font-semibold">
-                          {profileData.email}
-                        </span>
-                      </div>
-                      <div>
-                        <span className="text-xs text-muted-foreground block uppercase font-bold tracking-wide">
-                          Key Access
-                        </span>
-                        <span className="text-sm font-semibold italic text-muted-foreground">
-                          Protected Key Credentials
-                        </span>
-                      </div>
-                      <Button
-                        onClick={() => setIsEditingProfile(true)}
-                        className="w-full"
-                        variant="outline"
-                      >
-                        Edit Profile
-                      </Button>
-                    </div>
-                  ) : (
-                    <form onSubmit={handleUpdateProfile} className="space-y-3">
-                      <div>
-                        <label className="text-xs font-semibold block text-muted-foreground uppercase">
-                          Name
-                        </label>
-                        <input
-                          type="text"
-                          value={profileData.name}
-                          onChange={(e) =>
-                            setProfileData({
-                              ...profileData,
-                              name: e.target.value,
-                            })
-                          }
-                          className="input-base w-full mt-1"
-                        />
-                      </div>
-                      <div>
-                        <label className="text-xs font-semibold block text-muted-foreground uppercase">
-                          Email
-                        </label>
-                        <input
-                          type="email"
-                          value={profileData.email}
-                          onChange={(e) =>
-                            setProfileData({
-                              ...profileData,
-                              email: e.target.value,
-                            })
-                          }
-                          className="input-base w-full mt-1"
-                        />
-                      </div>
-                      <div className="flex gap-2 pt-2">
-                        <Button type="submit" className="flex-1">
-                          Save
-                        </Button>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          onClick={() => setIsEditingProfile(false)}
-                        >
-                          Cancel
-                        </Button>
-                      </div>
-                    </form>
-                  )}
-
-                  {/* SECURITY KEY RESET */}
-                  <div className="pt-4 border-t border-border/50 space-y-3">
-                    <h4 className="text-sm font-bold text-foreground flex items-center gap-1.5">
-                      <Shield size={16} className="text-primary" /> Security
-                      Verification Key
-                    </h4>
-                    <p className="text-xs text-muted-foreground">
-                      Reset your master admin key token. Re-login will be
-                      required if changed.
-                    </p>
-                    <input
-                      type="password"
-                      placeholder="New Admin Key token"
-                      className="input-base w-full text-xs"
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") {
-                          handleChangeAdminKey(e.target.value);
-                          e.target.value = "";
-                        }
-                      }}
-                    />
-                    <p className="text-[10px] text-muted-foreground italic">
-                      Press Enter to save changes.
-                    </p>
-                  </div>
-                </div>
-
-                {/* USER ACCOUNTS LIST */}
-                <div className="lg:col-span-2 bg-card border border-border rounded-xl p-6 space-y-4">
+              {/* Users & Staff Sub-Tab */}
+              {profileSubTab === "users" && (
+                <div className="bg-card border border-border rounded-xl p-6 space-y-4">
                   <div className="flex items-center justify-between">
                     <div>
                       <h3 className="font-bold text-foreground">
                         Authorized System Users
                       </h3>
-                      <p className="text-xs text-muted-foreground">
+                      <p className="text-xs text-muted-foreground mt-0.5">
                         Authorized profiles who can access system features.
                       </p>
                     </div>
                     {hasPermission(currentUser?.role, "canEdit", "users") && (
                       <Button
                         onClick={() => setUserDialogOpen(true)}
-                        className="h-9"
+                        className="h-9 text-xs"
                       >
                         <Plus size={14} className="mr-1" /> Add User
                       </Button>
@@ -3780,7 +4470,6 @@ const AdminPage = () => {
                         <tr>
                           <th className="px-4 py-2.5">User</th>
                           <th className="px-4 py-2.5">Role</th>
-                          <th className="px-4 py-2.5">Tab Access Permissions</th>
                           <th className="px-4 py-2.5">Created</th>
                           <th className="px-4 py-2.5 text-right w-16">
                             Action
@@ -3802,51 +4491,9 @@ const AdminPage = () => {
                               </div>
                             </td>
                             <td className="px-4 py-3">
-                              <span className="bg-primary/10 text-primary px-2 py-0.5 rounded-full text-[10px] font-semibold">
+                              <span className="bg-primary/10 text-primary px-2.5 py-0.5 rounded-full text-[10px] font-semibold border border-primary/20">
                                 {u.role || "Admin"}
                               </span>
-                            </td>
-                            <td className="px-4 py-3">
-                              {u.role === "Admin" ? (
-                                <span className="text-[10px] text-muted-foreground font-semibold italic">Full Administrative Access</span>
-                              ) : (
-                                <div className="flex flex-wrap gap-4">
-                                  {["projects", "orders", "team", "recruitment", "crm", "finance", "media", "cms"].map((res) => {
-                                    let customPerms = {};
-                                    if (u.custom_permissions) {
-                                      if (typeof u.custom_permissions === "string") {
-                                        try {
-                                          customPerms = JSON.parse(u.custom_permissions);
-                                        } catch (e) {
-                                          customPerms = {};
-                                        }
-                                      } else {
-                                        customPerms = u.custom_permissions;
-                                      }
-                                    }
-                                    const isInherited = hasPermission(u.role, "canView", res);
-                                    const isChecked = customPerms.canView?.includes(res) || isInherited;
-                                    
-                                    return (
-                                      <label key={res} className="flex items-center gap-1.5 cursor-pointer select-none">
-                                        <input
-                                          type="checkbox"
-                                          checked={isChecked}
-                                          disabled={isInherited || !hasPermission(currentUser, "canEdit", "users")}
-                                          onChange={() => handleTogglePermission(u, res)}
-                                          className="rounded border-border text-primary focus:ring-primary h-3.5 w-3.5 bg-muted/40 cursor-pointer"
-                                        />
-                                        <span className={`text-[10px] uppercase font-bold ${
-                                          isInherited ? "text-muted-foreground/50 italic" : "text-foreground"
-                                        }`} title={isInherited ? "Role permission (Inherited)" : "Custom permission"}>
-                                          {res}
-                                          {isInherited && " (R)"}
-                                        </span>
-                                      </label>
-                                    );
-                                  })}
-                                </div>
-                              )}
                             </td>
                             <td className="px-4 py-3 text-muted-foreground">
                               {new Date(u.created).toLocaleDateString()}
@@ -3859,7 +4506,7 @@ const AdminPage = () => {
                                       setEditingUser(u);
                                       setUserDialogOpen(true);
                                     }}
-                                    className="text-muted-foreground hover:text-primary p-1 rounded-md"
+                                    className="text-muted-foreground hover:text-primary p-1.5 rounded-md hover:bg-muted transition-all cursor-pointer"
                                     title="Edit User"
                                   >
                                     <Pencil size={13} />
@@ -3872,7 +4519,7 @@ const AdminPage = () => {
                                 ) && (
                                   <button
                                     onClick={() => handleDeleteUser(u.id)}
-                                    className="text-muted-foreground hover:text-destructive p-1 rounded-md"
+                                    className="text-muted-foreground hover:text-destructive p-1.5 rounded-md hover:bg-muted transition-all cursor-pointer"
                                     title="Delete User"
                                   >
                                     <Trash2 size={13} />
@@ -3915,8 +4562,630 @@ const AdminPage = () => {
                       </div>
                     )}
                   </div>
+
+                  {/* Technician Invite & Referral Link Generator */}
+                  <div className="bg-card border border-border rounded-xl p-6 space-y-6 mt-6 text-left">
+                    <div>
+                      <h3 className="font-bold text-foreground">
+                        Technician Recruitment Referral Generator
+                      </h3>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        Generate and distribute prefilled recruitment invite links for technician candidates.
+                      </p>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div className="space-y-1.5">
+                        <Label htmlFor="ref-name">Candidate Name</Label>
+                        <Input
+                          id="ref-name"
+                          value={candidateName}
+                          onChange={(e) => setCandidateName(e.target.value)}
+                          placeholder="e.g. John Doe"
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label htmlFor="ref-phone">Candidate Phone</Label>
+                        <Input
+                          id="ref-phone"
+                          value={candidatePhone}
+                          onChange={(e) => setCandidatePhone(e.target.value)}
+                          placeholder="e.g. (555) 000-0000"
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label htmlFor="ref-code">Referral / Invite Code</Label>
+                        <div className="flex gap-2">
+                          <Input
+                            id="ref-code"
+                            value={referralCode}
+                            onChange={(e) => setReferralCode(e.target.value)}
+                            placeholder="e.g. REF-TECH-XYZ"
+                            className="font-mono text-xs uppercase"
+                          />
+                          <Button
+                            variant="outline"
+                            onClick={() => {
+                              const code = "REF-" + Math.random().toString(36).substr(2, 6).toUpperCase();
+                              setReferralCode(code);
+                            }}
+                            className="text-xs"
+                          >
+                            Generate
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="space-y-3 pt-2">
+                      <Button
+                        onClick={handleGenerateReferralLink}
+                        className="bg-primary hover:bg-primary/90 text-primary-foreground text-xs"
+                      >
+                        Create Invite & Links
+                      </Button>
+                    </div>
+
+                    {generatedLink && (
+                      <div className="bg-muted/40 p-4 rounded-xl border border-border space-y-4 animate-fade-in text-left">
+                        <div className="space-y-1.5">
+                          <span className="text-xs font-semibold text-muted-foreground uppercase">Invite Referral Link</span>
+                          <div className="flex gap-2 items-center">
+                            <Input
+                              value={generatedLink}
+                              readOnly
+                              className="font-mono text-xs select-all bg-background"
+                            />
+                            <Button
+                              variant="outline"
+                              onClick={handleCopyLink}
+                              className="h-9 px-3 text-xs"
+                            >
+                              Copy
+                            </Button>
+                          </div>
+                        </div>
+
+                        <div className="flex flex-wrap gap-2.5 pt-1">
+                          <Button
+                            variant="secondary"
+                            onClick={handleShareEmail}
+                            className="text-xs gap-1.5"
+                          >
+                            <Mail size={13} /> Share via Email
+                          </Button>
+                          <Button
+                            variant="secondary"
+                            onClick={handleShareWhatsApp}
+                            className="text-xs gap-1.5"
+                          >
+                            <MessageSquare size={13} /> Share via WhatsApp
+                          </Button>
+                          <Button
+                            variant="secondary"
+                            onClick={handleShareSMS}
+                            className="text-xs gap-1.5"
+                          >
+                            <Smartphone size={13} /> Share via Text
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </div>
+              )}
+
+              {/* Admin Profile Sub-Tab */}
+              {profileSubTab === "profile" && (
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                  {/* Left Column: Profile Settings */}
+                  <div className="lg:col-span-8 space-y-6">
+                    {/* ADMIN PROFILE INFORMATION */}
+                    <div className="bg-card border border-border rounded-xl p-6 space-y-6">
+                      <div className="flex flex-col sm:flex-row items-center gap-6 pb-6 border-b border-border/50">
+                        <img
+                          src={profileData.avatar}
+                          alt={currentUser?.email || profileData.name}
+                          className="w-20 h-20 rounded-full object-cover border border-border"
+                        />
+                        <div className="text-center sm:text-left space-y-1">
+                          <h3 className="font-bold text-lg text-foreground leading-tight">
+                            {profileData.name}
+                          </h3>
+                          <p className="text-xs text-muted-foreground">{profileData.email}</p>
+                          <span className="inline-block text-[10px] bg-primary/20 text-primary px-2.5 py-0.5 rounded-full font-bold uppercase tracking-wider">
+                            {currentUser?.role || profileData.role}
+                          </span>
+                        </div>
+                      </div>
+
+                      {!isEditingProfile ? (
+                        <div className="space-y-4 text-xs">
+                          <div className="grid grid-cols-3 border-b border-border/50 py-2">
+                            <span className="text-muted-foreground font-semibold uppercase tracking-wide">Display Username</span>
+                            <span className="col-span-2 font-bold text-foreground">{profileData.name}</span>
+                          </div>
+                          <div className="grid grid-cols-3 border-b border-border/50 py-2">
+                            <span className="text-muted-foreground font-semibold uppercase tracking-wide">Email Address</span>
+                            <span className="col-span-2 font-bold text-foreground">{profileData.email}</span>
+                          </div>
+                          <div className="grid grid-cols-3 border-b border-border/50 py-2">
+                            <span className="text-muted-foreground font-semibold uppercase tracking-wide">Security Access</span>
+                            <span className="col-span-2 font-semibold italic text-muted-foreground">Protected Key Credentials</span>
+                          </div>
+                          <Button
+                            onClick={() => {
+                              setIsEditingProfile(true);
+                              setProfileNewPassword("");
+                              setProfileConfirmPassword("");
+                            }}
+                            className="w-full h-10 text-xs font-semibold bg-primary hover:bg-primary/90 text-primary-foreground"
+                          >
+                            Edit Profile Details
+                          </Button>
+                        </div>
+                      ) : (
+                        <form onSubmit={handleUpdateProfile} className="space-y-4">
+                          {/* Profile Picture Upload */}
+                          <div className="flex flex-col sm:flex-row items-center gap-4 pb-4 border-b border-border/50">
+                            <div className="relative group">
+                              <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-primary/20 bg-muted flex items-center justify-center text-xl font-bold text-muted-foreground shadow-inner">
+                                {profileData.avatar ? (
+                                  <img src={profileData.avatar} alt="Profile" className="w-full h-full object-cover" />
+                                ) : (
+                                  <span>{profileData.name ? profileData.name[0].toUpperCase() : "A"}</span>
+                                )}
+                              </div>
+                              <label htmlFor="admin-avatar-file" className="absolute bottom-0 right-0 w-6 h-6 bg-primary hover:bg-primary/95 text-primary-foreground rounded-full flex items-center justify-center cursor-pointer shadow-md transition-all active:scale-95">
+                                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path>
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                </svg>
+                                <input
+                                  type="file"
+                                  id="admin-avatar-file"
+                                  accept="image/*"
+                                  onChange={handleAdminAvatarChange}
+                                  className="hidden"
+                                />
+                              </label>
+                            </div>
+                            
+                            <div className="space-y-1 text-center sm:text-left">
+                              <h4 className="font-bold text-xs text-foreground">Change Profile Photo</h4>
+                              <p className="text-[10px] text-muted-foreground">Select a clean image. Max size 1MB.</p>
+                              <div className="flex gap-2 justify-center sm:justify-start">
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => document.getElementById("admin-avatar-file").click()}
+                                  className="h-7 px-2 text-[10px]"
+                                >
+                                  Upload New
+                                </Button>
+                                {profileData.avatar && (
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => setProfileData(prev => ({ ...prev, avatar: "" }))}
+                                    className="h-7 px-2 text-[10px] text-destructive hover:bg-destructive/5"
+                                  >
+                                    Remove
+                                  </Button>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                              <label className="text-xs font-bold text-muted-foreground uppercase block mb-1">
+                                Username (Display Name)
+                              </label>
+                              <input
+                                type="text"
+                                value={profileData.name}
+                                onChange={(e) =>
+                                  setProfileData({
+                                    ...profileData,
+                                    name: e.target.value,
+                                  })
+                                }
+                                className="input-base w-full focus:border-primary"
+                                required
+                              />
+                            </div>
+                            <div>
+                              <label className="text-xs font-bold text-muted-foreground uppercase block mb-1">
+                                Email Address
+                              </label>
+                              <input
+                                type="email"
+                                value={profileData.email}
+                                onChange={(e) =>
+                                  setProfileData({
+                                    ...profileData,
+                                    email: e.target.value,
+                                  })
+                                }
+                                className="input-base w-full focus:border-primary"
+                                required
+                              />
+                            </div>
+                          </div>
+
+                          <div className="border-t border-border/50 pt-4 space-y-4">
+                            <div className="flex items-center justify-between">
+                              <h4 className="font-bold text-xs text-muted-foreground uppercase tracking-wider">Change Password (Optional)</h4>
+                            </div>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                              <div>
+                                <label className="text-xs font-semibold text-muted-foreground block mb-1">
+                                  New Password
+                                </label>
+                                <div className="relative">
+                                  <input
+                                    type={showProfileNewPassword ? "text" : "password"}
+                                    value={profileNewPassword}
+                                    onChange={(e) => setProfileNewPassword(e.target.value)}
+                                    placeholder="Min 6 characters"
+                                    className="input-base w-full focus:border-primary pr-10"
+                                  />
+                                  <button
+                                    type="button"
+                                    onClick={() => setShowProfileNewPassword(!showProfileNewPassword)}
+                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground flex items-center"
+                                  >
+                                    {showProfileNewPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+                                  </button>
+                                </div>
+                              </div>
+                              <div>
+                                <label className="text-xs font-semibold text-muted-foreground block mb-1">
+                                  Confirm Password
+                                </label>
+                                <div className="relative">
+                                  <input
+                                    type={showProfileConfirmPassword ? "text" : "password"}
+                                    value={profileConfirmPassword}
+                                    onChange={(e) => setProfileConfirmPassword(e.target.value)}
+                                    placeholder="Re-enter password"
+                                    className="input-base w-full focus:border-primary pr-10"
+                                  />
+                                  <button
+                                    type="button"
+                                    onClick={() => setShowProfileConfirmPassword(!showProfileConfirmPassword)}
+                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground flex items-center"
+                                  >
+                                    {showProfileConfirmPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="flex gap-2 pt-2">
+                            <Button type="submit" className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold h-10 text-xs">
+                              Save Profile Settings
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              onClick={() => setIsEditingProfile(false)}
+                              className="h-10 text-xs"
+                            >
+                              Cancel
+                            </Button>
+                          </div>
+                        </form>
+                      )}
+
+                      {/* STANDALONE PASSWORD CHANGE */}
+                      <div className="pt-5 border-t border-border/50 space-y-3">
+                        <div className="flex items-center justify-between">
+                          <h4 className="text-sm font-bold text-foreground flex items-center gap-1.5">
+                            <Lock size={16} className="text-primary" /> Update Account Password
+                          </h4>
+                        </div>
+                        <p className="text-xs text-muted-foreground leading-relaxed">
+                          Change your administrator password immediately. Min 6 characters.
+                        </p>
+                        <form
+                          onSubmit={(e) => {
+                            e.preventDefault();
+                            const newPwd = e.target.elements.standalonePassword.value;
+                            const confirmPwd = e.target.elements.standaloneConfirmPassword.value;
+                            if (newPwd !== confirmPwd) {
+                              toast.error("Passwords do not match.");
+                              return;
+                            }
+                            handleStandaloneUpdatePassword(newPwd);
+                            e.target.reset();
+                          }}
+                          className="max-w-md space-y-3"
+                        >
+                          <div className="relative">
+                            <input
+                              name="standalonePassword"
+                              type={showStandaloneNewPassword ? "text" : "password"}
+                              placeholder="New Password"
+                              className="input-base w-full text-xs pr-10"
+                              required
+                            />
+                            <button
+                              type="button"
+                              onClick={() => setShowStandaloneNewPassword(!showStandaloneNewPassword)}
+                              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground flex items-center"
+                            >
+                              {showStandaloneNewPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+                            </button>
+                          </div>
+                          <div className="relative">
+                            <input
+                              name="standaloneConfirmPassword"
+                              type={showStandaloneConfirmPassword ? "text" : "password"}
+                              placeholder="Confirm New Password"
+                              className="input-base w-full text-xs pr-10"
+                              required
+                            />
+                            <button
+                              type="button"
+                              onClick={() => setShowStandaloneConfirmPassword(!showStandaloneConfirmPassword)}
+                              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground flex items-center"
+                            >
+                              {showStandaloneConfirmPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+                            </button>
+                          </div>
+                          <Button
+                            type="submit"
+                            className="w-full h-8 text-[11px] font-semibold bg-primary hover:bg-primary/90 text-primary-foreground cursor-pointer"
+                          >
+                            Update Password
+                          </Button>
+                        </form>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Right Column: System Health */}
+                  <div className="lg:col-span-4 space-y-6">
+                    <div className="bg-card border border-border rounded-xl p-6 space-y-4">
+                      <h3 className="font-bold text-base text-foreground">System Health & Diagnostic</h3>
+                      <div className="p-4 rounded-xl border border-border bg-muted/40 text-[11px] text-muted-foreground space-y-2.5">
+                        <div className="flex justify-between items-center">
+                          <span>Database Sync Status:</span>
+                          <span className="text-green-500 font-bold flex items-center gap-1">
+                            <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-ping"></span>
+                            Online & Sync
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Total Active Staff:</span>
+                          <span className="font-semibold text-foreground">{teamMembers.filter(t => !t.isSuspended).length} Technicians</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Total Support Tickets:</span>
+                          <span className="font-semibold text-foreground">{supportTickets.length} Tickets</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Authorized Accounts:</span>
+                          <span className="font-semibold text-foreground">{users.length} Users</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Permissions Manager Sub-Tab */}
+              {profileSubTab === "permissions" && (
+                <div className="space-y-6">
+                  {/* Clean Role Definitions Guide */}
+                  <div className="bg-card border border-border rounded-xl p-6">
+                    <h3 className="font-bold text-base text-foreground mb-4">Staff Roles Reference Guide</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                      <div className="p-3.5 rounded-lg bg-muted/30 border border-border/40 text-xs">
+                        <span className="font-bold text-primary block mb-1">Admin</span>
+                        <p className="text-muted-foreground text-[11px] leading-relaxed">
+                          Full read, write, and delete permissions across all system modules.
+                        </p>
+                      </div>
+                      <div className="p-3.5 rounded-lg bg-muted/30 border border-border/40 text-xs">
+                        <span className="font-bold text-foreground block mb-1">Moderator</span>
+                        <p className="text-muted-foreground text-[11px] leading-relaxed">
+                          Read/write permissions for projects, orders, team, finance, and media.
+                        </p>
+                      </div>
+                      <div className="p-3.5 rounded-lg bg-muted/30 border border-border/40 text-xs">
+                        <span className="font-bold text-foreground block mb-1">Viewer</span>
+                        <p className="text-muted-foreground text-[11px] leading-relaxed">
+                          Read-only access to standard dashboard modules, excluding sensitive data.
+                        </p>
+                      </div>
+                      <div className="p-3.5 rounded-lg bg-muted/30 border border-border/40 text-xs">
+                        <span className="font-bold text-foreground block mb-1">Accountant</span>
+                        <p className="text-muted-foreground text-[11px] leading-relaxed">
+                          Specialized read-only access restricted strictly to financial dashboard.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                    {/* Left Pane: Staff Selector */}
+                    <div className="lg:col-span-4 space-y-4">
+                      <h3 className="text-sm font-bold text-foreground px-1">Select Staff Member</h3>
+                      {(() => {
+                        const nonAdminUsers = users.filter((u) => u.role !== "Admin");
+                        if (nonAdminUsers.length === 0) {
+                          return (
+                            <div className="text-center py-10 text-muted-foreground text-xs bg-card border border-dashed border-border rounded-xl">
+                              No non-admin staff users found.
+                            </div>
+                          );
+                        }
+                        return (
+                          <div className="space-y-2">
+                            {nonAdminUsers.map((u) => {
+                              const isSelected = selectedPermissionUserId === u.id;
+                              return (
+                                <button
+                                  key={u.id}
+                                  onClick={() => setSelectedPermissionUserId(u.id)}
+                                  className={`w-full text-left p-3 rounded-xl border transition-all duration-150 flex items-center gap-3 cursor-pointer ${
+                                    isSelected
+                                      ? "bg-primary/10 border-primary text-foreground shadow-sm"
+                                      : "bg-card border-border hover:bg-muted/40 text-muted-foreground hover:text-foreground"
+                                  }`}
+                                >
+                                  <div className="w-8 h-8 rounded-full bg-primary/20 text-primary flex items-center justify-center font-bold text-xs uppercase shrink-0">
+                                    {u.username ? u.username.substring(0, 2) : "US"}
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-xs font-bold text-foreground truncate">{u.username}</p>
+                                    <p className="text-[10px] text-muted-foreground truncate">{u.email}</p>
+                                  </div>
+                                  <span className="text-[9px] bg-muted border border-border px-2 py-0.5 rounded-full font-semibold uppercase shrink-0">
+                                    {u.role || "Staff"}
+                                  </span>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        );
+                      })()}
+                    </div>
+
+                    {/* Right Pane: Granular Custom Permissions matrix */}
+                    <div className="lg:col-span-8">
+                      {(() => {
+                        const targetUser = users.find((u) => u.id === selectedPermissionUserId);
+                        if (!targetUser || targetUser.role === "Admin") {
+                          return (
+                            <div className="flex flex-col items-center justify-center py-20 text-center bg-card border border-border rounded-2xl p-6 h-full min-h-[300px]">
+                              <Shield size={36} className="text-muted-foreground/45 mb-3" />
+                              <h4 className="text-sm font-bold text-foreground mb-1">Select a Staff Member</h4>
+                              <p className="text-xs text-muted-foreground max-w-xs leading-relaxed">
+                                Choose a registered system user from the left pane to view and customize their granular access overrides.
+                              </p>
+                            </div>
+                          );
+                        }
+
+                        return (
+                          <div className="bg-card border border-border rounded-xl p-6 space-y-6">
+                            <div className="flex items-center justify-between pb-4 border-b border-border/50">
+                              <div>
+                                <h3 className="font-bold text-foreground">Custom Permissions Override</h3>
+                                <p className="text-xs text-muted-foreground mt-0.5">
+                                  Set granular overrides for <span className="font-bold text-primary">{targetUser.username}</span> ({targetUser.email}).
+                                </p>
+                              </div>
+                              <span className="bg-primary/10 text-primary border border-primary/20 px-3 py-1 rounded-full text-xs font-bold uppercase">
+                                {targetUser.role || "Staff"}
+                              </span>
+                            </div>
+
+                            <div className="text-xs text-muted-foreground bg-muted/30 border border-border/40 p-4 rounded-lg leading-relaxed">
+                              <span className="font-bold text-foreground block mb-1">How overrides work:</span>
+                              Default permissions are inherited automatically based on the user's role (indicated by <span className="italic font-bold text-muted-foreground/70">Role Inherited</span>). You can explicitly grant additional access using the checkboxes below. If a permission is already granted by their role, the checkbox is checked and locked.
+                            </div>
+
+                            <div className="border border-border rounded-lg overflow-hidden bg-background">
+                              <table className="w-full text-xs text-left">
+                                <thead className="bg-muted text-muted-foreground font-semibold border-b border-border">
+                                  <tr>
+                                    <th className="px-4 py-3">Module / Resource</th>
+                                    <th className="px-4 py-3 text-center w-24">View</th>
+                                    <th className="px-4 py-3 text-center w-24">Edit</th>
+                                    <th className="px-4 py-3 text-center w-24">Delete</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {["projects", "orders", "team", "recruitment", "crm", "finance", "media", "cms"].map((res) => {
+                                    let customPerms = {};
+                                    if (targetUser.custom_permissions) {
+                                      if (typeof targetUser.custom_permissions === "string") {
+                                        try {
+                                          customPerms = JSON.parse(targetUser.custom_permissions);
+                                        } catch (e) {
+                                          customPerms = {};
+                                        }
+                                      } else {
+                                        customPerms = targetUser.custom_permissions;
+                                      }
+                                    }
+
+                                    const isViewInherited = hasPermission(targetUser.role, "canView", res);
+                                    const isEditInherited = hasPermission(targetUser.role, "canEdit", res);
+                                    const isDeleteInherited = hasPermission(targetUser.role, "canDelete", res);
+
+                                    const hasView = customPerms.canView?.includes(res) || isViewInherited;
+                                    const hasEdit = customPerms.canEdit?.includes(res) || isEditInherited;
+                                    const hasDelete = customPerms.canDelete?.includes(res) || isDeleteInherited;
+
+                                    return (
+                                      <tr key={res} className="border-b border-border last:border-0 hover:bg-muted/10">
+                                        <td className="px-4 py-3 font-bold uppercase tracking-wide text-foreground">
+                                          {res}
+                                        </td>
+                                        <td className="px-4 py-3 text-center">
+                                          <div className="flex flex-col items-center justify-center gap-1">
+                                            <input
+                                              type="checkbox"
+                                              checked={hasView}
+                                              disabled={isViewInherited || !hasPermission(currentUser, "canEdit", "users")}
+                                              onChange={() => handleTogglePermission(targetUser, res, "canView")}
+                                              className="rounded border-border text-primary focus:ring-primary h-4 w-4 bg-muted/40 cursor-pointer disabled:cursor-not-allowed"
+                                            />
+                                            {isViewInherited && (
+                                              <span className="text-[8px] text-muted-foreground/60 font-semibold italic block">(Role)</span>
+                                            )}
+                                          </div>
+                                        </td>
+                                        <td className="px-4 py-3 text-center">
+                                          <div className="flex flex-col items-center justify-center gap-1">
+                                            <input
+                                              type="checkbox"
+                                              checked={hasEdit}
+                                              disabled={isEditInherited || !hasPermission(currentUser, "canEdit", "users")}
+                                              onChange={() => handleTogglePermission(targetUser, res, "canEdit")}
+                                              className="rounded border-border text-primary focus:ring-primary h-4 w-4 bg-muted/40 cursor-pointer disabled:cursor-not-allowed"
+                                            />
+                                            {isEditInherited && (
+                                              <span className="text-[8px] text-muted-foreground/60 font-semibold italic block">(Role)</span>
+                                            )}
+                                          </div>
+                                        </td>
+                                        <td className="px-4 py-3 text-center">
+                                          <div className="flex flex-col items-center justify-center gap-1">
+                                            <input
+                                              type="checkbox"
+                                              checked={hasDelete}
+                                              disabled={isDeleteInherited || !hasPermission(currentUser, "canEdit", "users")}
+                                              onChange={() => handleTogglePermission(targetUser, res, "canDelete")}
+                                              className="rounded border-border text-primary focus:ring-primary h-4 w-4 bg-muted/40 cursor-pointer disabled:cursor-not-allowed"
+                                            />
+                                            {isDeleteInherited && (
+                                              <span className="text-[8px] text-muted-foreground/60 font-semibold italic block">(Role)</span>
+                                            )}
+                                          </div>
+                                        </td>
+                                      </tr>
+                                    );
+                                  })}
+                                </tbody>
+                              </table>
+                            </div>
+                          </div>
+                        );
+                      })()}
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -4103,6 +5372,230 @@ const AdminPage = () => {
                   )}
                 </div>
               )}
+            </div>
+          )}
+
+          {/* TAB CONTENT: SUPPORT DESK */}
+          {activeTab === "support" && (
+            <div className="space-y-6 animate-fade-in">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-card border border-border p-6 rounded-2xl">
+                <div>
+                  <h2 className="text-2xl font-bold tracking-tight">Support & Claims Desk</h2>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Manage customer support tickets, link tickets to bookings, process refunds, resolve claims, and dispatch warranty repairs.
+                  </p>
+                </div>
+              </div>
+
+              {/* Filters & Search */}
+              <div className="flex flex-col md:flex-row gap-4 items-center justify-between bg-muted/40 p-4 rounded-xl border border-border/50">
+                <div className="flex flex-col sm:flex-row items-center gap-2 w-full md:w-auto">
+                  <div className="relative w-full sm:w-64">
+                    <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                    <input
+                      type="text"
+                      placeholder="Search name, email, booking ref..."
+                      value={supportSearch}
+                      onChange={(e) => setSupportSearch(e.target.value)}
+                      className="input-base pl-9 w-full bg-card text-sm border-border h-9 text-foreground rounded-lg"
+                    />
+                  </div>
+                  <select
+                    value={supportCategoryFilter}
+                    onChange={(e) => setSupportCategoryFilter(e.target.value)}
+                    className="bg-card border border-border rounded-lg text-xs p-2 text-foreground h-9 font-medium"
+                  >
+                    <option value="All">All Categories</option>
+                    <option value="Workmanship">Workmanship</option>
+                    <option value="Billing">Billing</option>
+                    <option value="Property Damage">Property Damage</option>
+                    <option value="Other">Other</option>
+                  </select>
+                </div>
+
+                <div className="flex gap-2 overflow-x-auto w-full md:w-auto pb-2 md:pb-0">
+                  {["All", "Pending Review", "Resolved", "Refunded", "Scheduled Repair"].map((status) => (
+                    <button
+                      key={status}
+                      onClick={() => setSupportFilter(status)}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all ${
+                        supportFilter === status
+                          ? "bg-primary text-primary-foreground shadow-sm shadow-primary/20"
+                          : "bg-card border border-border text-muted-foreground hover:bg-muted hover:text-foreground"
+                      }`}
+                    >
+                      {status}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Tickets List */}
+              {loadingSupport ? (
+                <div className="flex items-center justify-center py-20">
+                  <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                </div>
+              ) : (() => {
+                const filteredTickets = supportTickets.filter(ticket => {
+                  const matchesSearch = 
+                    ticket.client_name?.toLowerCase().includes(supportSearch.toLowerCase()) ||
+                    ticket.client_email?.toLowerCase().includes(supportSearch.toLowerCase()) ||
+                    ticket.client_phone?.includes(supportSearch) ||
+                    ticket.id?.toLowerCase().includes(supportSearch.toLowerCase()) ||
+                    (ticket.booking_id && ticket.booking_id.toLowerCase().includes(supportSearch.toLowerCase()));
+                  
+                  const matchesStatus = supportFilter === "All" || ticket.status === supportFilter || (supportFilter === "Pending Review" && (ticket.status === "Pending Review" || ticket.status === "Pending"));
+                  const matchesCategory = supportCategoryFilter === "All" || ticket.category === supportCategoryFilter;
+                  
+                  return matchesSearch && matchesStatus && matchesCategory;
+                });
+
+                if (filteredTickets.length === 0) {
+                  return (
+                    <div className="bg-card border border-border rounded-2xl p-12 text-center animate-fade-in">
+                      <LifeBuoy className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
+                      <h3 className="font-semibold text-lg">No support tickets found</h3>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        There are no claims matching the current filters.
+                      </p>
+                    </div>
+                  );
+                }
+
+                return (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {filteredTickets.map((ticket) => (
+                      <div 
+                        key={ticket.id} 
+                        className="bg-card border border-border rounded-2xl p-5 hover:border-primary/30 transition-all shadow-sm flex flex-col justify-between border-t-2 border-t-primary/20"
+                      >
+                        <div>
+                          <div className="flex justify-between items-start gap-2 mb-3">
+                            <div>
+                              <span className="text-[10px] font-bold bg-muted px-2 py-0.5 rounded border border-border text-muted-foreground uppercase">
+                                {ticket.id}
+                              </span>
+                              <h3 className="font-bold text-base text-foreground mt-1">{ticket.client_name}</h3>
+                            </div>
+                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                              ticket.status === "Pending Review" || ticket.status === "Pending"
+                                ? "bg-yellow-500/10 text-yellow-500 border-yellow-500/20" 
+                                : ticket.status === "Resolved" 
+                                ? "bg-green-500/10 text-green-500 border-green-500/20" 
+                                : ticket.status === "Refunded" 
+                                ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/20" 
+                                : "bg-blue-500/10 text-blue-500 border-blue-500/20"
+                            }`}>
+                              {ticket.status}
+                            </span>
+                          </div>
+
+                          <div className="space-y-1.5 text-xs text-muted-foreground border-b border-border/50 pb-3 mb-3">
+                            <p><strong>Email:</strong> {ticket.client_email}</p>
+                            <p><strong>Phone:</strong> {ticket.client_phone}</p>
+                            <p>
+                              <strong>Category:</strong>{" "}
+                              <span className="font-semibold text-foreground bg-primary/5 border border-primary/10 px-1.5 py-0.5 rounded">
+                                {ticket.category}
+                              </span>
+                            </p>
+                            <p><strong>Logged:</strong> {new Date(ticket.created).toLocaleString()}</p>
+                          </div>
+
+                          {/* Linking Status Info */}
+                          <div className="p-3 bg-muted/40 rounded-xl border border-border/50 text-xs mb-3 space-y-1">
+                            <div className="flex justify-between items-center">
+                              <span>
+                                <strong>Booking ID:</strong>{" "}
+                                {ticket.booking_id ? (
+                                  <span className="font-semibold text-foreground">{ticket.booking_id}</span>
+                                ) : (
+                                  <span className="text-amber-500 font-bold">Unlinked</span>
+                                )}
+                              </span>
+                              {!ticket.booking_id && (
+                                <button 
+                                  onClick={() => {
+                                    setTicketToLink(ticket);
+                                    setBookingToLink("");
+                                  }}
+                                  className="text-[10px] bg-primary text-primary-foreground font-semibold px-2 py-0.5 rounded hover:bg-primary/90"
+                                >
+                                  Link Now
+                                </button>
+                              )}
+                            </div>
+                            {ticket.booking_service && <p><strong>Service:</strong> {ticket.booking_service}</p>}
+                            {ticket.technician_name && (
+                              <p>
+                                <strong>Assigned Tech:</strong> {ticket.technician_name}
+                              </p>
+                            )}
+                          </div>
+
+                          {/* Description */}
+                          <div className="text-xs text-foreground leading-relaxed bg-muted/20 p-3 rounded-lg border border-border/40 whitespace-pre-wrap mb-4">
+                            <strong>Issue Details:</strong>
+                            <p className="mt-1 text-muted-foreground">{ticket.description}</p>
+                          </div>
+
+                          {/* Image Attachments */}
+                          {ticket.attachments && ticket.attachments.length > 0 && (
+                            <div className="mb-4">
+                              <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block mb-1.5">Claim Attachments ({ticket.attachments.length})</span>
+                              <div className="flex gap-2 flex-wrap">
+                                {ticket.attachments.map((img, i) => (
+                                  <img 
+                                    key={i} 
+                                    src={img} 
+                                    alt="attachment" 
+                                    onClick={() => setSelectedTicketImg(img)}
+                                    className="w-12 h-12 object-cover rounded-lg border border-border hover:border-primary cursor-pointer transition-all"
+                                  />
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Actions block */}
+                        {(ticket.status === "Pending Review" || ticket.status === "Pending" || ticket.status === "Pending Review") && (
+                          <div className="flex gap-2 flex-wrap justify-end border-t border-border/40 pt-3 mt-1">
+                            {ticket.booking_id ? (
+                              <>
+                                <button
+                                  onClick={() => handleIssueTicketRefund(ticket)}
+                                  className="text-xs border border-emerald-500/30 text-emerald-500 hover:bg-emerald-500/10 px-2.5 py-1 rounded font-semibold transition-colors"
+                                >
+                                  Issue Refund
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    setTicketToRedispatch(ticket);
+                                    setTechToRedispatch("");
+                                  }}
+                                  className="text-xs border border-blue-500/30 text-blue-500 hover:bg-blue-500/10 px-2.5 py-1 rounded font-semibold transition-colors"
+                                >
+                                  Redispatch Repair
+                                </button>
+                              </>
+                            ) : null}
+                            <button
+                              onClick={() => {
+                                setTicketToResolve(ticket);
+                                setPointsDeducted(0);
+                              }}
+                              className="text-xs bg-primary text-primary-foreground hover:bg-primary/90 px-3 py-1 rounded font-semibold transition-colors"
+                            >
+                              Resolve Claim
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                );
+              })()}
             </div>
           )}
         </main>
@@ -4604,6 +6097,308 @@ const AdminPage = () => {
                 </Button>
               </div>
             </div>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {/* LINK SUPPORT TICKET TO BOOKING MODAL */}
+      {ticketToLink && (
+        <Dialog open={!!ticketToLink} onOpenChange={() => setTicketToLink(null)}>
+          <DialogContent className="max-w-md bg-card border border-border">
+            <DialogHeader>
+              <DialogTitle>Link Ticket to Booking</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 py-2 text-xs">
+              <p className="text-muted-foreground leading-relaxed">
+                Select an active booking for client <strong className="text-foreground">{ticketToLink.client_name}</strong> ({ticketToLink.client_email}) to link with ticket <strong className="text-foreground">{ticketToLink.id}</strong>.
+              </p>
+              <div>
+                <label className="text-xs font-semibold text-muted-foreground block mb-1">Select Booking</label>
+                <select
+                  value={bookingToLink}
+                  onChange={(e) => setBookingToLink(e.target.value)}
+                  className="w-full bg-background border border-border rounded-lg p-2.5 text-xs text-foreground focus:ring-1 focus:ring-primary focus:outline-none"
+                >
+                  <option value="">-- Choose Booking --</option>
+                  {(() => {
+                    const bookings = JSON.parse(localStorage.getItem(LOCAL_BOOKINGS_STORAGE) || "[]");
+                    const filtered = bookings.filter(b => 
+                      b.email?.toLowerCase() === ticketToLink.client_email?.toLowerCase() ||
+                      b.clientEmail?.toLowerCase() === ticketToLink.client_email?.toLowerCase() ||
+                      b.phone?.replace(/\D/g, "") === ticketToLink.client_phone?.replace(/\D/g, "")
+                    );
+                    
+                    const bookingsToRender = filtered.length > 0 ? filtered : bookings;
+                    
+                    return bookingsToRender.map(b => (
+                      <option key={b.id} value={b.id}>
+                        {b.id} - {b.service_type || b.service} ({b.preferred_date || b.Preferred_Date}) [${b.estimated_quote || b.Estimated_Quote || '0.00'}]
+                      </option>
+                    ));
+                  })()}
+                </select>
+                {(() => {
+                  const bookings = JSON.parse(localStorage.getItem(LOCAL_BOOKINGS_STORAGE) || "[]");
+                  const hasMatches = bookings.some(b => 
+                    b.email?.toLowerCase() === ticketToLink.client_email?.toLowerCase() ||
+                    b.clientEmail?.toLowerCase() === ticketToLink.client_email?.toLowerCase() ||
+                    b.phone?.replace(/\D/g, "") === ticketToLink.client_phone?.replace(/\D/g, "")
+                  );
+                  if (!hasMatches) {
+                    return <p className="text-[10px] text-amber-500 mt-1 font-semibold">No exact email/phone match found. Listing all bookings.</p>;
+                  }
+                  return <p className="text-[10px] text-green-500 mt-1 font-semibold">Displaying auto-matched customer bookings.</p>;
+                })()}
+              </div>
+              <div className="flex justify-end gap-2 pt-2">
+                <Button variant="outline" onClick={() => setTicketToLink(null)} className="h-9 text-xs">Cancel</Button>
+                <Button 
+                  disabled={!bookingToLink}
+                  onClick={() => handleLinkTicketBooking(ticketToLink.id, bookingToLink)}
+                  className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold h-9 text-xs"
+                >
+                  Link Booking
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {/* RESOLVE CLAIM WITH TQS DEDUCTION MODAL */}
+      {ticketToResolve && (
+        <Dialog open={!!ticketToResolve} onOpenChange={() => setTicketToResolve(null)}>
+          <DialogContent className="max-w-md bg-card border border-border">
+            <DialogHeader>
+              <DialogTitle>Resolve Ticket Claim</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 py-2 text-xs">
+              <p className="text-muted-foreground leading-relaxed">
+                Resolve Ticket <strong className="text-foreground">{ticketToResolve.id}</strong>. If there was a workmanship or service issue, select technician quality score (TQS) points to deduct.
+              </p>
+              {ticketToResolve.technician_name ? (
+                <div className="text-foreground font-semibold bg-muted/40 p-2.5 rounded-lg border border-border/50">
+                  <p>Assigned Tech: {ticketToResolve.technician_name}</p>
+                  <p className="text-[10px] text-muted-foreground mt-0.5">Technician ID: {ticketToResolve.technician_id}</p>
+                </div>
+              ) : (
+                <p className="text-amber-500 font-semibold bg-amber-500/5 p-2.5 rounded-lg border border-amber-500/20">
+                  Note: No technician is currently linked to this ticket. Points deduction will not apply.
+                </p>
+              )}
+              
+              {ticketToResolve.technician_name && (
+                <div>
+                  <label className="text-xs font-semibold text-muted-foreground block mb-1">Technician Score Deduction (TQS)</label>
+                  <select
+                    value={pointsDeducted}
+                    onChange={(e) => setPointsDeducted(Number(e.target.value))}
+                    className="w-full bg-background border border-border rounded-lg p-2.5 text-xs text-foreground font-semibold focus:ring-1 focus:ring-primary focus:outline-none"
+                  >
+                    <option value={0}>No Deduction (0 pts) - General/Billing issue</option>
+                    <option value={5}>Minor Workmanship Issue (5 pts)</option>
+                    <option value={15}>Major Workmanship Issue / Claim (15 pts)</option>
+                    <option value={25}>Technician No Show (25 pts)</option>
+                    <option value={50}>Severe Violation (50 pts)</option>
+                  </select>
+                  <p className="text-[10px] text-muted-foreground mt-1.5">
+                    Current TQS benchmark: Technicians falling below 75 points are automatically suspended from active jobs.
+                  </p>
+                </div>
+              )}
+              
+              <div className="flex justify-end gap-2 pt-2">
+                <Button variant="outline" onClick={() => setTicketToResolve(null)} className="h-9 text-xs">Cancel</Button>
+                <Button 
+                  onClick={() => {
+                    handleResolveTicket(ticketToResolve, pointsDeducted);
+                    setTicketToResolve(null);
+                  }}
+                  className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold h-9 text-xs"
+                >
+                  Confirm Resolve
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {/* RE-DISPATCH WARRANTY REPAIR MODAL */}
+      {ticketToRedispatch && (
+        <Dialog open={!!ticketToRedispatch} onOpenChange={() => setTicketToRedispatch(null)}>
+          <DialogContent className="max-w-md bg-card border border-border">
+            <DialogHeader>
+              <DialogTitle>Re-Dispatch Warranty Repair</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 py-2 text-xs">
+              <p className="text-muted-foreground leading-relaxed">
+                Schedule a warranty repair job at $0.00 for client <strong className="text-foreground">{ticketToRedispatch.client_name}</strong> and assign a different technician.
+              </p>
+              <div>
+                <label className="text-xs font-semibold text-muted-foreground block mb-1">Select Technician</label>
+                <select
+                  value={techToRedispatch}
+                  onChange={(e) => setTechToRedispatch(e.target.value)}
+                  className="w-full bg-background border border-border rounded-lg p-2.5 text-xs text-foreground font-semibold focus:ring-1 focus:ring-primary focus:outline-none"
+                >
+                  <option value="">-- Choose Active Technician --</option>
+                  {(() => {
+                    const team = JSON.parse(localStorage.getItem(LOCAL_TEAM_STORAGE) || "[]");
+                    const activeTechs = team.filter(t => 
+                      !t.isSuspended && 
+                      (t.tqs === undefined || t.tqs >= 75) && 
+                      t.id !== ticketToRedispatch.technician_id
+                    );
+                    return activeTechs.map(t => (
+                      <option key={t.id} value={t.id}>
+                        {t.name} (TQS: {t.tqs !== undefined ? t.tqs : 100})
+                      </option>
+                    ));
+                  })()}
+                </select>
+                <p className="text-[10px] text-muted-foreground mt-1.5">
+                  Only active, non-suspended technicians with a TQS score of 75+ are eligible for warranty dispatch.
+                </p>
+              </div>
+              <div className="flex justify-end gap-2 pt-2">
+                <Button variant="outline" onClick={() => setTicketToRedispatch(null)} className="h-9 text-xs">Cancel</Button>
+                <Button 
+                  disabled={!techToRedispatch}
+                  onClick={() => handleRedispatchRepair(ticketToRedispatch, techToRedispatch)}
+                  className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold h-9 text-xs"
+                >
+                  Dispatch Warranty Job
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {/* PHOTO PREVIEW LIGHTBOX */}
+      {selectedTicketImg && (
+        <Dialog open={!!selectedTicketImg} onOpenChange={() => setSelectedTicketImg(null)}>
+          <DialogContent className="max-w-2xl bg-card border border-border p-1">
+            <DialogHeader className="sr-only">
+              <DialogTitle>Attachment View</DialogTitle>
+            </DialogHeader>
+            <div className="relative">
+              <button 
+                onClick={() => setSelectedTicketImg(null)}
+                className="absolute top-2 right-2 p-1.5 rounded-full bg-background/80 hover:bg-background border border-border text-foreground hover:text-primary transition-all z-10"
+              >
+                <X size={16} />
+              </button>
+              <img 
+                src={selectedTicketImg} 
+                alt="Attachment Preview" 
+                className="w-full h-auto max-h-[80vh] object-contain rounded-lg"
+              />
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {/* QUICK CHANGE CREDENTIALS DIALOG */}
+      {credentialsModalOpen && (
+        <Dialog open={credentialsModalOpen} onOpenChange={(open) => setCredentialsModalOpen(open)}>
+          <DialogContent className="max-w-md bg-card border border-border">
+            <DialogHeader>
+              <DialogTitle>Change Admin Credentials</DialogTitle>
+            </DialogHeader>
+            <form onSubmit={handleUpdateCredentials} className="space-y-4 py-2">
+              <div className="space-y-3">
+                <div>
+                  <label className="text-xs font-bold text-muted-foreground uppercase block mb-1">
+                    Username / Display Name
+                  </label>
+                  <input
+                    type="text"
+                    value={credentialsUsername}
+                    onChange={(e) => setCredentialsUsername(e.target.value)}
+                    className="input-base w-full focus:border-primary"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-bold text-muted-foreground uppercase block mb-1">
+                    Email Address
+                  </label>
+                  <input
+                    type="email"
+                    value={credentialsEmail}
+                    onChange={(e) => setCredentialsEmail(e.target.value)}
+                    className="input-base w-full focus:border-primary"
+                    required
+                  />
+                </div>
+                <div className="border-t border-border/50 pt-3 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h4 className="font-bold text-xs text-muted-foreground uppercase tracking-wider">Change Password (Optional)</h4>
+                  </div>
+                  <div>
+                    <label className="text-xs font-semibold text-muted-foreground block mb-1">
+                      New Password
+                    </label>
+                    <div className="relative">
+                      <input
+                        type={showCredentialsNewPassword ? "text" : "password"}
+                        value={credentialsPassword}
+                        onChange={(e) => setCredentialsPassword(e.target.value)}
+                        placeholder="Min 6 characters"
+                        className="input-base w-full focus:border-primary pr-10"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowCredentialsNewPassword(!showCredentialsNewPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground flex items-center"
+                      >
+                        {showCredentialsNewPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+                      </button>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="text-xs font-semibold text-muted-foreground block mb-1">
+                      Confirm Password
+                    </label>
+                    <div className="relative">
+                      <input
+                        type={showCredentialsConfirmPassword ? "text" : "password"}
+                        value={credentialsConfirmPassword}
+                        onChange={(e) => setCredentialsConfirmPassword(e.target.value)}
+                        placeholder="Re-enter password"
+                        className="input-base w-full focus:border-primary pr-10"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowCredentialsConfirmPassword(!showCredentialsConfirmPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground flex items-center"
+                      >
+                        {showCredentialsConfirmPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2">
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={() => setCredentialsModalOpen(false)} 
+                  className="h-9 text-xs"
+                >
+                  Cancel
+                </Button>
+                <Button 
+                  type="submit" 
+                  className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold h-9 text-xs"
+                >
+                  Save Changes
+                </Button>
+              </div>
+            </form>
           </DialogContent>
         </Dialog>
       )}

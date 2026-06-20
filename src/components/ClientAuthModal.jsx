@@ -18,7 +18,7 @@ import { Eye, EyeOff, User, Wrench, ArrowLeft } from "lucide-react";
 const ClientAuthModal = () => {
   const { authModalOpen, closeAuthModal, authModalMode, setAuthModalMode } =
     useUI();
-  const { login, signup } = useClientAuth();
+  const { login, loginWithGoogle, signup } = useClientAuth();
 
   const [mode, setMode] = useState("login"); // login | signup | chooseType | signupForm
   const [accountType, setAccountType] = useState("customer");
@@ -59,8 +59,17 @@ const ClientAuthModal = () => {
     }
   }, [authModalOpen]);
 
+  const isValidEmail = (email) => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
+
   const handleLogin = async (e) => {
     e.preventDefault();
+    if (!isValidEmail(form.email)) {
+      toast.error("Please enter a valid email address.");
+      return;
+    }
     setLoading(true);
     try {
       await login(form.email, form.password);
@@ -74,6 +83,10 @@ const ClientAuthModal = () => {
 
   const handleSignup = async (e) => {
     e.preventDefault();
+    if (!isValidEmail(form.email)) {
+      toast.error("Please enter a valid email address.");
+      return;
+    }
     if (!agreeTerms) {
       toast.error("Please accept the Terms of Service and Privacy Policy to register.");
       return;
@@ -146,23 +159,26 @@ const ClientAuthModal = () => {
                   placeholder="you@example.com"
                 />
               </div>
-              <div className="space-y-1.5 relative">
+              <div className="space-y-1.5">
                 <Label htmlFor="auth-password">Password</Label>
-                <Input
-                  id="auth-password"
-                  type={showPassword ? "text" : "password"}
-                  value={form.password}
-                  onChange={(e) => updateForm("password", e.target.value)}
-                  required
-                  placeholder="••••••••"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-[30px] text-muted-foreground hover:text-foreground"
-                >
-                  {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
-                </button>
+                <div className="relative">
+                  <Input
+                    id="auth-password"
+                    type={showPassword ? "text" : "password"}
+                    value={form.password}
+                    onChange={(e) => updateForm("password", e.target.value)}
+                    required
+                    placeholder="••••••••"
+                    className="pr-10"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground flex items-center"
+                  >
+                    {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+                  </button>
+                </div>
               </div>
               <Button
                 type="submit"
@@ -171,12 +187,53 @@ const ClientAuthModal = () => {
               >
                 {loading ? "Signing in…" : "Sign In"}
               </Button>
+
+              <div className="relative flex py-2 items-center">
+                <div className="flex-grow border-t border-border"></div>
+                <span className="flex-shrink mx-4 text-muted-foreground text-[10px] uppercase font-bold tracking-wider">Or continue with</span>
+                <div className="flex-grow border-t border-border"></div>
+              </div>
+
+              <Button
+                type="button"
+                variant="outline"
+                onClick={async () => {
+                  try {
+                    await loginWithGoogle();
+                    closeAuthModal();
+                  } catch (err) {
+                    toast.error(err.message || "Google Authentication failed.");
+                  }
+                }}
+                className="w-full border-border bg-card hover:bg-muted text-foreground flex items-center justify-center gap-2 h-10 text-xs font-semibold cursor-pointer"
+              >
+                <svg className="h-4 w-4" viewBox="0 0 24 24">
+                  <path
+                    fill="#EA4335"
+                    d="M5.266 9.765A7.077 7.077 0 0 1 12 4.909c1.69 0 3.218.6 4.418 1.582l3.51-3.51C17.642 1.091 14.973 0 12 0 7.354 0 3.398 2.673 1.48 6.574l3.786 3.191z"
+                  />
+                  <path
+                    fill="#4285F4"
+                    d="M23.49 12.275c0-.818-.073-1.609-.21-2.373H12v4.582h6.44c-.277 1.464-1.1 2.709-2.34 3.545l3.65 2.836c2.136-1.973 3.37-4.873 3.37-8.59z"
+                  />
+                  <path
+                    fill="#FBBC05"
+                    d="M5.266 14.235A7.093 7.093 0 0 1 4.91 12c0-.79.13-1.555.356-2.265L1.48 6.545A11.905 11.905 0 0 0 0 12c0 2.01.5 3.91 1.38 5.61l3.886-3.375z"
+                  />
+                  <path
+                    fill="#34A853"
+                    d="M12 24c3.24 0 5.957-1.077 7.94-2.927l-3.65-2.836c-1.01.677-2.3 1.082-3.79 1.082-2.923 0-5.4-1.973-6.282-4.627L1.38 17.936A11.927 11.927 0 0 0 12 24z"
+                  />
+                </svg>
+                <span>Gmail / Google</span>
+              </Button>
+
               <p className="text-center text-sm text-muted-foreground">
                 Don't have an account?{" "}
                 <button
                   type="button"
                   onClick={() => setMode("chooseType")}
-                  className="text-primary hover:underline font-medium"
+                  className="text-primary hover:underline font-medium cursor-pointer"
                 >
                   Sign up
                 </button>
@@ -283,36 +340,49 @@ const ClientAuthModal = () => {
                   <option value="WhatsApp">WhatsApp</option>
                 </select>
               </div>
-              <div className="space-y-1.5 relative">
+              <div className="space-y-1.5">
                 <Label htmlFor="su-password">Password</Label>
-                <Input
-                  id="su-password"
-                  type={showPassword ? "text" : "password"}
-                  value={form.password}
-                  onChange={(e) => updateForm("password", e.target.value)}
-                  required
-                  placeholder="••••••••"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-[30px] text-muted-foreground hover:text-foreground"
-                >
-                  {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
-                </button>
+                <div className="relative">
+                  <Input
+                    id="su-password"
+                    type={showPassword ? "text" : "password"}
+                    value={form.password}
+                    onChange={(e) => updateForm("password", e.target.value)}
+                    required
+                    placeholder="••••••••"
+                    className="pr-10"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground flex items-center"
+                  >
+                    {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+                  </button>
+                </div>
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="su-confirm">Confirm Password</Label>
-                <Input
-                  id="su-confirm"
-                  type="password"
-                  value={form.confirmPassword}
-                  onChange={(e) =>
-                    updateForm("confirmPassword", e.target.value)
-                  }
-                  required
-                  placeholder="••••••••"
-                />
+                <div className="relative">
+                  <Input
+                    id="su-confirm"
+                    type={showPassword ? "text" : "password"}
+                    value={form.confirmPassword}
+                    onChange={(e) =>
+                      updateForm("confirmPassword", e.target.value)
+                    }
+                    required
+                    placeholder="••••••••"
+                    className="pr-10"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground flex items-center"
+                  >
+                    {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+                  </button>
+                </div>
               </div>
               <div className="flex items-start gap-2.5 py-1 text-xs select-none">
                 <input
@@ -344,10 +414,51 @@ const ClientAuthModal = () => {
               >
                 {loading ? "Creating account…" : "Create Account"}
               </Button>
+
+              <div className="relative flex py-2 items-center">
+                <div className="flex-grow border-t border-border"></div>
+                <span className="flex-shrink mx-4 text-muted-foreground text-[10px] uppercase font-bold tracking-wider">Or sign up with</span>
+                <div className="flex-grow border-t border-border"></div>
+              </div>
+
+              <Button
+                type="button"
+                variant="outline"
+                onClick={async () => {
+                  try {
+                    await loginWithGoogle();
+                    closeAuthModal();
+                  } catch (err) {
+                    toast.error(err.message || "Google Authentication failed.");
+                  }
+                }}
+                className="w-full border-border bg-card hover:bg-muted text-foreground flex items-center justify-center gap-2 h-10 text-xs font-semibold cursor-pointer"
+              >
+                <svg className="h-4 w-4" viewBox="0 0 24 24">
+                  <path
+                    fill="#EA4335"
+                    d="M5.266 9.765A7.077 7.077 0 0 1 12 4.909c1.69 0 3.218.6 4.418 1.582l3.51-3.51C17.642 1.091 14.973 0 12 0 7.354 0 3.398 2.673 1.48 6.574l3.786 3.191z"
+                  />
+                  <path
+                    fill="#4285F4"
+                    d="M23.49 12.275c0-.818-.073-1.609-.21-2.373H12v4.582h6.44c-.277 1.464-1.1 2.709-2.34 3.545l3.65 2.836c2.136-1.973 3.37-4.873 3.37-8.59z"
+                  />
+                  <path
+                    fill="#FBBC05"
+                    d="M5.266 14.235A7.093 7.093 0 0 1 4.91 12c0-.79.13-1.555.356-2.265L1.48 6.545A11.905 11.905 0 0 0 0 12c0 2.01.5 3.91 1.38 5.61l3.886-3.375z"
+                  />
+                  <path
+                    fill="#34A853"
+                    d="M12 24c3.24 0 5.957-1.077 7.94-2.927l-3.65-2.836c-1.01.677-2.3 1.082-3.79 1.082-2.923 0-5.4-1.973-6.282-4.627L1.38 17.936A11.927 11.927 0 0 0 12 24z"
+                  />
+                </svg>
+                <span>Gmail / Google</span>
+              </Button>
+
               <button
                 type="button"
                 onClick={() => setMode("chooseType")}
-                className="w-full text-center text-sm text-muted-foreground hover:text-foreground flex items-center justify-center gap-1"
+                className="w-full text-center text-sm text-muted-foreground hover:text-foreground flex items-center justify-center gap-1 cursor-pointer"
               >
                 <ArrowLeft size={14} /> Back
               </button>

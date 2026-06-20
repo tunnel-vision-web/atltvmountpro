@@ -52,6 +52,7 @@ const HeroCarousel = () => {
 
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [visible, setVisible] = useState(true);
+  const [isTextHovered, setIsTextHovered] = useState(false);
 
   // Load home page CMS dynamic fields for first slide
   useEffect(() => {
@@ -160,7 +161,7 @@ const HeroCarousel = () => {
       </div>
 
       {/* Gradient overlay */}
-      <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/45 to-black/70 pointer-events-none" />
+      <div className={`absolute inset-0 bg-gradient-to-b from-black/60 via-black/45 to-black/70 pointer-events-none transition-opacity duration-500 ${isTextHovered ? "opacity-0" : "opacity-100"}`} />
 
       {/* Embla carousel — used only for auto-advance timing + scroll index, content is animated via CSS */}
       <div className="relative h-[100dvh] w-full" ref={emblaRef}>
@@ -172,7 +173,11 @@ const HeroCarousel = () => {
             >
               {/* Content — centered both axes */}
               <div className="absolute inset-0 flex items-center justify-center pt-20">
-                <div className="w-full max-w-[860px] mx-auto px-6 sm:px-10 text-center">
+                <div 
+                  className="w-full max-w-[860px] mx-auto px-6 sm:px-10 text-center cursor-default"
+                  onMouseEnter={() => setIsTextHovered(true)}
+                  onMouseLeave={() => setIsTextHovered(false)}
+                >
                   {/* Animated content wrapper — only shown for active slide */}
                   {selectedIndex === index && (
                     <div

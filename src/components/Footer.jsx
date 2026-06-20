@@ -66,7 +66,7 @@ const Footer = () => {
               </Link>
               <Link
                 to="/join"
-                className="text-sm hover:text-primary transition-colors duration-200 font-semibold text-primary"
+                className="text-sm hover:text-primary transition-colors duration-200"
               >
                 Become a Tech
               </Link>
@@ -81,6 +81,12 @@ const Footer = () => {
                 className="text-sm hover:text-primary transition-colors duration-200"
               >
                 Customer App (Mock)
+              </Link>
+              <Link
+                to="/support"
+                className="text-sm hover:text-primary transition-colors duration-200"
+              >
+                Support & Claims
               </Link>
             </nav>
           </div>

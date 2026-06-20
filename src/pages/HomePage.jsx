@@ -485,6 +485,47 @@ const HomePage = () => {
         </div>
       </section>
 
+      {/* ── Mobile App Download CTA ── */}
+      <section className="py-20 bg-slate-900 border-t border-slate-800 text-white relative overflow-hidden">
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_60%_60%_at_50%_120%,rgba(230,179,119,0.1),rgba(255,255,255,0))]" />
+        <div className="max-w-[1140px] mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+          <div className="bg-slate-850/40 backdrop-blur-md border border-slate-800/80 rounded-3xl p-8 md:p-12 flex flex-col md:flex-row items-center justify-between gap-8">
+            <div className="max-w-xl text-center md:text-left space-y-4">
+              <span className="text-xs bg-indigo-500/20 text-indigo-400 px-3 py-1 rounded-full font-bold uppercase tracking-wider">
+                Atlanta TV Mount PRO Mobile
+              </span>
+              <h2 className="text-3xl md:text-4xl font-extrabold tracking-tight text-white leading-tight">
+                Download the Mobile Application
+              </h2>
+              <p className="text-slate-300 text-base md:text-lg leading-relaxed">
+                Manage your appointments, track your technician in real-time, view invoice histories, tip after service, and communicate with support directly from your mobile device.
+              </p>
+            </div>
+            <div className="flex-shrink-0 flex flex-col sm:flex-row gap-4 items-center justify-center">
+              <Link to="/apps/customer" title="Download Customer App" className="block cursor-pointer">
+                <svg className="h-[44px] w-[150px] transition-transform hover:scale-105 duration-200 border border-slate-700/50 rounded-lg shadow-md" viewBox="0 0 135 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <rect width="135" height="40" rx="6" fill="black"/>
+                  <path d="M20.2 16.5C20.2 14.2 22.1 13 22.2 13C21.1 11.4 19.4 11.2 18.8 11.1C17.3 11 15.8 12 15 12C14.2 12 13 11.2 12 11.2C10.7 11.2 9.4 12 8.7 13.2C7.3 15.7 8.3 19.4 9.7 21.3C10.4 22.2 11.1 23.2 12.1 23.2C13 23.2 13.4 22.6 14.5 22.6C15.6 22.6 15.9 23.2 16.9 23.2C17.9 23.2 18.6 22.3 19.2 21.4C19.9 20.4 20.2 19.4 20.2 19.3C20.2 19.3 18.7 18.7 18.7 17C18.7 15.6 19.9 14.6 20.2 14.5C20.1 14.5 20.2 16.5 20.2 16.5ZM17.2 9.5C17.8 8.7 18.2 7.7 18.1 6.6C17.2 6.6 16.1 7.2 15.5 8C15 8.6 14.6 9.6 14.7 10.7C15.7 10.8 16.7 10.2 17.2 9.5Z" fill="white"/>
+                  <text x="32" y="16" fill="white" fontFamily="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" fontSize="7" fontWeight="500" letterSpacing="0.2">Download on the</text>
+                  <text x="32" y="29" fill="white" fontFamily="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" fontSize="13" fontWeight="bold" letterSpacing="0.2">App Store</text>
+                </svg>
+              </Link>
+              <Link to="/apps/tech" title="Download Technician App" className="block cursor-pointer">
+                <svg className="h-[44px] w-[150px] transition-transform hover:scale-105 duration-200 border border-slate-700/50 rounded-lg shadow-md" viewBox="0 0 135 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <rect width="135" height="40" rx="6" fill="black"/>
+                  <path d="M12 10.5V29.5C12 30.1 12.4 30.3 12.8 30L26 20.5L12.8 10C12.4 9.7 12 9.9 12 10.5Z" fill="#00F0FF"/>
+                  <path d="M12.8 10L20 15L12 23.5V10.5C12 10 12.4 9.7 12.8 10Z" fill="#00E676"/>
+                  <path d="M20 15L26 20.5L20 26L12.8 30L20 15Z" fill="#FFD600"/>
+                  <path d="M12 23.5L20 26L12.8 30C12.4 30.3 12 30.1 12 29.5V23.5Z" fill="#FF3D00"/>
+                  <text x="35" y="16" fill="white" fontFamily="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" fontSize="7" fontWeight="500" letterSpacing="0.2">GET IT ON</text>
+                  <text x="35" y="29" fill="white" fontFamily="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" fontSize="13" fontWeight="bold" letterSpacing="0.2">Google Play</text>
+                </svg>
+              </Link>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* ── Newsletter ── */}
       <section className="py-20" style={{ backgroundColor: "#e6b377" }}>
         <div className="max-w-[1140px] mx-auto px-4 sm:px-6 lg:px-8">

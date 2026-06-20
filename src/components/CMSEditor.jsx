@@ -109,6 +109,17 @@ export default function CMSEditor() {
   }, [activePage, data]);
 
   const handleSave = async () => {
+    if (formData.email) {
+      const isValidEmail = (email) => {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        return emailRegex.test(email);
+      };
+      if (!isValidEmail(formData.email)) {
+        toast.error("Please enter a valid email address.");
+        return;
+      }
+    }
+
     setSaving(true);
     try {
       const result = await savePage(activePage, formData);

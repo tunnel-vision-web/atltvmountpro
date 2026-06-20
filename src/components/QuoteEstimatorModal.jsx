@@ -369,6 +369,16 @@ const QuoteEstimatorModal = () => {
       toast.error('Please fill in your name, email, and phone.');
       return;
     }
+
+    const isValidEmail = (email) => {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      return emailRegex.test(email);
+    };
+
+    if (!isValidEmail(contactData.email)) {
+      toast.error("Please enter a valid email address.");
+      return;
+    }
     setLoading(true);
 
     const hardwareText = selectedHardware.length > 0
