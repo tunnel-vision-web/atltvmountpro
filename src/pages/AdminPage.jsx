@@ -4576,32 +4576,34 @@ const AdminPage = () => {
 
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                       <div className="space-y-1.5">
-                        <Label htmlFor="ref-name">Candidate Name</Label>
-                        <Input
+                        <label htmlFor="ref-name" className="text-xs font-semibold block text-foreground">Candidate Name</label>
+                        <input
                           id="ref-name"
                           value={candidateName}
                           onChange={(e) => setCandidateName(e.target.value)}
                           placeholder="e.g. John Doe"
+                          className="w-full bg-muted/40 border border-border text-foreground h-10 rounded-md px-3 text-sm mt-1.5 focus:border-primary focus:outline-none"
                         />
                       </div>
                       <div className="space-y-1.5">
-                        <Label htmlFor="ref-phone">Candidate Phone</Label>
-                        <Input
+                        <label htmlFor="ref-phone" className="text-xs font-semibold block text-foreground">Candidate Phone</label>
+                        <input
                           id="ref-phone"
                           value={candidatePhone}
                           onChange={(e) => setCandidatePhone(e.target.value)}
                           placeholder="e.g. (555) 000-0000"
+                          className="w-full bg-muted/40 border border-border text-foreground h-10 rounded-md px-3 text-sm mt-1.5 focus:border-primary focus:outline-none"
                         />
                       </div>
                       <div className="space-y-1.5">
-                        <Label htmlFor="ref-code">Referral / Invite Code</Label>
-                        <div className="flex gap-2">
-                          <Input
+                        <label htmlFor="ref-code" className="text-xs font-semibold block text-foreground">Referral / Invite Code</label>
+                        <div className="flex gap-2 mt-1.5">
+                          <input
                             id="ref-code"
                             value={referralCode}
                             onChange={(e) => setReferralCode(e.target.value)}
                             placeholder="e.g. REF-TECH-XYZ"
-                            className="font-mono text-xs uppercase"
+                            className="flex-1 bg-muted/40 border border-border text-foreground h-10 rounded-md px-3 text-sm focus:border-primary focus:outline-none font-mono uppercase"
                           />
                           <Button
                             variant="outline"
