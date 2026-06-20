@@ -1687,6 +1687,10 @@ const AdminPage = () => {
   const [showProductDialog, setShowProductDialog] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
   const [newCategoryName, setNewCategoryName] = useState("");
+  const [onboardingSettingsForm, setOnboardingSettingsForm] = useState({
+    poloCost: 10.00,
+    nameTagCost: 5.00,
+  });
   const [productForm, setProductForm] = useState({
     name: "",
     category: "Polo Shirts",
@@ -1812,6 +1816,20 @@ const AdminPage = () => {
     // Tech Uniform Orders
     const storedTechOrders = localStorage.getItem("atltv_uniform_orders");
     setUniformOrders(storedTechOrders ? JSON.parse(storedTechOrders) : []);
+
+    // Onboarding settings
+    const storedOnbSettings = localStorage.getItem("atltv_onboarding_settings");
+    if (storedOnbSettings) {
+      try {
+        setOnboardingSettingsForm(JSON.parse(storedOnbSettings));
+      } catch (err) {
+        console.error(err);
+      }
+    } else {
+      const defaults = { poloCost: 10.00, nameTagCost: 5.00 };
+      localStorage.setItem("atltv_onboarding_settings", JSON.stringify(defaults));
+      setOnboardingSettingsForm(defaults);
+    }
   };
 
   useEffect(() => {
@@ -1909,6 +1927,12 @@ const AdminPage = () => {
     localStorage.setItem("atltv_uniform_orders", JSON.stringify(updated));
     setUniformOrders(updated);
     toast.success("Uniform order status updated.");
+  };
+
+  const handleSaveOnboardingSettings = (e) => {
+    e.preventDefault();
+    localStorage.setItem("atltv_onboarding_settings", JSON.stringify(onboardingSettingsForm));
+    toast.success("Onboarding package settings updated successfully.");
   };
 
   const handleProductImageUpload = (e) => {
@@ -5841,64 +5865,115 @@ const AdminPage = () => {
 
               {/* Technician Uniform Orders Sub-tab */}
               {storeSubTab === "uniforms" && (
-                <div className="bg-card border border-border rounded-2xl overflow-hidden shadow-sm">
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-left text-xs border-collapse">
-                      <thead>
-                        <tr className="bg-muted/50 text-muted-foreground font-semibold border-b border-border">
-                          <th className="px-5 py-3.5">Order ID</th>
-                          <th className="px-5 py-3.5">Technician / Recruit</th>
-                          <th className="px-5 py-3.5">Size Selection</th>
-                          <th className="px-5 py-3.5">Shipping Speed</th>
-                          <th className="px-5 py-3.5">Paycheck Deduction</th>
-                          <th className="px-5 py-3.5">Order Date</th>
-                          <th className="px-5 py-3.5">Status</th>
-                          <th className="px-5 py-3.5 text-right">Actions</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-border/50">
-                        {uniformOrders.length === 0 ? (
-                          <tr>
-                            <td colSpan={8} className="text-center py-8 text-muted-foreground">
-                              No technician uniform orders found in onboarding system.
-                            </td>
+                <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 animate-fade-in">
+                  {/* Left Column: Onboarding Package Settings */}
+                  <div className="lg:col-span-1 space-y-4">
+                    <div className="bg-card border border-border rounded-2xl p-5 shadow-sm space-y-4">
+                      <div>
+                        <h3 className="font-bold text-sm text-foreground">Onboarding Settings</h3>
+                        <p className="text-[11px] text-muted-foreground mt-1">
+                          Configure pricing for the recruit uniform apparel package.
+                        </p>
+                      </div>
+                      <form onSubmit={handleSaveOnboardingSettings} className="space-y-3.5">
+                        <div className="space-y-1.5">
+                          <Label htmlFor="set-polo-cost" className="text-xs">Polo Shirt Cost ($)</Label>
+                          <Input
+                            id="set-polo-cost"
+                            type="number"
+                            step="0.01"
+                            value={onboardingSettingsForm.poloCost}
+                            onChange={(e) => setOnboardingSettingsForm({ ...onboardingSettingsForm, poloCost: parseFloat(e.target.value) || 0 })}
+                            required
+                            className="bg-muted/40 text-xs h-9"
+                          />
+                        </div>
+                        <div className="space-y-1.5">
+                          <Label htmlFor="set-nametag-cost" className="text-xs">Name Tag Cost ($)</Label>
+                          <Input
+                            id="set-nametag-cost"
+                            type="number"
+                            step="0.01"
+                            value={onboardingSettingsForm.nameTagCost}
+                            onChange={(e) => setOnboardingSettingsForm({ ...onboardingSettingsForm, nameTagCost: parseFloat(e.target.value) || 0 })}
+                            required
+                            className="bg-muted/40 text-xs h-9"
+                          />
+                        </div>
+                        <div className="bg-muted/30 p-2.5 rounded border border-border text-[10px] text-muted-foreground">
+                          <span className="font-bold text-foreground block">Apparel Total (excl. shipping):</span>
+                          3 Polos @ ${onboardingSettingsForm.poloCost.toFixed(2)} + 1 Name Tag @ ${onboardingSettingsForm.nameTagCost.toFixed(2)} = 
+                          <span className="text-primary font-bold text-xs block mt-0.5">
+                            ${((onboardingSettingsForm.poloCost * 3) + onboardingSettingsForm.nameTagCost).toFixed(2)}
+                          </span>
+                        </div>
+                        <Button type="submit" className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold h-9 text-xs">
+                          Save Settings
+                        </Button>
+                      </form>
+                    </div>
+                  </div>
+
+                  {/* Right Column: Uniform Orders List */}
+                  <div className="lg:col-span-3 bg-card border border-border rounded-2xl overflow-hidden shadow-sm h-fit">
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left text-xs border-collapse">
+                        <thead>
+                          <tr className="bg-muted/50 text-muted-foreground font-semibold border-b border-border">
+                            <th className="px-5 py-3.5">Order ID</th>
+                            <th className="px-5 py-3.5">Technician / Recruit</th>
+                            <th className="px-5 py-3.5">Size Selection</th>
+                            <th className="px-5 py-3.5">Shipping Speed</th>
+                            <th className="px-5 py-3.5">Paycheck Deduction</th>
+                            <th className="px-5 py-3.5">Order Date</th>
+                            <th className="px-5 py-3.5">Status</th>
+                            <th className="px-5 py-3.5 text-right">Actions</th>
                           </tr>
-                        ) : (
-                          uniformOrders.map((o) => (
-                            <tr key={o.id} className="hover:bg-muted/5 transition-colors">
-                              <td className="px-5 py-3.5 font-mono text-muted-foreground">#{o.id.slice(-6)}</td>
-                              <td className="px-5 py-3.5">
-                                <div className="font-semibold text-foreground">{o.techName}</div>
-                                <div className="text-[10px] text-muted-foreground">{o.techEmail}</div>
-                              </td>
-                              <td className="px-5 py-3.5 font-bold text-indigo-400">Size {o.size}</td>
-                              <td className="px-5 py-3.5 capitalize text-muted-foreground">{o.shippingSpeed} Delivery</td>
-                              <td className="px-5 py-3.5 font-bold text-red-500">-${(o.totalDeduction || 0).toFixed(2)}</td>
-                              <td className="px-5 py-3.5 text-muted-foreground">{new Date(o.timestamp).toLocaleDateString()}</td>
-                              <td className="px-5 py-3.5">
-                                <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold border ${
-                                  o.status === "Shipped"
-                                    ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/20"
-                                    : "bg-amber-500/10 text-amber-500 border-amber-500/20"
-                                }`}>
-                                  {o.status}
-                                </span>
-                              </td>
-                              <td className="px-5 py-3.5 text-right">
-                                <Button
-                                  onClick={() => toggleUniformOrderStatus(o.id)}
-                                  variant="outline"
-                                  size="sm"
-                                  className="h-8 text-[10px] font-semibold"
-                                >
-                                  Mark as {o.status === "Shipped" ? "Pending" : "Shipped"}
-                                </Button>
+                        </thead>
+                        <tbody className="divide-y divide-border/50">
+                          {uniformOrders.length === 0 ? (
+                            <tr>
+                              <td colSpan={8} className="text-center py-8 text-muted-foreground">
+                                No technician uniform orders found in onboarding system.
                               </td>
                             </tr>
-                          ))
-                        )}
-                      </tbody>
-                    </table>
+                          ) : (
+                            uniformOrders.map((o) => (
+                              <tr key={o.id} className="hover:bg-muted/5 transition-colors">
+                                <td className="px-5 py-3.5 font-mono text-muted-foreground">#{o.id.slice(-6)}</td>
+                                <td className="px-5 py-3.5">
+                                  <div className="font-semibold text-foreground">{o.techName}</div>
+                                  <div className="text-[10px] text-muted-foreground">{o.techEmail}</div>
+                                </td>
+                                <td className="px-5 py-3.5 font-bold text-indigo-400">Size {o.size}</td>
+                                <td className="px-5 py-3.5 capitalize text-muted-foreground">{o.shippingSpeed} Delivery</td>
+                                <td className="px-5 py-3.5 font-bold text-red-500">-${(o.totalDeduction || 0).toFixed(2)}</td>
+                                <td className="px-5 py-3.5 text-muted-foreground">{new Date(o.timestamp).toLocaleDateString()}</td>
+                                <td className="px-5 py-3.5">
+                                  <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold border ${
+                                    o.status === "Shipped"
+                                      ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/20"
+                                      : "bg-amber-500/10 text-amber-500 border-amber-500/20"
+                                  }`}>
+                                    {o.status}
+                                  </span>
+                                </td>
+                                <td className="px-5 py-3.5 text-right">
+                                  <Button
+                                    onClick={() => toggleUniformOrderStatus(o.id)}
+                                    variant="outline"
+                                    size="sm"
+                                    className="h-8 text-[10px] font-semibold"
+                                  >
+                                    Mark as {o.status === "Shipped" ? "Pending" : "Shipped"}
+                                  </Button>
+                                </td>
+                              </tr>
+                            ))
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
                   </div>
                 </div>
               )}
