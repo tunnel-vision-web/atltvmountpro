@@ -141,6 +141,11 @@ const ClientDashboard = () => {
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [showQuizModal, setShowQuizModal] = useState(false);
   const [showPayoutModal, setShowPayoutModal] = useState(false);
+  const [showUniformModal, setShowUniformModal] = useState(false);
+
+  // Uniform form states
+  const [uniformSize, setUniformSize] = useState("L");
+  const [uniformShipping, setUniformShipping] = useState("standard");
 
   // Submitting States
   const [submittingBg, setSubmittingBg] = useState(false);
@@ -403,7 +408,24 @@ const ClientDashboard = () => {
           String(e.techId) === String(user.id) ||
           e.techName === user.name
       );
-      setEscrowHolds(holds);
+      
+      const uniformOrders = JSON.parse(localStorage.getItem("atltv_uniform_orders") || "[]");
+      const myUniformOrders = uniformOrders.filter(
+        (o) => o.techEmail === user.email || String(o.techId) === String(user.id)
+      );
+      const uniformEntries = myUniformOrders.map((o) => ({
+        id: o.id,
+        bookingId: "UNIFORM",
+        serviceType: `Atlanta TV Mount PRO Uniform (Size ${o.size})`,
+        jobDate: new Date(o.timestamp).toLocaleDateString(),
+        invoiceTotal: -o.totalDeduction,
+        baseCommission: -o.totalDeduction,
+        tipAmount: 0,
+        status: o.status === "Shipped" ? "Released" : "Holding",
+        releaseTime: new Date(o.timestamp + 86400000 * 2).toISOString(),
+      }));
+      
+      setEscrowHolds([...holds, ...uniformEntries]);
 
       activeJobsList = bookings.map((b) => ({
         id: b.id,
@@ -489,6 +511,7 @@ const ClientDashboard = () => {
       insuranceUploaded: false,
       appDownloaded: false,
       profileSetup: false,
+      uniformOrdered: false,
     };
     try {
       const localData = JSON.parse(localStorage.getItem(`atltv_onboarding_${user?.email}`) || "null");
@@ -618,6 +641,62 @@ const ClientDashboard = () => {
   const handleAppDownload = () => {
     updateOnboardingKey("appDownloaded", true);
     toast.success("Atlanta TV Mount PRO companion app link sent to device.");
+  };
+
+  // Uniform order submission handler
+  const handleUniformSubmit = (e) => {
+    e.preventDefault();
+    const shippingFee =
+      uniformShipping === "standard"
+        ? 4.99
+        : uniformShipping === "next_day"
+        ? 14.99
+        : 24.99;
+    const totalDeduction = 30 + shippingFee;
+
+    const newOrder = {
+      id: `uni_${Date.now()}`,
+      techId: user.id || "unknown",
+      techName: user.name || user.email || "Technician",
+      techEmail: user.email,
+      size: uniformSize,
+      shippingSpeed: uniformShipping,
+      shippingFee,
+      totalDeduction,
+      timestamp: Date.now(),
+      status: "Pending"
+    };
+
+    try {
+      const existingOrders = JSON.parse(localStorage.getItem("atltv_uniform_orders") || "[]");
+      existingOrders.push(newOrder);
+      localStorage.setItem("atltv_uniform_orders", JSON.stringify(existingOrders));
+      updateOnboardingKey("uniformOrdered", true);
+      
+      // Reactive state update for immediate UI refresh
+      const uniformEntry = {
+        id: newOrder.id,
+        bookingId: "UNIFORM",
+        serviceType: `Atlanta TV Mount PRO Uniform (Size ${newOrder.size})`,
+        jobDate: new Date(newOrder.timestamp).toLocaleDateString(),
+        invoiceTotal: -newOrder.totalDeduction,
+        baseCommission: -newOrder.totalDeduction,
+        tipAmount: 0,
+        status: "Holding",
+        releaseTime: new Date(newOrder.timestamp + 86400000 * 2).toISOString(),
+      };
+      
+      setEscrowHolds((prev) => {
+        const filtered = prev.filter(h => h.bookingId !== "UNIFORM");
+        return [...filtered, uniformEntry];
+      });
+
+      toast.success("Uniform ordered successfully! Paycheck deduction details added to earnings.");
+      setShowUniformModal(false);
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to place uniform order.");
+    }
   };
 
   // Complete job updates
@@ -760,7 +839,8 @@ const ClientDashboard = () => {
     { id: 2, label: "Direct Payout Registration", done: onboarding.payoutSetup, desc: "Submit routing/account info or CashApp tag", action: () => setShowPayoutModal(true) },
     { id: 3, label: "Liability Insurance Upload", done: onboarding.insuranceUploaded, desc: "Upload active certificate of general liability insurance", action: handleUploadInsurance },
     { id: 4, label: "On-site Profile Construction", done: onboarding.profileSetup, desc: "Submit a friendly bio and profile photo for customers", action: () => updateOnboardingKey("profileSetup", true) },
-    { id: 5, label: "Install Technician Mobile Companion PWA", done: onboarding.appDownloaded, desc: "Link the progressive web app shortcut", action: handleAppDownload }
+    { id: 5, label: "Install Technician Mobile Companion PWA", done: onboarding.appDownloaded, desc: "Link the progressive web app shortcut", action: handleAppDownload },
+    { id: 6, label: "Order Branded Uniform (Polos & Name Tag)", done: onboarding.uniformOrdered, desc: "Select sizing and shipping speed for your uniform kit", action: () => setShowUniformModal(true) }
   ];
 
   const postDoneCount = postChecklist.filter(item => item.done).length;
@@ -2475,6 +2555,77 @@ const ClientDashboard = () => {
               </div>
             )}
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── UNIFORM ORDERING MODAL ── */}
+      <Dialog open={showUniformModal} onOpenChange={setShowUniformModal}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Order Branded Uniform</DialogTitle>
+            <DialogDescription>
+              Select sizing and shipping details for your Atlanta TV Mount PRO uniform set (3 branded polo shirts and free engraved name tag).
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleUniformSubmit} className="space-y-4 py-2">
+            <div className="space-y-1.5">
+              <Label htmlFor="uni-size">Polo Shirt Size</Label>
+              <select
+                id="uni-size"
+                value={uniformSize}
+                onChange={(e) => setUniformSize(e.target.value)}
+                className="w-full bg-muted/40 border border-border text-foreground h-10 rounded-md px-3 text-sm focus:border-primary focus:outline-none"
+              >
+                <option value="S">Small (S)</option>
+                <option value="M">Medium (M)</option>
+                <option value="L">Large (L)</option>
+                <option value="XL">Extra Large (XL)</option>
+                <option value="XXL">Double Extra Large (XXL)</option>
+              </select>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="uni-shipping">Shipping Speed</Label>
+              <select
+                id="uni-shipping"
+                value={uniformShipping}
+                onChange={(e) => setUniformShipping(e.target.value)}
+                className="w-full bg-muted/40 border border-border text-foreground h-10 rounded-md px-3 text-sm focus:border-primary focus:outline-none"
+              >
+                <option value="standard">Standard Delivery (3-5 days) — $4.99</option>
+                <option value="next_day">Next Day Delivery — $14.99</option>
+                <option value="same_day">Same Day Delivery — $24.99</option>
+              </select>
+            </div>
+
+            <div className="bg-muted/40 p-3.5 rounded-xl border border-border space-y-2 text-xs">
+              <div className="flex justify-between font-medium">
+                <span>3 Branded Polo Shirts</span>
+                <span>$30.00</span>
+              </div>
+              <div className="flex justify-between text-muted-foreground">
+                <span>Custom Engraved Name Tag</span>
+                <span className="text-green-500">Free</span>
+              </div>
+              <div className="flex justify-between text-muted-foreground">
+                <span>Shipping ({uniformShipping === "standard" ? "Standard" : uniformShipping === "next_day" ? "Next Day" : "Same Day"})</span>
+                <span>${(uniformShipping === "standard" ? 4.99 : uniformShipping === "next_day" ? 14.99 : 24.99).toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between font-bold text-sm pt-2 border-t border-border mt-2 text-primary">
+                <span>First Paycheck Deduction</span>
+                <span>${(30 + (uniformShipping === "standard" ? 4.99 : uniformShipping === "next_day" ? 14.99 : 24.99)).toFixed(2)}</span>
+              </div>
+            </div>
+
+            <div className="text-[10px] text-muted-foreground text-center bg-primary/5 p-2.5 rounded border border-primary/15 leading-relaxed">
+              Atlanta TV Mount PRO requires all technicians to wear branded apparel while performing services on client premises. This cost will be automatically deducted from your first paycheck.
+            </div>
+
+            <div className="flex justify-end gap-2 pt-2">
+              <Button type="button" variant="outline" onClick={() => setShowUniformModal(false)}>Cancel</Button>
+              <Button type="submit" className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold">Place Order</Button>
+            </div>
+          </form>
         </DialogContent>
       </Dialog>
     </div>

@@ -34,7 +34,7 @@ import {
 const SERVICES = {
   'TV mounting': {
     label: 'TV Mounting',
-    base: 120,
+    base: 65,
     description: 'Wall mount + cable management',
     icon: '📺',
     options: [
@@ -43,10 +43,10 @@ const SERVICES = {
         label: 'TV Size',
         type: 'select',
         choices: [
-          { label: 'Up to 43"', value: 0 },
-          { label: '44" – 65"', value: 30 },
-          { label: '66" – 85"', value: 60 },
-          { label: '86" or larger', value: 100 },
+          { label: 'Up to 31"', value: 0 },
+          { label: '32" – 60"', value: 29 },
+          { label: '61" – 80"', value: 67 },
+          { label: 'Over 81"', value: 86 },
         ],
       },
       {
@@ -78,7 +78,7 @@ const SERVICES = {
   },
   'drywall repair': {
     label: 'Drywall Repair',
-    base: 95,
+    base: 90,
     description: 'Patching, texturing, paint-ready finish',
     icon: '🔧',
     options: [
@@ -109,7 +109,7 @@ const SERVICES = {
   },
   painting: {
     label: 'Painting',
-    base: 175,
+    base: 166,
     description: 'Interior walls — prep, paint, cleanup',
     icon: '🖌️',
     options: [
@@ -147,7 +147,7 @@ const SERVICES = {
   },
   carpentry: {
     label: 'Carpentry',
-    base: 150,
+    base: 142,
     description: 'Custom shelving, trim, door work',
     icon: '🪵',
     options: [
@@ -175,7 +175,7 @@ const SERVICES = {
   },
   flooring: {
     label: 'Flooring',
-    base: 200,
+    base: 190,
     description: 'Installation per room',
     icon: '🏠',
     options: [
@@ -210,7 +210,7 @@ const SERVICES = {
   },
   plumbing: {
     label: 'Plumbing',
-    base: 110,
+    base: 104,
     description: 'Fixture installation & minor repairs',
     icon: '🚿',
     options: [
@@ -230,7 +230,7 @@ const SERVICES = {
   },
   'light electrical': {
     label: 'Light Electrical',
-    base: 95,
+    base: 90,
     description: 'Outlets, switches, fixtures',
     icon: '⚡',
     options: [
@@ -273,7 +273,7 @@ const GENERAL_HARDWARE_OPTIONS = [
   { id: "hw-anchors", name: "Heavy-Duty Toggle Wall Anchors Pack", price: 12, services: ["TV Mounting", "Carpentry", "Other", "Light Electrical"] },
 ];
 
-const DISCOUNT_RATE = 0.2; // 20% below industry standard
+const DISCOUNT_RATE = 0.15; // 15% discount for first-time customers
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -469,7 +469,7 @@ const QuoteEstimatorModal = () => {
               <div className="p-4 bg-primary/10 rounded-xl text-center">
                 <p className="text-xs text-muted-foreground mb-1">Your estimate</p>
                 <p className="text-3xl font-bold text-primary">{formatCurrency(finalEstimate)}</p>
-                <p className="text-xs text-muted-foreground mt-1">20% below industry average</p>
+                <p className="text-xs text-muted-foreground mt-1">15% first-time discount applied</p>
               </div>
               <Button onClick={handleClose} className="bg-primary hover:bg-primary/90 text-primary-foreground">
                 Done
@@ -577,7 +577,7 @@ const QuoteEstimatorModal = () => {
                           <span className="line-through">{formatCurrency(subtotal)}</span>
                         </div>
                         <div className="flex justify-between text-sm text-green-500">
-                          <span>Our discount (20% off)</span>
+                          <span>First-time discount (15% off)</span>
                           <span>−{formatCurrency(discountAmount)}</span>
                         </div>
                         <div className="flex justify-between font-bold text-lg pt-1 border-t border-border mt-1">

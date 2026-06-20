@@ -40,8 +40,12 @@ import {
   LifeBuoy,
   Bell,
   Wrench,
+  ShoppingBag,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import brandedPoloImg from "@/assets/images/branded_polo.png";
 import {
   Dialog,
   DialogContent,
@@ -131,7 +135,7 @@ const ROLES = {
 
 const PERMISSIONS = {
   [ROLES.Admin]: {
-    canView: ["projects", "orders", "team", "profile", "cms", "finance", "media", "crm", "recruitment"],
+    canView: ["projects", "orders", "team", "profile", "cms", "finance", "media", "crm", "recruitment", "store"],
     canEdit: [
       "projects",
       "orders",
@@ -143,6 +147,7 @@ const PERMISSIONS = {
       "media",
       "crm",
       "recruitment",
+      "store",
     ],
     canDelete: [
       "projects",
@@ -155,15 +160,16 @@ const PERMISSIONS = {
       "media",
       "crm",
       "recruitment",
+      "store",
     ],
   },
   [ROLES.Moderator]: {
-    canView: ["projects", "orders", "team", "profile", "finance", "media"],
-    canEdit: ["projects", "orders", "team", "finance", "media"],
+    canView: ["projects", "orders", "team", "profile", "finance", "media", "store"],
+    canEdit: ["projects", "orders", "team", "finance", "media", "store"],
     canDelete: ["projects", "orders", "team", "media"],
   },
   [ROLES.Viewer]: {
-    canView: ["projects", "orders", "team", "profile", "finance", "media"],
+    canView: ["projects", "orders", "team", "profile", "finance", "media", "store"],
     canEdit: [],
     canDelete: [],
   },
@@ -1672,6 +1678,249 @@ const AdminPage = () => {
   const [profileSubTab, setProfileSubTab] = useState("users");
   const [selectedPermissionUserId, setSelectedPermissionUserId] = useState(null);
 
+  // Store Manager States
+  const [storeProducts, setStoreProducts] = useState([]);
+  const [storeCategories, setStoreCategories] = useState([]);
+  const [customerOrders, setCustomerOrders] = useState([]);
+  const [uniformOrders, setUniformOrders] = useState([]);
+  const [storeSubTab, setStoreSubTab] = useState("products");
+  const [showProductDialog, setShowProductDialog] = useState(false);
+  const [editingProduct, setEditingProduct] = useState(null);
+  const [newCategoryName, setNewCategoryName] = useState("");
+  const [productForm, setProductForm] = useState({
+    name: "",
+    category: "Polo Shirts",
+    customerPrice: 19.99,
+    techPrice: 10.00,
+    description: "",
+    image: "",
+    stock: 50,
+  });
+
+  const loadStoreData = () => {
+    // Products
+    const storedProds = localStorage.getItem("atltv_store_products");
+    if (storedProds) {
+      setStoreProducts(JSON.parse(storedProds));
+    } else {
+      const defaults = [
+        {
+          id: "prod-polo",
+          name: "Atlanta TV Mount PRO Branded Polo",
+          category: "Polo Shirts",
+          customerPrice: 19.99,
+          techPrice: 10.00,
+          description: "Premium dry-fit branded polo shirt required for technicians on client premises. Features Atlanta TV Mount PRO chest logo.",
+          image: brandedPoloImg,
+          stock: 120,
+          isPolo: true,
+          rating: 4.9,
+          reviewsCount: 54,
+          specs: {
+            Material: "100% Recycled Polyester Dry-Fit",
+            Fit: "Standard athletic fit",
+            Weight: "5.3 oz / 180 g",
+            Care: "Machine wash cold, tumble dry low",
+          },
+          reviews: [
+            { author: "Marcus T.", rating: 5, date: "2026-06-12", comment: "Outstanding quality. Super breathable during hot summer mounting jobs." },
+            { author: "Devin R.", rating: 4, date: "2026-06-08", comment: "Comfortable and looks professional. Fits true to size." },
+          ]
+        },
+        {
+          id: "prod-stud",
+          name: "Professional Electronic Stud Finder",
+          category: "Tools & Equipment",
+          customerPrice: 29.99,
+          techPrice: 29.99,
+          description: "Heavy-duty electronic stud finder with deep sensing, LCD display, and wire warning detection. Ideal for safe mounting.",
+          image: "https://images.unsplash.com/photo-1581092160607-ee22621dd758?w=500&q=80",
+          stock: 45,
+          rating: 4.7,
+          reviewsCount: 32,
+          specs: {
+            "Sensing Depth": "Up to 1.5 inches (38mm)",
+            Display: "Backlit graphical LCD",
+            Battery: "9V battery (not included)",
+            Calibration: "Automatic on-stud calibration",
+          },
+          reviews: [
+            { author: "Steve H.", rating: 5, date: "2026-06-15", comment: "Incredibly accurate. Must-have tool if you are mounting heavy TVs." },
+          ]
+        },
+        {
+          id: "prod-wristband",
+          name: "Magnetic Wristband for Screws & Tools",
+          category: "Accessories",
+          customerPrice: 12.99,
+          techPrice: 12.99,
+          description: "Embedded with super strong magnets for holding screws, nails, drill bits, and small tools. Speeds up installation.",
+          image: "https://images.unsplash.com/photo-1620331357332-9f79c23577d6?w=500&q=80",
+          stock: 80,
+          rating: 4.8,
+          reviewsCount: 89,
+          specs: {
+            Material: "1680D Ballistic Nylon",
+            Magnets: "15 strong neodymium magnets",
+            Size: "One size fits most (adjustable Velcro)",
+            Weight: "3.2 oz",
+          },
+          reviews: [
+            { author: "Clara M.", rating: 5, date: "2026-06-18", comment: "This has saved me from dropping screws off ladders a hundred times." },
+          ]
+        },
+        {
+          id: "prod-vest",
+          name: "High-Visibility Safety Reflective Vest",
+          category: "Safety Apparel",
+          customerPrice: 14.99,
+          techPrice: 14.99,
+          description: "High visibility neon yellow safety vest with multi-functional pockets and premium reflective stripes.",
+          image: "https://images.unsplash.com/photo-1598151551608-d227f67f5b33?w=500&q=80",
+          stock: 35,
+          rating: 4.6,
+          reviewsCount: 18,
+          specs: {
+            Material: "Highly breathable polyester mesh",
+            Standard: "ANSI/ISEA 107-2020 Class 2 compliant",
+            Reflective: "2-inch wide silver strips",
+            Pockets: "5 utility pockets including ID holder",
+          },
+          reviews: [
+            { author: "Alex B.", rating: 4, date: "2026-06-10", comment: "Lightweight and bright. Pockets are very handy for storing markers and tape." },
+          ]
+        }
+      ];
+      localStorage.setItem("atltv_store_products", JSON.stringify(defaults));
+      setStoreProducts(defaults);
+    }
+
+    // Categories
+    const storedCats = localStorage.getItem("atltv_store_categories");
+    if (storedCats) {
+      setStoreCategories(JSON.parse(storedCats));
+    } else {
+      const defaults = ["All Products", "Polo Shirts", "Tools & Equipment", "Safety Apparel", "Accessories"];
+      localStorage.setItem("atltv_store_categories", JSON.stringify(defaults));
+      setStoreCategories(defaults);
+    }
+
+    // Customer Orders
+    const storedCustOrders = localStorage.getItem("atltv_store_orders");
+    setCustomerOrders(storedCustOrders ? JSON.parse(storedCustOrders) : []);
+
+    // Tech Uniform Orders
+    const storedTechOrders = localStorage.getItem("atltv_uniform_orders");
+    setUniformOrders(storedTechOrders ? JSON.parse(storedTechOrders) : []);
+  };
+
+  useEffect(() => {
+    if (activeTab === "store") {
+      loadStoreData();
+    }
+  }, [activeTab]);
+
+  const handleSaveProduct = (e) => {
+    e.preventDefault();
+    if (!productForm.name || !productForm.description || !productForm.category) {
+      toast.error("Please fill in name, description, and category.");
+      return;
+    }
+    
+    let updatedList = [];
+    if (editingProduct) {
+      updatedList = storeProducts.map(p => 
+        p.id === editingProduct.id ? { ...p, ...productForm } : p
+      );
+      toast.success("Product updated successfully.");
+    } else {
+      const newProd = {
+        ...productForm,
+        id: `prod_${Date.now()}`,
+        customerPrice: parseFloat(productForm.customerPrice) || 0,
+        techPrice: parseFloat(productForm.techPrice) || 0,
+        stock: parseInt(productForm.stock) || 0,
+      };
+      updatedList = [...storeProducts, newProd];
+      toast.success("Product created successfully.");
+    }
+
+    localStorage.setItem("atltv_store_products", JSON.stringify(updatedList));
+    setStoreProducts(updatedList);
+    setShowProductDialog(false);
+    setEditingProduct(null);
+  };
+
+  const handleDeleteProduct = (productId) => {
+    if (!window.confirm("Are you sure you want to delete this product?")) return;
+    const updated = storeProducts.filter(p => p.id !== productId);
+    localStorage.setItem("atltv_store_products", JSON.stringify(updated));
+    setStoreProducts(updated);
+    toast.success("Product deleted successfully.");
+  };
+
+  const handleAddCategory = (e) => {
+    e.preventDefault();
+    if (!newCategoryName.trim()) return;
+    if (storeCategories.includes(newCategoryName.trim())) {
+      toast.error("Category already exists.");
+      return;
+    }
+    const updated = [...storeCategories, newCategoryName.trim()];
+    localStorage.setItem("atltv_store_categories", JSON.stringify(updated));
+    setStoreCategories(updated);
+    setNewCategoryName("");
+    toast.success("Category added.");
+  };
+
+  const handleDeleteCategory = (cat) => {
+    if (cat === "All Products" || cat === "Polo Shirts") {
+      toast.error("Default categories cannot be deleted.");
+      return;
+    }
+    if (!window.confirm(`Are you sure you want to delete category "${cat}"?`)) return;
+    const updated = storeCategories.filter(c => c !== cat);
+    localStorage.setItem("atltv_store_categories", JSON.stringify(updated));
+    setStoreCategories(updated);
+    toast.success("Category deleted.");
+  };
+
+  const toggleCustomerOrderStatus = (orderId) => {
+    const updated = customerOrders.map(o => {
+      if (o.id === orderId) {
+        const nextStatus = o.status === "Shipped" ? "Pending" : "Shipped";
+        return { ...o, status: nextStatus };
+      }
+      return o;
+    });
+    localStorage.setItem("atltv_store_orders", JSON.stringify(updated));
+    setCustomerOrders(updated);
+    toast.success("Order status updated.");
+  };
+
+  const toggleUniformOrderStatus = (orderId) => {
+    const updated = uniformOrders.map(o => {
+      if (o.id === orderId) {
+        const nextStatus = o.status === "Shipped" ? "Pending" : "Shipped";
+        return { ...o, status: nextStatus };
+      }
+      return o;
+    });
+    localStorage.setItem("atltv_uniform_orders", JSON.stringify(updated));
+    setUniformOrders(updated);
+    toast.success("Uniform order status updated.");
+  };
+
+  const handleProductImageUpload = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setProductForm(prev => ({ ...prev, image: reader.result }));
+    };
+    reader.readAsDataURL(file);
+  };
+
   // Technician Invite & Referral Link states
   const [candidateName, setCandidateName] = useState("");
   const [candidatePhone, setCandidatePhone] = useState("");
@@ -2434,6 +2683,7 @@ const AdminPage = () => {
       if (hasPermission(currentUser, "canView", "cms")) allowed.push("cms");
       if (hasPermission(currentUser, "canView", "media")) allowed.push("media");
       if (hasPermission(currentUser, "canView", "recruitment")) allowed.push("recruitment");
+      if (hasPermission(currentUser, "canView", "store")) allowed.push("store");
       
       if (allowed.length > 0 && !allowed.includes(activeTab)) {
         setActiveTab(allowed[0]);
@@ -3350,6 +3600,19 @@ const AdminPage = () => {
                 >
                   <ImageIcon size={18} className="flex-shrink-0" />
                   <span>Media Library</span>
+                </button>
+              )}
+
+              {hasPermission(currentUser, "canView", "store") && (
+                <button
+                  onClick={() => {
+                    setActiveTab("store");
+                    setSidebarOpen(false);
+                  }}
+                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 ${activeTab === "store" ? "bg-primary text-primary-foreground shadow-sm shadow-primary/20" : "text-muted-foreground hover:bg-muted hover:text-foreground"}`}
+                >
+                  <ShoppingBag size={18} className="flex-shrink-0" />
+                  <span>Store Manager</span>
                 </button>
               )}
             </nav>
@@ -5285,6 +5548,491 @@ const AdminPage = () => {
             <MediaLibraryAdmin
               canEdit={hasPermission(currentUser?.role, "canEdit", "media")}
             />
+          )}
+
+          {/* TAB CONTENT: STORE MANAGER */}
+          {activeTab === "store" && (
+            <div className="space-y-6 animate-fade-in">
+              {/* Header */}
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-card border border-border p-6 rounded-2xl shadow-sm">
+                <div>
+                  <h2 className="text-2xl font-bold tracking-tight">Apparel & Gear Store Manager</h2>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Manage the public storefront catalog, categories, customer orders, and technician uniform onboarding requests.
+                  </p>
+                </div>
+                {storeSubTab === "products" && (
+                  <Button
+                    onClick={() => {
+                      setEditingProduct(null);
+                      setProductForm({
+                        name: "",
+                        category: "Polo Shirts",
+                        customerPrice: 19.99,
+                        techPrice: 10.00,
+                        description: "",
+                        image: "",
+                        stock: 50,
+                      });
+                      setShowProductDialog(true);
+                    }}
+                    className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold flex items-center gap-1.5"
+                  >
+                    <Plus size={16} /> Add Product
+                  </Button>
+                )}
+              </div>
+
+              {/* Sub-tab selection bar */}
+              <div className="flex gap-2 border-b border-border pb-3">
+                {[
+                  { id: "products", name: "Products catalog" },
+                  { id: "categories", name: "Categories manager" },
+                  { id: "orders", name: "Customer Orders" },
+                  { id: "uniforms", name: "Technician Uniforms" },
+                ].map((t) => (
+                  <button
+                    key={t.id}
+                    onClick={() => setStoreSubTab(t.id)}
+                    className={`px-4 py-2 text-xs font-semibold rounded-lg transition-all ${
+                      storeSubTab === t.id
+                        ? "bg-primary text-primary-foreground shadow-sm"
+                        : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                    }`}
+                  >
+                    {t.name}
+                  </button>
+                ))}
+              </div>
+
+              {/* Products Sub-tab */}
+              {storeSubTab === "products" && (
+                <div className="bg-card border border-border rounded-2xl overflow-hidden shadow-sm">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-xs border-collapse">
+                      <thead>
+                        <tr className="bg-muted/50 text-muted-foreground font-semibold border-b border-border">
+                          <th className="px-5 py-3.5">Image</th>
+                          <th className="px-5 py-3.5">Product Name</th>
+                          <th className="px-5 py-3.5">Category</th>
+                          <th className="px-5 py-3.5">Customer Price</th>
+                          <th className="px-5 py-3.5">Technician Price</th>
+                          <th className="px-5 py-3.5">Stock</th>
+                          <th className="px-5 py-3.5 text-right">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-border/50">
+                        {storeProducts.length === 0 ? (
+                          <tr>
+                            <td colSpan={7} className="text-center py-8 text-muted-foreground">
+                              No products found. Add products to populate catalog.
+                            </td>
+                          </tr>
+                        ) : (
+                          storeProducts.map((prod) => (
+                            <tr key={prod.id} className="hover:bg-muted/5 transition-colors">
+                              <td className="px-5 py-3">
+                                {prod.image ? (
+                                  <img
+                                    src={prod.image}
+                                    alt={prod.name}
+                                    className="w-10 h-10 object-cover rounded-md border border-border"
+                                  />
+                                ) : (
+                                  <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center text-[10px] text-muted-foreground font-semibold">
+                                    No Image
+                                  </div>
+                                )}
+                              </td>
+                              <td className="px-5 py-3 font-semibold text-foreground">{prod.name}</td>
+                              <td className="px-5 py-3 text-muted-foreground">{prod.category}</td>
+                              <td className="px-5 py-3 font-medium">${(prod.customerPrice || 0).toFixed(2)}</td>
+                              <td className="px-5 py-3 font-medium text-emerald-500">${(prod.techPrice || 0).toFixed(2)}</td>
+                              <td className="px-5 py-3 text-muted-foreground">
+                                <span className={`font-semibold ${prod.stock < 10 ? "text-amber-500 font-bold" : ""}`}>
+                                  {prod.stock}
+                                </span>
+                              </td>
+                              <td className="px-5 py-3 text-right space-x-1.5">
+                                <Button
+                                  onClick={() => {
+                                    setEditingProduct(prod);
+                                    setProductForm({ ...prod });
+                                    setShowProductDialog(true);
+                                  }}
+                                  variant="outline"
+                                  size="sm"
+                                  className="h-8 px-2.5"
+                                >
+                                  <Pencil size={12} className="mr-1" /> Edit
+                                </Button>
+                                <Button
+                                  onClick={() => handleDeleteProduct(prod.id)}
+                                  variant="destructive"
+                                  size="sm"
+                                  className="h-8 px-2.5"
+                                >
+                                  <Trash2 size={12} className="mr-1" /> Delete
+                                </Button>
+                              </td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              {/* Categories Sub-tab */}
+              {storeSubTab === "categories" && (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  {/* Category List */}
+                  <div className="md:col-span-2 bg-card border border-border rounded-2xl overflow-hidden shadow-sm">
+                    <div className="px-5 py-4 border-b border-border/60">
+                      <h3 className="font-bold text-sm">Product Categories</h3>
+                    </div>
+                    <div className="divide-y divide-border/50">
+                      {storeCategories.map((cat) => (
+                        <div key={cat} className="flex items-center justify-between px-5 py-3 text-xs">
+                          <span className="font-semibold text-foreground">{cat}</span>
+                          {cat !== "All Products" && cat !== "Polo Shirts" ? (
+                            <Button
+                              onClick={() => handleDeleteCategory(cat)}
+                              variant="destructive"
+                              size="sm"
+                              className="h-7 px-2"
+                            >
+                              <Trash2 size={11} /> Delete
+                            </Button>
+                          ) : (
+                            <span className="text-[10px] text-muted-foreground bg-muted px-2 py-0.5 rounded-full font-bold">
+                              System Default
+                            </span>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Add Category Form */}
+                  <div className="bg-card border border-border rounded-2xl p-5 shadow-sm space-y-4 h-fit">
+                    <h3 className="font-bold text-sm text-foreground">Create New Category</h3>
+                    <form onSubmit={handleAddCategory} className="space-y-3">
+                      <div className="space-y-1.5">
+                        <Label htmlFor="new-cat-name" className="text-xs">Category Name</Label>
+                        <Input
+                          id="new-cat-name"
+                          value={newCategoryName}
+                          onChange={(e) => setNewCategoryName(e.target.value)}
+                          placeholder="e.g. Tools & Hardware"
+                          className="bg-muted/40 text-xs h-9"
+                        />
+                      </div>
+                      <Button type="submit" className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold h-9 text-xs">
+                        Add Category
+                      </Button>
+                    </form>
+                  </div>
+                </div>
+              )}
+
+              {/* Customer Orders Sub-tab */}
+              {storeSubTab === "orders" && (
+                <div className="bg-card border border-border rounded-2xl overflow-hidden shadow-sm">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-xs border-collapse">
+                      <thead>
+                        <tr className="bg-muted/50 text-muted-foreground font-semibold border-b border-border">
+                          <th className="px-5 py-3.5">Order ID</th>
+                          <th className="px-5 py-3.5">Customer Details</th>
+                          <th className="px-5 py-3.5">Shipping & Billing Address</th>
+                          <th className="px-5 py-3.5">Items Ordered</th>
+                          <th className="px-5 py-3.5">Shipping Method</th>
+                          <th className="px-5 py-3.5">Total Paid</th>
+                          <th className="px-5 py-3.5">Date</th>
+                          <th className="px-5 py-3.5">Status</th>
+                          <th className="px-5 py-3.5 text-right">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-border/50">
+                        {customerOrders.length === 0 ? (
+                          <tr>
+                            <td colSpan={9} className="text-center py-8 text-muted-foreground">
+                              No customer orders found in system.
+                            </td>
+                          </tr>
+                        ) : (
+                          customerOrders.map((o) => (
+                            <tr key={o.id} className="hover:bg-muted/5 transition-colors">
+                              <td className="px-5 py-3.5 font-mono text-muted-foreground">#{o.id.slice(-6)}</td>
+                              <td className="px-5 py-3.5">
+                                <div className="font-semibold text-foreground flex items-center gap-1">
+                                  {o.customerDetails.name}
+                                  {o.customerDetails.isTech && (
+                                    <span className="bg-emerald-500/10 text-emerald-500 text-[8px] px-1 py-0.2 rounded font-extrabold uppercase">Tech</span>
+                                  )}
+                                </div>
+                                <div className="text-[10px] text-muted-foreground">{o.customerDetails.email}</div>
+                                <div className="text-[10px] text-muted-foreground">{o.customerDetails.phone}</div>
+                              </td>
+                              <td className="px-5 py-3.5">
+                                <div className="text-foreground font-medium leading-tight">
+                                  {o.customerDetails.address}, {o.customerDetails.city}, {o.customerDetails.state} {o.customerDetails.zip}
+                                </div>
+                                {!o.billingAddress ? (
+                                  <div className="text-[9px] text-emerald-500 font-bold mt-0.5">Billing same as shipping</div>
+                                ) : (
+                                  <div className="text-[9px] text-muted-foreground mt-0.5 leading-tight">
+                                    <span className="font-bold text-foreground">Billing:</span> {o.billingAddress.address}, {o.billingAddress.city}, {o.billingAddress.state} {o.billingAddress.zip}
+                                  </div>
+                                )}
+                              </td>
+                              <td className="px-5 py-3.5">
+                                <div className="space-y-0.5">
+                                  {o.items.map((it, idx) => (
+                                    <div key={idx} className="text-foreground flex items-center gap-1.5">
+                                      <span>{it.name}</span>
+                                      {it.size && (
+                                        <span className="bg-primary/10 text-primary text-[9px] px-1.5 py-0.5 rounded font-extrabold">
+                                          Size {it.size}
+                                        </span>
+                                      )}
+                                      <span className="text-muted-foreground font-semibold">x{it.quantity}</span>
+                                    </div>
+                                  ))}
+                                  {o.isGift && (
+                                    <div className="mt-1.5 bg-amber-500/10 border border-amber-500/25 p-2 rounded text-[10px] text-amber-500 font-semibold max-w-[200px] leading-snug">
+                                      🎁 Gift: "{o.giftNote}"
+                                    </div>
+                                  )}
+                                </div>
+                              </td>
+                              <td className="px-5 py-3.5 capitalize text-muted-foreground">{o.shippingMethod} Delivery</td>
+                              <td className="px-5 py-3.5 font-bold text-primary">${(o.total || 0).toFixed(2)}</td>
+                              <td className="px-5 py-3.5 text-muted-foreground">{new Date(o.timestamp).toLocaleDateString()}</td>
+                              <td className="px-5 py-3.5">
+                                <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold border ${
+                                  o.status === "Shipped"
+                                    ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/20"
+                                    : "bg-amber-500/10 text-amber-500 border-amber-500/20"
+                                }`}>
+                                  {o.status}
+                                </span>
+                              </td>
+                              <td className="px-5 py-3.5 text-right">
+                                <Button
+                                  onClick={() => toggleCustomerOrderStatus(o.id)}
+                                  variant="outline"
+                                  size="sm"
+                                  className="h-8 text-[10px] font-semibold"
+                                >
+                                  Mark as {o.status === "Shipped" ? "Pending" : "Shipped"}
+                                </Button>
+                              </td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              {/* Technician Uniform Orders Sub-tab */}
+              {storeSubTab === "uniforms" && (
+                <div className="bg-card border border-border rounded-2xl overflow-hidden shadow-sm">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-xs border-collapse">
+                      <thead>
+                        <tr className="bg-muted/50 text-muted-foreground font-semibold border-b border-border">
+                          <th className="px-5 py-3.5">Order ID</th>
+                          <th className="px-5 py-3.5">Technician / Recruit</th>
+                          <th className="px-5 py-3.5">Size Selection</th>
+                          <th className="px-5 py-3.5">Shipping Speed</th>
+                          <th className="px-5 py-3.5">Paycheck Deduction</th>
+                          <th className="px-5 py-3.5">Order Date</th>
+                          <th className="px-5 py-3.5">Status</th>
+                          <th className="px-5 py-3.5 text-right">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-border/50">
+                        {uniformOrders.length === 0 ? (
+                          <tr>
+                            <td colSpan={8} className="text-center py-8 text-muted-foreground">
+                              No technician uniform orders found in onboarding system.
+                            </td>
+                          </tr>
+                        ) : (
+                          uniformOrders.map((o) => (
+                            <tr key={o.id} className="hover:bg-muted/5 transition-colors">
+                              <td className="px-5 py-3.5 font-mono text-muted-foreground">#{o.id.slice(-6)}</td>
+                              <td className="px-5 py-3.5">
+                                <div className="font-semibold text-foreground">{o.techName}</div>
+                                <div className="text-[10px] text-muted-foreground">{o.techEmail}</div>
+                              </td>
+                              <td className="px-5 py-3.5 font-bold text-indigo-400">Size {o.size}</td>
+                              <td className="px-5 py-3.5 capitalize text-muted-foreground">{o.shippingSpeed} Delivery</td>
+                              <td className="px-5 py-3.5 font-bold text-red-500">-${(o.totalDeduction || 0).toFixed(2)}</td>
+                              <td className="px-5 py-3.5 text-muted-foreground">{new Date(o.timestamp).toLocaleDateString()}</td>
+                              <td className="px-5 py-3.5">
+                                <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold border ${
+                                  o.status === "Shipped"
+                                    ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/20"
+                                    : "bg-amber-500/10 text-amber-500 border-amber-500/20"
+                                }`}>
+                                  {o.status}
+                                </span>
+                              </td>
+                              <td className="px-5 py-3.5 text-right">
+                                <Button
+                                  onClick={() => toggleUniformOrderStatus(o.id)}
+                                  variant="outline"
+                                  size="sm"
+                                  className="h-8 text-[10px] font-semibold"
+                                >
+                                  Mark as {o.status === "Shipped" ? "Pending" : "Shipped"}
+                                </Button>
+                              </td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              {/* Product Creation / Edit Modal Dialog */}
+              <Dialog open={showProductDialog} onOpenChange={setShowProductDialog}>
+                <DialogContent className="sm:max-w-[450px]">
+                  <DialogHeader>
+                    <DialogTitle>{editingProduct ? "Edit Product Catalog Details" : "Create New Store Product"}</DialogTitle>
+                  </DialogHeader>
+                  <form onSubmit={handleSaveProduct} className="space-y-4 py-2">
+                    <div className="space-y-1">
+                      <Label htmlFor="prod-name" className="text-xs">Product Name</Label>
+                      <Input
+                        id="prod-name"
+                        value={productForm.name}
+                        onChange={(e) => setProductForm({ ...productForm, name: e.target.value })}
+                        required
+                        placeholder="e.g. Branded Polo Shirt"
+                        className="bg-muted/40 text-xs h-9"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-1">
+                        <Label htmlFor="prod-category" className="text-xs">Category</Label>
+                        <select
+                          id="prod-category"
+                          value={productForm.category}
+                          onChange={(e) => setProductForm({ ...productForm, category: e.target.value })}
+                          className="w-full bg-muted/40 border border-border text-foreground h-9 rounded-md px-3 text-xs focus:border-primary focus:outline-none"
+                        >
+                          {storeCategories.filter(c => c !== "All Products").map(cat => (
+                            <option key={cat} value={cat}>{cat}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div className="space-y-1">
+                        <Label htmlFor="prod-stock" className="text-xs">Initial Stock</Label>
+                        <Input
+                          id="prod-stock"
+                          type="number"
+                          value={productForm.stock}
+                          onChange={(e) => setProductForm({ ...productForm, stock: parseInt(e.target.value) || 0 })}
+                          required
+                          className="bg-muted/40 text-xs h-9"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-1">
+                        <Label htmlFor="prod-cust-price" className="text-xs">Customer Price ($)</Label>
+                        <Input
+                          id="prod-cust-price"
+                          type="number"
+                          step="0.01"
+                          value={productForm.customerPrice}
+                          onChange={(e) => setProductForm({ ...productForm, customerPrice: parseFloat(e.target.value) || 0 })}
+                          required
+                          className="bg-muted/40 text-xs h-9"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Label htmlFor="prod-tech-price" className="text-xs">Technician Discount Price ($)</Label>
+                        <Input
+                          id="prod-tech-price"
+                          type="number"
+                          step="0.01"
+                          value={productForm.techPrice}
+                          onChange={(e) => setProductForm({ ...productForm, techPrice: parseFloat(e.target.value) || 0 })}
+                          required
+                          className="bg-muted/40 text-xs h-9"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-1">
+                      <Label htmlFor="prod-image-upload" className="text-xs">Product Image</Label>
+                      <div className="flex gap-2 items-center">
+                        <input
+                          id="prod-image-upload"
+                          type="file"
+                          accept="image/*"
+                          onChange={handleProductImageUpload}
+                          className="hidden"
+                        />
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => document.getElementById("prod-image-upload").click()}
+                          className="h-9 text-xs"
+                        >
+                          Choose File
+                        </Button>
+                        <span className="text-[10px] text-muted-foreground truncate max-w-[250px]">
+                          {productForm.image ? "Image attached (base64)" : "No image selected"}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="space-y-1">
+                      <Label htmlFor="prod-desc" className="text-xs">Description</Label>
+                      <textarea
+                        id="prod-desc"
+                        rows={3}
+                        value={productForm.description}
+                        onChange={(e) => setProductForm({ ...productForm, description: e.target.value })}
+                        required
+                        placeholder="Detailed product descriptions..."
+                        className="w-full bg-muted/40 border border-border text-foreground rounded-md p-3 text-xs focus:border-primary focus:outline-none"
+                      />
+                    </div>
+
+                    <div className="flex justify-end gap-2 pt-2 border-t border-border">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => setShowProductDialog(false)}
+                        className="h-9 text-xs"
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        type="submit"
+                        className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold h-9 text-xs"
+                      >
+                        {editingProduct ? "Save Changes" : "Create Product"}
+                      </Button>
+                    </div>
+                  </form>
+                </DialogContent>
+              </Dialog>
+            </div>
           )}
 
           {/* TAB CONTENT: RECRUITMENT */}
