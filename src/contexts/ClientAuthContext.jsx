@@ -86,6 +86,7 @@ export const ClientAuthProvider = ({ children }) => {
         role: authData.record.Role || 'customer',
         type: authData.record.Type || 'customer',
         phone: authData.record.Phone_Number || '',
+        avatar: authData.record.avatar || '',
         token: authData.token,
       };
       setUser(u);
@@ -117,6 +118,7 @@ export const ClientAuthProvider = ({ children }) => {
         role: authData.record.Role || 'customer',
         type: authData.record.Type || 'customer',
         phone: authData.record.Phone_Number || '',
+        avatar: authData.record.avatar || '',
         token: authData.token,
       };
       setUser(u);
@@ -143,6 +145,7 @@ export const ClientAuthProvider = ({ children }) => {
           role: 'customer',
           type: 'customer',
           phone: '',
+          avatar: '',
           created: new Date().toISOString(),
         };
         saveLocalUser(found);
@@ -202,6 +205,7 @@ export const ClientAuthProvider = ({ children }) => {
         role,
         type: role,
         phone: phone || '',
+        avatar: '',
         OptIn_Status: 'Pending',
         OptIn_Channel: channel,
         DoubleOptIn_Token: token,
