@@ -767,6 +767,7 @@ const UserFormDialog = ({ open, onClose, initial, onSaved }) => {
     email: "",
     password: "",
     role: "Admin",
+    avatar: "",
   });
   const [saving, setSaving] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -780,8 +781,9 @@ const UserFormDialog = ({ open, onClose, initial, onSaved }) => {
               email: initial.email || "",
               password: "",
               role: initial.role || "Admin",
+              avatar: initial.avatar || "",
             }
-          : { username: "", email: "", password: "", role: "Admin" }
+          : { username: "", email: "", password: "", role: "Admin", avatar: "" }
       );
       setShowPassword(false);
     }
@@ -798,6 +800,7 @@ const UserFormDialog = ({ open, onClose, initial, onSaved }) => {
       username: form.username,
       email: form.email,
       role: form.role,
+      avatar: form.avatar,
     };
     if (form.password) {
       payload.password = form.password;
@@ -845,6 +848,68 @@ const UserFormDialog = ({ open, onClose, initial, onSaved }) => {
           <DialogTitle>{initial ? "Edit System User" : "Add Admin User"}</DialogTitle>
         </DialogHeader>
         <form onSubmit={submit} className="space-y-4 mt-2">
+          {/* Avatar Picture Upload */}
+          <div className="flex items-center gap-4 pb-2 border-b border-border/50">
+            <div className="relative">
+              <div className="w-14 h-14 rounded-full overflow-hidden border border-border bg-muted flex items-center justify-center font-bold text-xs">
+                {form.avatar ? (
+                  <img src={form.avatar} alt="Avatar preview" className="w-full h-full object-cover" />
+                ) : (
+                  <span>{form.username ? form.username[0].toUpperCase() : "U"}</span>
+                )}
+              </div>
+              <label 
+                htmlFor="dialog-avatar-file" 
+                className="absolute -bottom-1 -right-1 w-6 h-6 bg-primary hover:bg-primary/95 text-primary-foreground rounded-full flex items-center justify-center cursor-pointer shadow-md transition-all active:scale-95 border border-background"
+                title="Upload avatar"
+              >
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path>
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                </svg>
+                <input
+                  type="file"
+                  id="dialog-avatar-file"
+                  accept="image/*"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      if (file.size > 1024 * 1024) {
+                        toast.error("Image size exceeds 1MB limit.");
+                        return;
+                      }
+                      const reader = new FileReader();
+                      reader.onloadend = () => {
+                        setForm(prev => ({ ...prev, avatar: reader.result }));
+                      };
+                      reader.readAsDataURL(file);
+                    }
+                  }}
+                  className="hidden"
+                />
+              </label>
+            </div>
+            <div>
+              <span className="text-xs font-semibold text-foreground block mb-0.5">Staff Avatar</span>
+              <button
+                type="button"
+                onClick={() => document.getElementById("dialog-avatar-file").click()}
+                className="text-[10px] text-primary hover:underline font-semibold"
+              >
+                Upload new image
+              </button>
+              {form.avatar && (
+                <button
+                  type="button"
+                  onClick={() => setForm(prev => ({ ...prev, avatar: "" }))}
+                  className="text-[10px] text-destructive hover:underline font-semibold ml-2.5"
+                >
+                  Remove
+                </button>
+              )}
+            </div>
+          </div>
+
           <div>
             <label className="text-sm font-medium mb-1 block">Username *</label>
             <input
@@ -4483,11 +4548,22 @@ const AdminPage = () => {
                             className="border-b border-border last:border-0 hover:bg-muted/20"
                           >
                             <td className="px-4 py-3">
-                              <div className="font-bold text-foreground">
-                                {u.username}
-                              </div>
-                              <div className="text-muted-foreground">
-                                {u.email}
+                              <div className="flex items-center gap-3">
+                                <div className="w-8 h-8 rounded-full overflow-hidden bg-muted border border-border shrink-0 flex items-center justify-center font-bold text-xs uppercase">
+                                  {u.avatar ? (
+                                    <img src={u.avatar} alt="Avatar" className="w-full h-full object-cover" />
+                                  ) : (
+                                    <span>{u.username ? u.username[0].toUpperCase() : "U"}</span>
+                                  )}
+                                </div>
+                                <div>
+                                  <div className="font-bold text-foreground">
+                                    {u.username}
+                                  </div>
+                                  <div className="text-muted-foreground text-[11px]">
+                                    {u.email}
+                                  </div>
+                                </div>
                               </div>
                             </td>
                             <td className="px-4 py-3">
@@ -5042,8 +5118,12 @@ const AdminPage = () => {
                                       : "bg-card border-border hover:bg-muted/40 text-muted-foreground hover:text-foreground"
                                   }`}
                                 >
-                                  <div className="w-8 h-8 rounded-full bg-primary/20 text-primary flex items-center justify-center font-bold text-xs uppercase shrink-0">
-                                    {u.username ? u.username.substring(0, 2) : "US"}
+                                  <div className="w-8 h-8 rounded-full bg-primary/20 text-primary flex items-center justify-center font-bold text-xs uppercase shrink-0 overflow-hidden border border-border/50">
+                                    {u.avatar ? (
+                                      <img src={u.avatar} alt="Avatar" className="w-full h-full object-cover" />
+                                    ) : (
+                                      u.username ? u.username.substring(0, 2) : "US"
+                                    )}
                                   </div>
                                   <div className="flex-1 min-w-0">
                                     <p className="text-xs font-bold text-foreground truncate">{u.username}</p>
