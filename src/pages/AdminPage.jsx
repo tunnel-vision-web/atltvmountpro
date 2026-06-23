@@ -2144,12 +2144,49 @@ const AdminPage = () => {
     }
 
     // Customer Orders
-    const storedCustOrders = localStorage.getItem("atltv_store_orders");
-    setCustomerOrders(storedCustOrders ? JSON.parse(storedCustOrders) : []);
+    pb.collection("atltv_store_orders").getFullList({ sort: "-created" })
+      .then(records => {
+        const orders = records.map(r => ({
+          id: r.id,
+          items: r.items,
+          total: r.total,
+          status: r.status,
+          customerDetails: JSON.parse(r.address || '{}').shipping || { name: r.name, email: r.email },
+          billingAddress: JSON.parse(r.address || '{}').billing || null,
+          shippingMethod: r.shippingSpeed,
+          timestamp: Date.parse(r.created),
+        }));
+        setCustomerOrders(orders);
+        localStorage.setItem("atltv_store_orders", JSON.stringify(orders));
+      })
+      .catch(err => {
+        console.warn("Failed to load store orders from PocketBase, using local storage cache:", err);
+        const storedCustOrders = localStorage.getItem("atltv_store_orders");
+        setCustomerOrders(storedCustOrders ? JSON.parse(storedCustOrders) : []);
+      });
 
     // Tech Uniform Orders
-    const storedTechOrders = localStorage.getItem("atltv_uniform_orders");
-    setUniformOrders(storedTechOrders ? JSON.parse(storedTechOrders) : []);
+    pb.collection("atltv_uniform_orders").getFullList({ sort: "-created" })
+      .then(records => {
+        const orders = records.map(r => ({
+          id: r.id,
+          techId: r.techId,
+          techName: r.techName,
+          techEmail: r.techEmail,
+          size: r.size,
+          shippingSpeed: r.shippingSpeed,
+          totalDeduction: r.totalDeduction,
+          status: r.status,
+          timestamp: Date.parse(r.created),
+        }));
+        setUniformOrders(orders);
+        localStorage.setItem("atltv_uniform_orders", JSON.stringify(orders));
+      })
+      .catch(err => {
+        console.warn("Failed to load uniform orders from PocketBase, using local storage cache:", err);
+        const storedTechOrders = localStorage.getItem("atltv_uniform_orders");
+        setUniformOrders(storedTechOrders ? JSON.parse(storedTechOrders) : []);
+      });
 
     // Onboarding settings
     const storedOnbSettings = localStorage.getItem("atltv_onboarding_settings");
@@ -2432,7 +2469,7 @@ const AdminPage = () => {
     toast.success("Category deleted.");
   };
 
-  const toggleCustomerOrderStatus = (orderId) => {
+  const toggleCustomerOrderStatus = async (orderId) => {
     const updated = customerOrders.map(o => {
       if (o.id === orderId) {
         const nextStatus = o.status === "Shipped" ? "Pending" : "Shipped";
@@ -2440,12 +2477,23 @@ const AdminPage = () => {
       }
       return o;
     });
+
+    const targetOrder = customerOrders.find(o => o.id === orderId);
+    if (targetOrder) {
+      try {
+        const nextStatus = targetOrder.status === "Shipped" ? "Pending" : "Shipped";
+        await pb.collection("atltv_store_orders").update(orderId, { status: nextStatus });
+      } catch (err) {
+        console.warn("Failed to update store order status in PocketBase:", err);
+      }
+    }
+
     localStorage.setItem("atltv_store_orders", JSON.stringify(updated));
     setCustomerOrders(updated);
     toast.success("Order status updated.");
   };
 
-  const toggleUniformOrderStatus = (orderId) => {
+  const toggleUniformOrderStatus = async (orderId) => {
     const updated = uniformOrders.map(o => {
       if (o.id === orderId) {
         const nextStatus = o.status === "Shipped" ? "Pending" : "Shipped";
@@ -2453,6 +2501,17 @@ const AdminPage = () => {
       }
       return o;
     });
+
+    const targetOrder = uniformOrders.find(o => o.id === orderId);
+    if (targetOrder) {
+      try {
+        const nextStatus = targetOrder.status === "Shipped" ? "Pending" : "Shipped";
+        await pb.collection("atltv_uniform_orders").update(orderId, { status: nextStatus });
+      } catch (err) {
+        console.warn("Failed to update uniform order status in PocketBase:", err);
+      }
+    }
+
     localStorage.setItem("atltv_uniform_orders", JSON.stringify(updated));
     setUniformOrders(updated);
     toast.success("Uniform order status updated.");
@@ -2888,7 +2947,7 @@ const AdminPage = () => {
 
       // Freeze corresponding escrow entry
       try {
-        updateEscrowStatusByBooking(matched.id, "Frozen");
+        await updateEscrowStatusByBooking(matched.id, "Frozen");
       } catch (escrowErr) {
         console.warn("Failed to freeze escrow on ticket link:", escrowErr);
       }
@@ -2934,7 +2993,7 @@ const AdminPage = () => {
       }
       // Escrow Cancellation: update escrow status to Refunded (resets tech payouts)
       try {
-        updateEscrowStatusByBooking(ticket.booking_id, "Refunded");
+        await updateEscrowStatusByBooking(ticket.booking_id, "Refunded");
       } catch (escrowErr) {
         console.warn("Failed to update escrow status to Refunded:", escrowErr);
       }

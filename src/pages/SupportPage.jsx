@@ -296,7 +296,7 @@ const SupportPage = () => {
 
       if (matchedBooking) {
         try {
-          updateEscrowStatusByBooking(matchedBooking.id, "Frozen");
+          await updateEscrowStatusByBooking(matchedBooking.id, "Frozen");
         } catch (escrowErr) {
           console.warn("Failed to freeze escrow on ticket submission:", escrowErr);
         }

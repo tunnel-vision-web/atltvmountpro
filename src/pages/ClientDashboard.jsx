@@ -402,30 +402,49 @@ const ClientDashboard = () => {
       );
       setAssignedBookings(bookings);
       
-      const holds = getEscrowLedger().filter(
-        (e) =>
-          e.techEmail === user.email ||
-          String(e.techId) === String(user.id) ||
-          e.techName === user.name
-      );
-      
-      const uniformOrders = JSON.parse(localStorage.getItem("atltv_uniform_orders") || "[]");
-      const myUniformOrders = uniformOrders.filter(
-        (o) => o.techEmail === user.email || String(o.techId) === String(user.id)
-      );
-      const uniformEntries = myUniformOrders.map((o) => ({
-        id: o.id,
-        bookingId: "UNIFORM",
-        serviceType: `Atlanta TV Mount PRO Uniform (Size ${o.size})`,
-        jobDate: new Date(o.timestamp).toLocaleDateString(),
-        invoiceTotal: -o.totalDeduction,
-        baseCommission: -o.totalDeduction,
-        tipAmount: 0,
-        status: o.status === "Shipped" ? "Released" : "Holding",
-        releaseTime: new Date(o.timestamp + 86400000 * 2).toISOString(),
-      }));
-      
-      setEscrowHolds([...holds, ...uniformEntries]);
+      Promise.all([
+        getEscrowLedger(),
+        pb.collection("atltv_uniform_orders").getFullList({
+          filter: `techEmail="${user.email}" || techId="${user.id}"`
+        }).catch((err) => {
+          console.warn("PocketBase uniform orders load failed, falling back to local storage:", err);
+          const uniformOrders = JSON.parse(localStorage.getItem("atltv_uniform_orders") || "[]");
+          return uniformOrders.filter(
+            (o) => o.techEmail === user.email || String(o.techId) === String(user.id)
+          ).map(o => ({
+            id: o.id,
+            size: o.size,
+            shippingSpeed: o.shippingSpeed,
+            totalDeduction: o.totalDeduction,
+            status: o.status,
+            timestamp: o.timestamp
+          }));
+        })
+      ]).then(([allHolds, records]) => {
+        const holds = allHolds.filter(
+          (e) =>
+            e.techEmail === user.email ||
+            String(e.techId) === String(user.id) ||
+            e.techName === user.name
+        );
+        
+        const uniformEntries = records.map((o) => ({
+          id: o.id,
+          bookingId: "UNIFORM",
+          serviceType: `Atlanta TV Mount PRO Uniform (Size ${o.size})`,
+          jobDate: new Date(o.timestamp || o.created || Date.now()).toLocaleDateString(),
+          invoiceTotal: -o.totalDeduction,
+          baseCommission: -o.totalDeduction,
+          tipAmount: 0,
+          status: o.status === "Shipped" ? "Released" : "Holding",
+          releaseTime: new Date(Date.parse(o.timestamp || o.created || Date.now()) + 86400000 * 2).toISOString(),
+        }));
+        
+        setEscrowHolds([...holds, ...uniformEntries]);
+      }).catch((err) => {
+        console.warn("Failed to load escrow holds or uniform orders:", err);
+        setEscrowHolds([]);
+      });
 
       activeJobsList = bookings.map((b) => ({
         id: b.id,
@@ -644,7 +663,7 @@ const ClientDashboard = () => {
   };
 
   // Uniform order submission handler
-  const handleUniformSubmit = (e) => {
+  const handleUniformSubmit = async (e) => {
     e.preventDefault();
     const shippingFee =
       uniformShipping === "standard"
@@ -666,6 +685,22 @@ const ClientDashboard = () => {
       timestamp: Date.now(),
       status: "Pending"
     };
+
+    // Save to PocketBase (with fallback)
+    try {
+      await pb.collection("atltv_uniform_orders").create({
+        techId: newOrder.techId,
+        techName: newOrder.techName,
+        techEmail: newOrder.techEmail,
+        size: newOrder.size,
+        shippingSpeed: newOrder.shippingSpeed,
+        totalDeduction: newOrder.totalDeduction,
+        status: newOrder.status,
+        timestamp: new Date(newOrder.timestamp).toISOString()
+      });
+    } catch (pbErr) {
+      console.warn("PocketBase uniform order creation failed, fallback to local storage:", pbErr);
+    }
 
     try {
       const existingOrders = JSON.parse(localStorage.getItem("atltv_uniform_orders") || "[]");
@@ -793,7 +828,7 @@ const ClientDashboard = () => {
       if (bIdx !== -1) {
         bookings[bIdx].status = "completed";
         saveLocalBookings(bookings);
-        createEscrowEntry(bookings[bIdx], selectedInvoiceForPayment, tipVal);
+        await createEscrowEntry(bookings[bIdx], selectedInvoiceForPayment, tipVal);
       }
 
       setCheckoutStatus("success");

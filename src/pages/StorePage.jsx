@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
+import { pocketbaseClient as pb } from "@/lib/pocketbaseClient";
 import {
   ShoppingBag,
   ShoppingCart,
@@ -216,18 +217,31 @@ const StorePage = () => {
     }
   }, [user]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const checkFirstTimeStatus = () => {
+  const checkFirstTimeStatus = async () => {
     try {
-      const orders = JSON.parse(localStorage.getItem("atltv_store_orders") || "[]");
       const emailToCheck = user?.email || billingForm.email;
       if (emailToCheck) {
-        const userOrders = orders.filter((o) => o.customerDetails.email.toLowerCase() === emailToCheck.toLowerCase());
-        setIsFirstTimeCustomer(userOrders.length === 0);
+        const records = await pb.collection("atltv_store_orders").getList(1, 1, {
+          filter: `email="${emailToCheck.toLowerCase()}"`
+        });
+        setIsFirstTimeCustomer(records.totalItems === 0);
       } else {
         setIsFirstTimeCustomer(true);
       }
-    } catch {
-      setIsFirstTimeCustomer(true);
+    } catch (err) {
+      console.warn("Failed to check customer history in PocketBase, using local storage cache:", err);
+      try {
+        const orders = JSON.parse(localStorage.getItem("atltv_store_orders") || "[]");
+        const emailToCheck = user?.email || billingForm.email;
+        if (emailToCheck) {
+          const userOrders = orders.filter((o) => o.customerDetails.email.toLowerCase() === emailToCheck.toLowerCase());
+          setIsFirstTimeCustomer(userOrders.length === 0);
+        } else {
+          setIsFirstTimeCustomer(true);
+        }
+      } catch {
+        setIsFirstTimeCustomer(true);
+      }
     }
   };
 
@@ -427,7 +441,7 @@ const StorePage = () => {
 
     setIsProcessing(true);
 
-    setTimeout(() => {
+    setTimeout(async () => {
       // Create new order record
       const orderId = `order_${Date.now()}`;
       const newOrder = {
@@ -456,6 +470,27 @@ const StorePage = () => {
         timestamp: Date.now(),
         status: "Pending",
       };
+
+      // Save order to PocketBase (and fallback cache to local storage)
+      try {
+        await pb.collection("atltv_store_orders").create({
+          items: newOrder.items,
+          total: newOrder.total,
+          status: newOrder.status,
+          address: JSON.stringify({
+            shipping: newOrder.customerDetails,
+            billing: newOrder.billingAddress,
+            giftNote: newOrder.giftNote,
+            newsletterOptIn: newOrder.newsletterOptIn
+          }),
+          email: newOrder.customerDetails.email,
+          name: newOrder.customerDetails.name,
+          paymentMethod: "card",
+          shippingSpeed: newOrder.shippingMethod
+        });
+      } catch (pbErr) {
+        console.warn("PocketBase store order creation failed, fallback to local storage:", pbErr);
+      }
 
       try {
         const storedOrders = JSON.parse(localStorage.getItem("atltv_store_orders") || "[]");

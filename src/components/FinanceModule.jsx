@@ -81,26 +81,27 @@ const FinanceModule = ({ initialData = null, currentUser = null }) => {
   const [disputedEntry, setDisputedEntry] = useState(null);
   const [showDisputeModal, setShowDisputeModal] = useState(false);
 
-  const refreshEscrow = () => {
-    setEscrowLedger(getEscrowLedger());
+  const refreshEscrow = async () => {
+    const data = await getEscrowLedger();
+    setEscrowLedger(data);
   };
 
   useEffect(() => {
     refreshEscrow();
   }, [subTab]);
 
-  const handleForceRelease = (bookingId) => {
-    updateEscrowStatusByBooking(bookingId, "Released");
-    refreshEscrow();
+  const handleForceRelease = async (bookingId) => {
+    await updateEscrowStatusByBooking(bookingId, "Released");
+    await refreshEscrow();
     toast.success("Payout released from escrow successfully!");
   };
 
-  const handleResolveDispute = (bookingId, forceRelease) => {
+  const handleResolveDispute = async (bookingId, forceRelease) => {
     if (forceRelease) {
-      updateEscrowStatusByBooking(bookingId, "Released");
+      await updateEscrowStatusByBooking(bookingId, "Released");
       toast.success("Dispute resolved: Payout released to technician.");
     } else {
-      updateEscrowStatusByBooking(bookingId, "Refunded");
+      await updateEscrowStatusByBooking(bookingId, "Refunded");
       
       const invoice = getInvoices().find(i => i.bookingId === bookingId);
       if (invoice) {
@@ -408,7 +409,7 @@ const FinanceModule = ({ initialData = null, currentUser = null }) => {
     setShowPayment(true);
   };
 
-  const processPayment = () => {
+  const processPayment = async () => {
     if (!selectedInvoice) return;
     const { method } = paymentForm;
     if (
@@ -461,7 +462,7 @@ const FinanceModule = ({ initialData = null, currentUser = null }) => {
         const bookings = stored ? JSON.parse(stored) : [];
         const booking = bookings.find(b => b.id === all[idx].bookingId);
         if (booking) {
-          createEscrowEntry(booking, all[idx], 0);
+          await createEscrowEntry(booking, all[idx], 0);
           const bIdx = bookings.findIndex(b => b.id === booking.id);
           if (bIdx !== -1) {
             bookings[bIdx].status = "completed";
@@ -472,7 +473,7 @@ const FinanceModule = ({ initialData = null, currentUser = null }) => {
         console.warn("Failed to create escrow entry on recorded payment:", err);
       }
       
-      refreshEscrow();
+      await refreshEscrow();
 
       toast.success(
         `Payment of $${all[idx].total.toFixed(2)} received via ${method}. Receipt generated.`,
