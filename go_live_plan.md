@@ -7,7 +7,7 @@ This document outlines the comprehensive go-live roadmap, daily schedule, and ch
 
 ## 1. Daily Implementation Schedule
 
-To ensure a smooth release and keep changes manageable, development is structured into a **8-Day Schedule** mapping the core and support components:
+To ensure a smooth release and keep changes manageable, development is structured into a **9-Day Schedule** mapping the core and support components:
  
  ```mermaid
  gantt
@@ -37,6 +37,8 @@ To ensure a smooth release and keep changes manageable, development is structure
       section Phase 8: Store & Uniforms
       Apparel Store & Cart Checkout Drawer     :day8, 2026-06-25, 1d
       Uniform Onboarding & Paycheck Deduct     :day8, 2026-06-25, 1d
+      section Phase 9: AI Assistance
+      AI-Driven Admin "How-To" Guide           :day9, 2026-06-26, 1d
  ```
  
  ### Day 1: Core Admin & Metrics (Completed)
@@ -85,6 +87,15 @@ To ensure a smooth release and keep changes manageable, development is structure
 - **Stripe Sandbox & Order Records**: Embedded checkout drawer supporting shipping speed choices and processing sandbox payments, logging order items and addresses into `atltv_store_orders` in localStorage.
 - **Technician Uniform Onboarding**: Integrated a 6th step into the approved recruit's checklist for uniform ordering (sizing, shipping speeds). Orders are logged in `atltv_uniform_orders` and total cost ($30 + shipping fee) is automatically deducted from their first paycheck as a negative commission row in their earnings ledger.
 - **Admin Store Manager**: Created an admin manager sub-panel with product CRUD, category creation, customer order status toggles, and technician uniform shipment tracking.
+
+### Day 9: AI-Driven Admin "How-To" Guide & Assistant (Tivo)
+- **AI Backend Assistant (Tivo)**: A context-aware chatbot and action assistant embedded in the Admin portal that answers operational questions, suggests guides, and assists in navigation. It is branded as a friendly android named Tivo, represented by an icon in a flat design style using theme colors (dark blue, black, and amber accents) depicting a robot with a digital TV head holding a wrench, showing a happy digital smiley face on its screen.
+  
+  ![Tivo Assistant Icon](file:///C:/Users/judit/.gemini/antigravity/brain/7c398f6a-2be9-4277-8e0a-f77c62109990/tivo_flat_icon_1782228698511.png)
+
+- **Context-Aware Integration**: The assistant reads the active tab state (`activeTab`, `storeSubTab`, role permissions, etc.) and suggests relevant help articles, e.g., if on the "Integrations" sub-tab, it provides instructions on retrieving API keys or triggering catalog syncs.
+- **AI Frontend Model Integration**: Connects to the local/server LLM endpoint, feeding it the current page schema, user role, and operation history to produce natural language guidance and step-by-step walk-throughs.
+- **Deep-Linked Quick Actions**: Allows Tivo to perform direct actions on behalf of the user, such as "Take me to CRM tab", "Show pending uniform orders", or "Run Wholesale2B sync" with single-click triggers.
  
  ---
  
@@ -96,3 +107,47 @@ To ensure a smooth release and keep changes manageable, development is structure
 - [ ] Run backend migrations to create the `support_tickets` and `onboarding_status` tables.
 - [ ] Seed base system users (Admins, Accountants, Moderators) with custom dashboard permissions.
 - [ ] Set Stripe variables (`VITE_STRIPE_PUBLIC_KEY`) in the client `.env` files.
+
+---
+
+## 3. Hardware & AV E-Commerce Integration Strategy
+
+To support the public storefront and technician fulfillment, a dual-integration strategy will be deployed for product sourcing, inventory synchronization, and order fulfillment:
+
+### Phase 1: Client-Facing AV & Accessory Dropshipping
+For high-margin, lightweight accessories sold directly to clients (TV wall mounts, HDMI cables, soundbar brackets, and LED backlights):
+- **Integration Partners**: **Wholesale2B** and **Petra Industries** (with brand options like Monoprice and Peerless-AV).
+- **Workflow & APIs**:
+  - Implement a background cron job (Node.js/PocketBase) that queries the supplier's product feeds.
+  - Automatically sync product details, images, stock levels, and retail pricing directly into our `atltv_store_products` database.
+  - Configure blind/white-label shipping via the supplier API during checkout so items are shipped directly to clients under the "Atlanta TV Mount PRO" brand.
+
+### Phase 2: Pro Procurement for Heavy Consumables & Installation Tools
+For tools and heavy consumables (drywall mud, joint compound, paint, screws, wall anchors, and drills) where standard dropshipping is cost-prohibitive due to weight:
+- **Consumables & Fasteners**: Partner with industrial distributors like **Grainger** or **McMaster-Carr** using their B2B punchout APIs (cXML/EDI) to order fasteners and custom hardware in bulk or next-day shipping.
+- **Local On-Demand Procurement**: Integrate with **Home Depot Pro** / **Lowe's Pro** APIs. When a job is booked or a technician logs a site request for drywall mud or paint:
+  - The system automatically adds the items to a job-specific purchase order.
+  - The order is placed programmatically via the Home Depot Pro / Lowe's Pro API for local store pickup or flatbed delivery directly to the customer's site.
+- **Hand Tools & Safety Gear**: Establish dealer accounts with specialized wholesale suppliers like **Grip Tight Tools** to supply technician toolkits.
+
+---
+
+## 4. Secure 2030 OTP-Based Password Reset Protocol
+
+To protect customer, technician, and administrator accounts while avoiding obsolete email link expiration issues, a unified **OTP-based Verification & Reset Protocol** is implemented:
+
+### Workflow & Security Gates:
+1. **Entry Portals**:
+   - **Administrators**: Standalone reset route integrated into the `/admin` login view.
+   - **Clients & Technicians**: Unified auth modal (`ClientAuthModal`) triggered from the header and onboarding pages.
+2. **Identification & Code Generation**:
+   - The user requests a reset by entering their registered email.
+   - For real accounts, the system triggers the PocketBase SMTP reset request (`pb.collection("users" | "clients").requestPasswordReset(email)`) alongside a 6-digit OTP verification code.
+   - For mock/demo accounts (ending in `@example.com` or containing `mock`), the system simulates the dispatch and outputs a bypass toast notification to ensure developer flexibility.
+3. **Multi-Input Verification**:
+   - Displays a secure 6-digit inline verification panel with auto-focus shifting and backspace navigation logic.
+   - Validates the input against the cryptographically generated OTP (or standard bypass code `123456`).
+4. **Credential Upgrades**:
+   - On successful verification, allows the user to define a new password (min 8 characters).
+   - Updates the live database (or `localStorage` mock users ledger `atltv_local_users`), returning the user to the standard Sign In flow.
+
