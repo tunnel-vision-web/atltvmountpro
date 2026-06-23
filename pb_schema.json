@@ -3,7 +3,7 @@
     "id": "pbc_2279338944",
     "name": "_mfas",
     "type": "base",
-    "system": 1,
+    "system": true,
     "fields": [
       {
         "autogeneratePattern": "[a-z0-9]{15}",
@@ -100,7 +100,7 @@
     "id": "pbc_1638494021",
     "name": "_otps",
     "type": "base",
-    "system": 1,
+    "system": true,
     "fields": [
       {
         "autogeneratePattern": "[a-z0-9]{15}",
@@ -211,7 +211,7 @@
     "id": "pbc_2281828961",
     "name": "_externalAuths",
     "type": "base",
-    "system": 1,
+    "system": true,
     "fields": [
       {
         "autogeneratePattern": "[a-z0-9]{15}",
@@ -324,7 +324,7 @@
     "id": "pbc_4275539003",
     "name": "_authOrigins",
     "type": "base",
-    "system": 1,
+    "system": true,
     "fields": [
       {
         "autogeneratePattern": "[a-z0-9]{15}",
@@ -421,7 +421,7 @@
     "id": "pbc_3142635823",
     "name": "_superusers",
     "type": "auth",
-    "system": 1,
+    "system": true,
     "fields": [
       {
         "autogeneratePattern": "[a-z0-9]{15}",
@@ -570,23 +570,23 @@
         }
       },
       "authToken": {
-        "secret": "KNUigtuds5sNDH5vGEw11uuwHczSMm476gHnOxiRnX6HWrf1EB",
+        "secret": "SkVfaUxDQvhzzsHkx3EuOpTIDTQtkNwtMK0PCKbsmoYDqvtsQ5",
         "duration": 86400
       },
       "passwordResetToken": {
-        "secret": "PXZtrwLvEJRUJRBoUT8Vzkaeo11U14RTIZwpw0rRVf95T5AnDT",
+        "secret": "dwxWkkcEJ2mGQ0gWwjJHSWJqbWuV2ARCRbuXA61Q19qj5oJk81",
         "duration": 1800
       },
       "emailChangeToken": {
-        "secret": "aJVsea9eAaCEDphmU0ZlPUvZZCaP96EGoc3ONFH2JZZrBgu25l",
+        "secret": "shf57JM2Wv4d8gvz2y2qxNsL5pIib6OsTGcsuHBYfsU6M06DK9",
         "duration": 1800
       },
       "verificationToken": {
-        "secret": "1fdoJlzIQxOAZn0VPujlN2SExIv8i0VUrfvGc9S6n75pSPXGYv",
+        "secret": "yPqQpQcGKPy6V9FaO6A941Cmu1iYpsrMB5hsjSIFkfpdnBsr4t",
         "duration": 86400
       },
       "fileToken": {
-        "secret": "bAwTw1KfxydttDT1DxCxTKOTWpQPWrCjexElIa21e2dP97g3hI",
+        "secret": "y2FyWj9x5RGZMkkb5M2sbeDjMhvUZcgnbOrrV6S6AOGMWcYwFR",
         "duration": 180
       },
       "verificationTemplate": {
@@ -607,7 +607,7 @@
     "id": "_pb_users_auth_",
     "name": "users",
     "type": "auth",
-    "system": 0,
+    "system": false,
     "fields": [
       {
         "autogeneratePattern": "[a-z0-9]{15}",
@@ -722,6 +722,26 @@
         "type": "file"
       },
       {
+        "hidden": false,
+        "id": "autodate2990389176",
+        "name": "created",
+        "onCreate": true,
+        "onUpdate": false,
+        "presentable": false,
+        "system": false,
+        "type": "autodate"
+      },
+      {
+        "hidden": false,
+        "id": "autodate3332085495",
+        "name": "updated",
+        "onCreate": true,
+        "onUpdate": true,
+        "presentable": false,
+        "system": false,
+        "type": "autodate"
+      },
+      {
         "help": "",
         "hidden": false,
         "id": "select1466534506",
@@ -753,42 +773,26 @@
         "type": "text"
       },
       {
+        "help": "",
         "hidden": false,
-        "id": "autodate2990389176",
-        "name": "created",
-        "onCreate": true,
-        "onUpdate": false,
-        "presentable": false,
-        "system": false,
-        "type": "autodate"
-      },
-      {
-        "hidden": false,
-        "id": "autodate3332085495",
-        "name": "updated",
-        "onCreate": true,
-        "onUpdate": true,
-        "presentable": false,
-        "system": false,
-        "type": "autodate"
-      },
-      {
         "id": "json_custom_permissions",
+        "maxSize": 0,
         "name": "custom_permissions",
-        "type": "json",
+        "presentable": false,
         "required": false,
-        "system": false
+        "system": false,
+        "type": "json"
       }
     ],
     "indexes": [
       "CREATE UNIQUE INDEX `idx_tokenKey__pb_users_auth_` ON `users` (`tokenKey`)",
       "CREATE UNIQUE INDEX `idx_email__pb_users_auth_` ON `users` (`email`) WHERE `email` != ''"
     ],
-    "listRule": null,
-    "viewRule": null,
+    "listRule": "id = @request.auth.id",
+    "viewRule": "id = @request.auth.id",
     "createRule": "",
-    "updateRule": null,
-    "deleteRule": null,
+    "updateRule": "id = @request.auth.id",
+    "deleteRule": "id = @request.auth.id",
     "options": {
       "authRule": "",
       "manageRule": null,
@@ -800,7 +804,7 @@
         }
       },
       "oauth2": {
-        "providers": [],
+        "providers": null,
         "mappedFields": {
           "id": "",
           "name": "name",
@@ -830,23 +834,23 @@
         }
       },
       "authToken": {
-        "secret": "YF9DIGGY6b6o0sfLLCiFiVkyTQI91WxBP5eZNH1J9Hkj38rR2Z",
+        "secret": "6mNJca4O9BamhPAJNlPHf7uR9tngDxX8WnJNXutLLhAN9tXagr",
         "duration": 432000
       },
       "passwordResetToken": {
-        "secret": "alzAqmhL4oE2Jr2RZM5sWZYh4HfP7CFQF1VVKX1mzLhibNQtuA",
+        "secret": "OFanrw6RVqubzDsrot4QKZnq84uCyfxj6RaSOfvm098s8MKKJ9",
         "duration": 1800
       },
       "emailChangeToken": {
-        "secret": "1cdCqhKKOdCX42fA9F1SzyZZ3Kk7L3ouPbYvCkoMee8yjd1ucW",
+        "secret": "PfG4KgVn1WU6hnNTBPQHSulzZk0gRGdnTY3GEKdnzUVUdV2UdP",
         "duration": 1800
       },
       "verificationToken": {
-        "secret": "18zqCORaKfEs0b0j0zew7lBSWoqiQxSoixVS8NGMrkH3MEAJaX",
+        "secret": "hxQ6AmT1MmSwaS5QCYyVDeEYJTsgQeDZaKlWtpLnftaCW9n5ni",
         "duration": 86400
       },
       "fileToken": {
-        "secret": "N3KEoXSQIPTyWCjJNemu3qqxvTAAhCN3eD7s4dUtflLNYTe2h3",
+        "secret": "q2vbrJEuuPbucJiqH5mNTTjCK7llpBib2KTh8YYTRGXIzHYq5Y",
         "duration": 180
       },
       "verificationTemplate": {
@@ -867,7 +871,7 @@
     "id": "pbc_3646451221",
     "name": "clients",
     "type": "auth",
-    "system": 0,
+    "system": false,
     "fields": [
       {
         "autogeneratePattern": "[a-z0-9]{15}",
@@ -1026,32 +1030,64 @@
         "type": "autodate"
       },
       {
+        "autogeneratePattern": "",
+        "help": "",
+        "hidden": false,
         "id": "text_optin_status",
+        "max": 0,
+        "min": 0,
         "name": "OptIn_Status",
-        "type": "text",
+        "pattern": "",
+        "presentable": false,
+        "primaryKey": false,
         "required": false,
-        "system": false
+        "system": false,
+        "type": "text"
       },
       {
+        "autogeneratePattern": "",
+        "help": "",
+        "hidden": false,
         "id": "text_optin_channel",
+        "max": 0,
+        "min": 0,
         "name": "OptIn_Channel",
-        "type": "text",
+        "pattern": "",
+        "presentable": false,
+        "primaryKey": false,
         "required": false,
-        "system": false
+        "system": false,
+        "type": "text"
       },
       {
+        "autogeneratePattern": "",
+        "help": "",
+        "hidden": false,
         "id": "text_optin_date",
+        "max": 0,
+        "min": 0,
         "name": "OptIn_Date",
-        "type": "text",
+        "pattern": "",
+        "presentable": false,
+        "primaryKey": false,
         "required": false,
-        "system": false
+        "system": false,
+        "type": "text"
       },
       {
+        "autogeneratePattern": "",
+        "help": "",
+        "hidden": false,
         "id": "text_optin_token",
+        "max": 0,
+        "min": 0,
         "name": "DoubleOptIn_Token",
-        "type": "text",
+        "pattern": "",
+        "presentable": false,
+        "primaryKey": false,
         "required": false,
-        "system": false
+        "system": false,
+        "type": "text"
       }
     ],
     "indexes": [
@@ -1074,7 +1110,7 @@
         }
       },
       "oauth2": {
-        "providers": [],
+        "providers": null,
         "mappedFields": {
           "id": "",
           "name": "",
@@ -1104,23 +1140,23 @@
         }
       },
       "authToken": {
-        "secret": "nIqC7UKWa7uhXwcy1uWP68mC37fgufd6b3zj8tNr3zgehbZkRv",
+        "secret": "vq35f2O9ApG4x3k8wEUWF917CYUqDrl3UyrxW84witWbNF8KTS",
         "duration": 432000
       },
       "passwordResetToken": {
-        "secret": "eKuWLmTvSGPMRdiVZThJi1GHtcI2unqzJnE4ZiNUk8MQayuSFx",
+        "secret": "KgVXNAgVXK3HAMZQPS74jhh87km9DsspyDXjB7SixVUOopDlKt",
         "duration": 1800
       },
       "emailChangeToken": {
-        "secret": "RbtYrO6TXMnU1jvcqMlNEulqsVlQpOVt9GBGC6AEydceXK4zAv",
+        "secret": "A7SU85JGTYweodRH7Jkp9MwpRkN8QrbGAmx7ey4GMecMIVPELv",
         "duration": 1800
       },
       "verificationToken": {
-        "secret": "Qa8GW688JzeycwM7P6YYSmLN4pry9oj4hUDkztB2es3hZusNJK",
+        "secret": "oVE1FP8xK9ZP1MbBbKODpxT8XGHpjJScxkAaOJmp1gRXfmPd6g",
         "duration": 86400
       },
       "fileToken": {
-        "secret": "Afn57vv9QHWxm70HKMAIdmZRYT4IkEobf7zcaCYLuiQUMI5gLo",
+        "secret": "XoiVxej5chg5re5K6xttFryaF7nyq1HoIL3KlvzYmZ2auNDLYC",
         "duration": 180
       },
       "verificationTemplate": {
@@ -1141,7 +1177,7 @@
     "id": "pbc_3364366788",
     "name": "appointment_bookings",
     "type": "base",
-    "system": 0,
+    "system": false,
     "fields": [
       {
         "autogeneratePattern": "[a-z0-9]{15}",
@@ -1269,32 +1305,64 @@
         "type": "autodate"
       },
       {
+        "autogeneratePattern": "",
+        "help": "",
+        "hidden": false,
         "id": "text_status",
+        "max": 0,
+        "min": 0,
         "name": "status",
-        "type": "text",
+        "pattern": "",
+        "presentable": false,
+        "primaryKey": false,
         "required": false,
-        "system": false
+        "system": false,
+        "type": "text"
       },
       {
+        "autogeneratePattern": "",
+        "help": "",
+        "hidden": false,
         "id": "text_assigned_tech_id",
+        "max": 0,
+        "min": 0,
         "name": "assignedTechId",
-        "type": "text",
+        "pattern": "",
+        "presentable": false,
+        "primaryKey": false,
         "required": false,
-        "system": false
+        "system": false,
+        "type": "text"
       },
       {
+        "autogeneratePattern": "",
+        "help": "",
+        "hidden": false,
         "id": "text_assigned_tech_name",
+        "max": 0,
+        "min": 0,
         "name": "assignedTechName",
-        "type": "text",
+        "pattern": "",
+        "presentable": false,
+        "primaryKey": false,
         "required": false,
-        "system": false
+        "system": false,
+        "type": "text"
       },
       {
+        "autogeneratePattern": "",
+        "help": "",
+        "hidden": false,
         "id": "text_service_type",
+        "max": 0,
+        "min": 0,
         "name": "service_type",
-        "type": "text",
+        "pattern": "",
+        "presentable": false,
+        "primaryKey": false,
         "required": false,
-        "system": false
+        "system": false,
+        "type": "text"
       }
     ],
     "indexes": [],
@@ -1309,7 +1377,7 @@
     "id": "pbc_1781307585",
     "name": "cms_pages",
     "type": "base",
-    "system": 0,
+    "system": false,
     "fields": [
       {
         "autogeneratePattern": "[a-z0-9]{15}",
@@ -1385,82 +1453,143 @@
     "id": "pbc_crm_blasts",
     "name": "crm_blasts",
     "type": "base",
-    "system": 0,
+    "system": false,
     "fields": [
       {
+        "autogeneratePattern": "",
+        "help": "",
+        "hidden": false,
         "id": "text3208210256",
+        "max": 0,
+        "min": 0,
         "name": "id",
-        "type": "text",
+        "pattern": "^[a-z0-9]+$",
+        "presentable": false,
         "primaryKey": true,
         "required": true,
-        "system": true
+        "system": true,
+        "type": "text"
       },
       {
+        "autogeneratePattern": "",
+        "help": "",
+        "hidden": false,
         "id": "text_blast_subject",
+        "max": 0,
+        "min": 0,
         "name": "subject",
-        "type": "text",
+        "pattern": "",
+        "presentable": false,
+        "primaryKey": false,
         "required": false,
-        "system": false
+        "system": false,
+        "type": "text"
       },
       {
+        "autogeneratePattern": "",
+        "help": "",
+        "hidden": false,
         "id": "text_blast_body",
+        "max": 0,
+        "min": 0,
         "name": "body",
-        "type": "text",
+        "pattern": "",
+        "presentable": false,
+        "primaryKey": false,
         "required": true,
-        "system": false
+        "system": false,
+        "type": "text"
       },
       {
+        "autogeneratePattern": "",
+        "help": "",
+        "hidden": false,
         "id": "text_blast_audience",
+        "max": 0,
+        "min": 0,
         "name": "audience",
-        "type": "text",
+        "pattern": "",
+        "presentable": false,
+        "primaryKey": false,
         "required": true,
-        "system": false
+        "system": false,
+        "type": "text"
       },
       {
+        "autogeneratePattern": "",
+        "help": "",
+        "hidden": false,
         "id": "text_blast_channel",
+        "max": 0,
+        "min": 0,
         "name": "channel",
-        "type": "text",
+        "pattern": "",
+        "presentable": false,
+        "primaryKey": false,
         "required": true,
-        "system": false
+        "system": false,
+        "type": "text"
       },
       {
+        "autogeneratePattern": "",
+        "help": "",
+        "hidden": false,
         "id": "text_blast_sent_by",
+        "max": 0,
+        "min": 0,
         "name": "sent_by",
-        "type": "text",
+        "pattern": "",
+        "presentable": false,
+        "primaryKey": false,
         "required": true,
-        "system": false
+        "system": false,
+        "type": "text"
       },
       {
+        "autogeneratePattern": "",
+        "help": "",
+        "hidden": false,
         "id": "text_blast_sent_date",
+        "max": 0,
+        "min": 0,
         "name": "sent_date",
-        "type": "text",
+        "pattern": "",
+        "presentable": false,
+        "primaryKey": false,
         "required": true,
-        "system": false
+        "system": false,
+        "type": "text"
       },
       {
+        "help": "",
+        "hidden": false,
         "id": "json_blast_stats",
+        "maxSize": 0,
         "name": "stats",
-        "type": "json",
+        "presentable": false,
         "required": false,
-        "system": false
+        "system": false,
+        "type": "json"
       },
       {
+        "hidden": false,
         "id": "autodate2990389176",
         "name": "created",
-        "type": "autodate",
         "onCreate": true,
         "onUpdate": false,
         "presentable": false,
-        "system": false
+        "system": false,
+        "type": "autodate"
       },
       {
+        "hidden": false,
         "id": "autodate3332085495",
         "name": "updated",
-        "type": "autodate",
         "onCreate": true,
         "onUpdate": true,
         "presentable": false,
-        "system": false
+        "system": false,
+        "type": "autodate"
       }
     ],
     "indexes": [],
@@ -1475,103 +1604,181 @@
     "id": "pbc_tech_apps",
     "name": "technician_applications",
     "type": "base",
-    "system": 0,
+    "system": false,
     "fields": [
       {
+        "autogeneratePattern": "",
+        "help": "",
+        "hidden": false,
         "id": "text_app_id",
+        "max": 0,
+        "min": 0,
         "name": "id",
-        "type": "text",
+        "pattern": "^[a-z0-9]+$",
+        "presentable": false,
         "primaryKey": true,
         "required": true,
-        "system": true
+        "system": true,
+        "type": "text"
       },
       {
+        "autogeneratePattern": "",
+        "help": "",
+        "hidden": false,
         "id": "text_app_name",
+        "max": 0,
+        "min": 0,
         "name": "name",
-        "type": "text",
+        "pattern": "",
+        "presentable": false,
+        "primaryKey": false,
         "required": true,
-        "system": false
+        "system": false,
+        "type": "text"
       },
       {
+        "exceptDomains": null,
+        "help": "",
+        "hidden": false,
         "id": "text_app_email",
         "name": "email",
-        "type": "email",
+        "onlyDomains": null,
+        "presentable": false,
         "required": true,
-        "system": false
+        "system": false,
+        "type": "email"
       },
       {
+        "autogeneratePattern": "",
+        "help": "",
+        "hidden": false,
         "id": "text_app_phone",
+        "max": 0,
+        "min": 0,
         "name": "phone",
-        "type": "text",
+        "pattern": "",
+        "presentable": false,
+        "primaryKey": false,
         "required": true,
-        "system": false
+        "system": false,
+        "type": "text"
       },
       {
+        "autogeneratePattern": "",
+        "help": "",
+        "hidden": false,
         "id": "text_app_city",
+        "max": 0,
+        "min": 0,
         "name": "city",
-        "type": "text",
+        "pattern": "",
+        "presentable": false,
+        "primaryKey": false,
         "required": false,
-        "system": false
+        "system": false,
+        "type": "text"
       },
       {
+        "autogeneratePattern": "",
+        "help": "",
+        "hidden": false,
         "id": "text_app_zip",
+        "max": 0,
+        "min": 0,
         "name": "zip",
-        "type": "text",
+        "pattern": "",
+        "presentable": false,
+        "primaryKey": false,
         "required": false,
-        "system": false
+        "system": false,
+        "type": "text"
       },
       {
+        "autogeneratePattern": "",
+        "help": "",
+        "hidden": false,
         "id": "text_app_experience",
+        "max": 0,
+        "min": 0,
         "name": "experience",
-        "type": "text",
+        "pattern": "",
+        "presentable": false,
+        "primaryKey": false,
         "required": false,
-        "system": false
+        "system": false,
+        "type": "text"
       },
       {
+        "help": "",
+        "hidden": false,
         "id": "json_app_skills",
+        "maxSize": 0,
         "name": "skills",
-        "type": "json",
+        "presentable": false,
         "required": false,
-        "system": false
+        "system": false,
+        "type": "json"
       },
       {
+        "help": "",
+        "hidden": false,
         "id": "json_app_tools",
+        "maxSize": 0,
         "name": "tools",
-        "type": "json",
+        "presentable": false,
         "required": false,
-        "system": false
+        "system": false,
+        "type": "json"
       },
       {
+        "autogeneratePattern": "",
+        "help": "",
+        "hidden": false,
         "id": "text_app_notes",
+        "max": 0,
+        "min": 0,
         "name": "notes",
-        "type": "text",
+        "pattern": "",
+        "presentable": false,
+        "primaryKey": false,
         "required": false,
-        "system": false
+        "system": false,
+        "type": "text"
       },
       {
+        "autogeneratePattern": "",
+        "help": "",
+        "hidden": false,
         "id": "text_app_status",
+        "max": 0,
+        "min": 0,
         "name": "status",
-        "type": "text",
+        "pattern": "",
+        "presentable": false,
+        "primaryKey": false,
         "required": false,
-        "system": false
+        "system": false,
+        "type": "text"
       },
       {
+        "hidden": false,
         "id": "autodate2990389176",
         "name": "created",
-        "type": "autodate",
         "onCreate": true,
         "onUpdate": false,
         "presentable": false,
-        "system": false
+        "system": false,
+        "type": "autodate"
       },
       {
+        "hidden": false,
         "id": "autodate3332085495",
         "name": "updated",
-        "type": "autodate",
         "onCreate": true,
         "onUpdate": true,
         "presentable": false,
-        "system": false
+        "system": false,
+        "type": "autodate"
       }
     ],
     "indexes": [],
@@ -1586,68 +1793,108 @@
     "id": "pbc_team_members",
     "name": "team_members",
     "type": "base",
-    "system": 0,
+    "system": false,
     "fields": [
       {
+        "autogeneratePattern": "",
+        "help": "",
+        "hidden": false,
         "id": "text_team_id",
+        "max": 0,
+        "min": 0,
         "name": "id",
-        "type": "text",
+        "pattern": "^[a-z0-9]+$",
+        "presentable": false,
         "primaryKey": true,
         "required": true,
-        "system": true
+        "system": true,
+        "type": "text"
       },
       {
+        "autogeneratePattern": "",
+        "help": "",
+        "hidden": false,
         "id": "text_team_name",
+        "max": 0,
+        "min": 0,
         "name": "name",
-        "type": "text",
+        "pattern": "",
+        "presentable": false,
+        "primaryKey": false,
         "required": true,
-        "system": false
+        "system": false,
+        "type": "text"
       },
       {
+        "autogeneratePattern": "",
+        "help": "",
+        "hidden": false,
         "id": "text_team_photo",
+        "max": 0,
+        "min": 0,
         "name": "photo",
-        "type": "text",
+        "pattern": "",
+        "presentable": false,
+        "primaryKey": false,
         "required": false,
-        "system": false
+        "system": false,
+        "type": "text"
       },
       {
+        "autogeneratePattern": "",
+        "help": "",
+        "hidden": false,
         "id": "text_team_bio",
+        "max": 0,
+        "min": 0,
         "name": "bio",
-        "type": "text",
+        "pattern": "",
+        "presentable": false,
+        "primaryKey": false,
         "required": false,
-        "system": false
+        "system": false,
+        "type": "text"
       },
       {
+        "help": "",
+        "hidden": false,
         "id": "json_team_skills",
+        "maxSize": 0,
         "name": "skills",
-        "type": "json",
+        "presentable": false,
         "required": false,
-        "system": false
+        "system": false,
+        "type": "json"
       },
       {
+        "help": "",
+        "hidden": false,
         "id": "bool_team_featured",
         "name": "featured",
-        "type": "bool",
+        "presentable": false,
         "required": false,
-        "system": false
+        "system": false,
+        "type": "bool"
       },
       {
+        "hidden": false,
         "id": "autodate2990389176",
         "name": "created",
-        "type": "autodate",
         "onCreate": true,
         "onUpdate": false,
         "presentable": false,
-        "system": false
+        "system": false,
+        "type": "autodate"
       },
       {
+        "hidden": false,
         "id": "autodate3332085495",
         "name": "updated",
-        "type": "autodate",
         "onCreate": true,
         "onUpdate": true,
         "presentable": false,
-        "system": false
+        "system": false,
+        "type": "autodate"
       }
     ],
     "indexes": [],
@@ -1662,82 +1909,145 @@
     "id": "pbc_quote_inquiries",
     "name": "quote_inquiries",
     "type": "base",
-    "system": 0,
+    "system": false,
     "fields": [
       {
+        "autogeneratePattern": "",
+        "help": "",
+        "hidden": false,
         "id": "text3208210256",
+        "max": 0,
+        "min": 0,
         "name": "id",
-        "type": "text",
+        "pattern": "^[a-z0-9]+$",
+        "presentable": false,
         "primaryKey": true,
         "required": true,
-        "system": true
+        "system": true,
+        "type": "text"
       },
       {
+        "autogeneratePattern": "",
+        "help": "",
+        "hidden": false,
         "id": "text_quote_name",
+        "max": 0,
+        "min": 0,
         "name": "name",
-        "type": "text",
+        "pattern": "",
+        "presentable": false,
+        "primaryKey": false,
         "required": true,
-        "system": false
+        "system": false,
+        "type": "text"
       },
       {
+        "autogeneratePattern": "",
+        "help": "",
+        "hidden": false,
         "id": "text_quote_email",
+        "max": 0,
+        "min": 0,
         "name": "email",
-        "type": "text",
+        "pattern": "",
+        "presentable": false,
+        "primaryKey": false,
         "required": true,
-        "system": false
+        "system": false,
+        "type": "text"
       },
       {
+        "autogeneratePattern": "",
+        "help": "",
+        "hidden": false,
         "id": "text_quote_phone",
+        "max": 0,
+        "min": 0,
         "name": "phone",
-        "type": "text",
+        "pattern": "",
+        "presentable": false,
+        "primaryKey": false,
         "required": true,
-        "system": false
+        "system": false,
+        "type": "text"
       },
       {
+        "autogeneratePattern": "",
+        "help": "",
+        "hidden": false,
         "id": "text_quote_service_type",
+        "max": 0,
+        "min": 0,
         "name": "service_type",
-        "type": "text",
+        "pattern": "",
+        "presentable": false,
+        "primaryKey": false,
         "required": false,
-        "system": false
+        "system": false,
+        "type": "text"
       },
       {
+        "autogeneratePattern": "",
+        "help": "",
+        "hidden": false,
         "id": "text_quote_details",
+        "max": 0,
+        "min": 0,
         "name": "project_details",
-        "type": "text",
+        "pattern": "",
+        "presentable": false,
+        "primaryKey": false,
         "required": false,
-        "system": false
+        "system": false,
+        "type": "text"
       },
       {
+        "help": "",
+        "hidden": false,
         "id": "num_quote_est",
+        "max": null,
+        "min": null,
         "name": "estimated_quote",
-        "type": "number",
+        "onlyInt": false,
+        "presentable": false,
         "required": false,
-        "system": false
+        "system": false,
+        "type": "number"
       },
       {
+        "autogeneratePattern": "",
+        "help": "",
+        "hidden": false,
         "id": "text_quote_status",
+        "max": 0,
+        "min": 0,
         "name": "status",
-        "type": "text",
+        "pattern": "",
+        "presentable": false,
+        "primaryKey": false,
         "required": false,
-        "system": false
+        "system": false,
+        "type": "text"
       },
       {
+        "hidden": false,
         "id": "autodate2990389176",
         "name": "created",
-        "type": "autodate",
         "onCreate": true,
         "onUpdate": false,
         "presentable": false,
-        "system": false
+        "system": false,
+        "type": "autodate"
       },
       {
+        "hidden": false,
         "id": "autodate3332085495",
         "name": "updated",
-        "type": "autodate",
         "onCreate": true,
         "onUpdate": true,
         "presentable": false,
-        "system": false
+        "system": false,
+        "type": "autodate"
       }
     ],
     "indexes": [],
