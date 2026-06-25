@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { MessageSquare, X, Send, HelpCircle, ArrowRight, CornerDownLeft, Sparkles } from "lucide-react";
-import tivoAvatar from "@/assets/tivo_brand_avatar_1782404474399.png";
+import tivoAvatar from "@/assets/tivo_logo_avatar_1782404679256.png";
 import { useUI } from "@/contexts/UIContext";
 
 const SUGGESTIONS = {
@@ -336,7 +336,7 @@ export default function TivoAssistant({ activeTab = "overview", onAction }) {
     <>
       {/* FLOATING WELCOME GREETING SPEECH BUBBLE */}
       {showWelcomeBubble && !isOpen && (
-        <div className="fixed bottom-[100px] left-6 z-50 bg-[#0f172a] border border-slate-800 p-3.5 rounded-[3px] text-xs text-slate-200 shadow-2xl w-[290px] animate-slide-up flex flex-col gap-2">
+        <div className="fixed bottom-[100px] right-6 z-50 bg-[#0f172a] border border-slate-800 p-3.5 rounded-[3px] text-xs text-slate-200 shadow-2xl w-[290px] animate-slide-up flex flex-col gap-2">
           <div className="flex items-start justify-between gap-2">
             <div className="flex gap-2 items-center">
               <img 
@@ -366,8 +366,8 @@ export default function TivoAssistant({ activeTab = "overview", onAction }) {
             Start Chatting <ArrowRight size={10} />
           </button>
           {/* Triangle pointer pointing down towards button */}
-          <div className="absolute -bottom-2 left-6 w-0 h-0 border-l-[8px] border-l-transparent border-r-[8px] border-r-transparent border-t-[8px] border-t-slate-800" />
-          <div className="absolute -bottom-1.5 left-[25px] w-0 h-0 border-l-[7px] border-l-transparent border-r-[7px] border-r-transparent border-t-[7px] border-t-[#0f172a]" />
+          <div className="absolute -bottom-2 right-6 w-0 h-0 border-l-[8px] border-l-transparent border-r-[8px] border-r-transparent border-t-[8px] border-t-slate-800" />
+          <div className="absolute -bottom-1.5 right-[25px] w-0 h-0 border-l-[7px] border-l-transparent border-r-[7px] border-r-transparent border-t-[7px] border-t-[#0f172a]" />
         </div>
       )}
 
@@ -377,7 +377,7 @@ export default function TivoAssistant({ activeTab = "overview", onAction }) {
           setIsOpen(!isOpen);
           setShowWelcomeBubble(false);
         }}
-        className="fixed bottom-6 left-6 z-50 h-16 bg-slate-900 border border-slate-700 hover:border-amber-500/50 hover:bg-slate-800 text-white rounded-[3px] shadow-2xl flex items-center gap-3 px-6 transition-all duration-200 group focus:outline-none hover:scale-[1.03]"
+        className="fixed bottom-6 right-6 z-50 h-16 bg-slate-900 border border-slate-700 hover:border-amber-500/50 hover:bg-slate-800 text-white rounded-[3px] shadow-2xl flex items-center gap-3 px-6 transition-all duration-200 group focus:outline-none hover:scale-[1.03]"
         title={isOpen ? "Close Assistant" : "Tivo Chat Assistant"}
       >
         <div className="relative flex items-center justify-center">
@@ -401,9 +401,9 @@ export default function TivoAssistant({ activeTab = "overview", onAction }) {
         </span>
       </button>
 
-      {/* CHAT DRAWER PANEL (SLIDES FROM THE LEFT SIDE FOR NATURAL CONTEXT WITH BUTTON) */}
+      {/* CHAT DRAWER PANEL (SLIDES FROM THE RIGHT SIDE FOR NATURAL CONTEXT WITH BUTTON) */}
       {isOpen && (
-        <div className="fixed bottom-[100px] left-6 w-[490px] h-[650px] max-w-[calc(100vw-3rem)] max-h-[calc(100vh-9rem)] bg-[#0a0f1d] border border-slate-800 rounded-[3px] shadow-2xl z-[9999] flex flex-col font-sans text-slate-200 animate-tivo-box">
+        <div className="fixed bottom-[100px] right-6 w-[490px] h-[650px] max-w-[calc(100vw-3rem)] max-h-[calc(100vh-9rem)] bg-[#0a0f1d] border border-slate-800 rounded-[3px] shadow-2xl z-[9999] flex flex-col font-sans text-slate-200 animate-tivo-box">
           {/* Header */}
           <div className="p-4 border-b border-slate-800 bg-[#0f172a] flex items-center justify-between">
             <div className="flex items-center gap-3">
