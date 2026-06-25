@@ -34,6 +34,11 @@ To prevent local testing credentials or addresses from leaking into production, 
   * Points to live server reverse proxy: `VITE_POCKETBASE_API_URL=/hcgi/platform`
 * **Protocol**: Never edit or merge the contents of `.env.production` into `.env`. Do not include database keys or credentials in either file.
 
+### 4. Execute AI Agent Traversal Validation
+Prior to any release or database migration, trigger the AI Testing Agent.
+* **Sandbox Verification**: Execute the full customer/technician/recruit traversal loops locally. Ensure all mocked transactions succeed.
+* **Production Verification**: Post-deployment, execute a manual Production Smoke Test sweep from the Admin Trigger Desk. Verify that the agent runs successfully and that all system-smoke data is auto-purged without error.
+
 ---
 
 ## 🛠️ Quick Diagnostics Checklist

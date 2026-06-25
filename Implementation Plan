@@ -27,3 +27,15 @@ User Management Extension:
 Add a Role selector dropdown (Admin, Moderator, Viewer) when creating system users.
 In AdminPage.jsx, intercept all submit handlers (projects, techs, bookings status, CMS saving, user additions/deletions) to block actions if the logged-in user's role doesn't have the appropriate clearance.
 Render visually locked indicators (e.g., lock icon 🔒, disabled save buttons, and helper banners) if the current user's role has insufficient permissions.
+
+Partner Authentication & CRM Data Sync
+Single Sign-On (SSO) integration:
+- Configure PocketBase custom OpenID Connect (OIDC) provider pointing to Intermaven's authorization server endpoint (`/api/auth/oauth/authorize` and `/api/auth/oauth/token`).
+- In ClientAuthModal.jsx, add a "Login with Intermaven" OAuth2 button.
+- Resolve user details on successful handshake, logging the client in and populating local profile credentials automatically.
+CRM Webhook Hooks:
+- Implement database event hooks (created/updated records) in the PocketBase collection layer or in React action submit handlers.
+- When an inquiry is submitted or updated in appointment_bookings, quote_inquiries, or support_tickets, automatically dispatch a secure JSON payload to Intermaven's /api/crm/ingest endpoint to consolidate customer history.
+Cross-Platform Plugin embedding:
+- Add a new "Partner Apps" section to the Admin sidebar in AdminPage.jsx.
+- Render the Intermaven AI applications (Social AI, Brand Kit) inside an iframe wrapper, authenticating automatically via secure postMessage token exchange.
