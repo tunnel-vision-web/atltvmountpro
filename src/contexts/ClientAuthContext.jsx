@@ -275,6 +275,41 @@ export const ClientAuthProvider = ({ children }) => {
     return updatedUser;
   };
 
+  const loginWithIntermaven = () => {
+    const state = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+    const verifier = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+    
+    localStorage.setItem('sso_state', state);
+    localStorage.setItem('sso_code_verifier', verifier);
+    
+    const intermavenUrl = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+      ? 'http://localhost:3000'
+      : 'https://intermaven.io';
+      
+    const redirectUri = window.location.origin + '/auth/callback';
+    
+    const authUrl = `${intermavenUrl}/sso/authorize?client_id=atltvmount&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&state=${state}&code_challenge=${verifier}&code_challenge_method=plain`;
+    
+    window.location.href = authUrl;
+  };
+
+  const loginWithSSO = (profile, token) => {
+    const u = {
+      id: profile.sub || 'sso_' + Math.random().toString(36).substring(2, 9),
+      email: profile.email,
+      name: profile.name || profile.email,
+      role: profile.role || 'customer',
+      type: profile.type || 'customer',
+      phone: profile.phone || '',
+      avatar: profile.avatar || '',
+      token: token,
+    };
+    setUser(u);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(u));
+    toast.success('Signed in with Intermaven successfully.');
+    return u;
+  };
+
   const value = {
     user,
     isAuthenticated: !!user,
@@ -283,6 +318,8 @@ export const ClientAuthProvider = ({ children }) => {
     login,
     loginWithGoogle,
     signup,
+    loginWithIntermaven,
+    loginWithSSO,
     logout,
     updateProfile,
     loading,

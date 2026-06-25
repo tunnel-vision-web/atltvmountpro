@@ -23,6 +23,7 @@ import ProjectDetailPage from "./pages/ProjectDetailPage";
 import ClientDashboard from "./pages/ClientDashboard";
 import AdminPage from "./pages/AdminPage";
 import VerifyOptinPage from "./pages/VerifyOptinPage";
+import AuthCallbackPage from "./pages/AuthCallbackPage";
 import JoinPage from "./pages/JoinPage";
 import TechAppPage from "./pages/TechAppPage";
 import CustomerAppPage from "./pages/CustomerAppPage";
@@ -214,6 +215,10 @@ function App() {
                       <Route
                         path="/verify-optin"
                         element={<VerifyOptinPage />}
+                      />
+                      <Route
+                        path="/auth/callback"
+                        element={<AuthCallbackPage />}
                       />
                       <Route path="/join" element={<JoinPage />} />
                       <Route path="/technician-terms" element={<TechnicianTermsPage />} />
