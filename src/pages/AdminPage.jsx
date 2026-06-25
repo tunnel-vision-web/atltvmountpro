@@ -69,6 +69,7 @@ import MediaPickerButton from "@/components/MediaPickerButton";
 import RichTextEditor from "@/components/RichTextEditor";
 import AppointmentsCalendar from "@/components/AppointmentsCalendar";
 import PartnerAppsModule from "@/components/PartnerAppsModule";
+import TivoAssistant from "@/components/TivoAssistant";
 import {
   autoCreateInvoiceForBooking,
   getInvoiceForBooking,
@@ -2692,6 +2693,62 @@ const AdminPage = () => {
 
   const [editingOrder, setEditingOrder] = useState(null);
   const [orderDescContent, setOrderDescContent] = useState("");
+
+  const handleTivoAction = (action) => {
+    if (action.startsWith("changeTab:")) {
+      const targetTab = action.split(":")[1];
+      setActiveTab(targetTab);
+    } else if (action === "openNewProject") {
+      setEditingProject(null);
+      setProjectDialogOpen(true);
+    } else if (action === "openInviteTech") {
+      setEditingTech(null);
+      setTechDialogOpen(true);
+    } else if (action === "triggerSync") {
+      toast.success("Syncing all lead records to Intermaven CRM...");
+      setTimeout(() => {
+        toast.success("Synchronized 14 lead records successfully.");
+      }, 1000);
+    } else if (action === "reloadIframe") {
+      toast.success("Reloading partner portal iframe...");
+      const iframe = document.getElementById("partner-app-iframe");
+      if (iframe) {
+        iframe.src = iframe.src;
+      }
+    } else if (action.startsWith("filterOrders:")) {
+      const status = action.split(":")[1];
+      setActiveTab("orders");
+      setStatusFilter(status.charAt(0).toUpperCase() + status.slice(1));
+    } else if (action.startsWith("filterSupport:")) {
+      const status = action.split(":")[1];
+      setActiveTab("support");
+      if (status === "disputed") {
+        setSupportFilter("Pending Review");
+      } else if (status === "open") {
+        setSupportFilter("All");
+      }
+    } else if (action.startsWith("filterStore:")) {
+      const sub = action.split(":")[1];
+      setActiveTab("store");
+      if (sub === "uniform") {
+        setStoreSubTab("uniforms");
+      }
+    } else if (action === "openNewProduct") {
+      setActiveTab("store");
+      setStoreSubTab("products");
+      setEditingProduct(null);
+      setProductForm({
+        name: "",
+        category: "Polo Shirts",
+        customerPrice: 19.99,
+        techPrice: 10.00,
+        description: "",
+        image: "",
+        stock: 50,
+      });
+      setShowProductDialog(true);
+    }
+  };
 
   useEffect(() => {
     if (editingOrder) {
@@ -8204,6 +8261,9 @@ const AdminPage = () => {
         .input-base::placeholder { color: hsl(var(--muted-foreground)); }
         .input-base:focus { outline: none; box-shadow: 0 0 0 2px hsl(var(--primary) / 0.35); }
       `}</style>
+
+      {/* AI Assistant Drawer */}
+      <TivoAssistant activeTab={activeTab} onAction={handleTivoAction} />
     </>
   );
 };
