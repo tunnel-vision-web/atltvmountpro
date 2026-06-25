@@ -68,6 +68,7 @@ import MediaLibraryAdmin from "@/components/MediaLibraryAdmin";
 import MediaPickerButton from "@/components/MediaPickerButton";
 import RichTextEditor from "@/components/RichTextEditor";
 import AppointmentsCalendar from "@/components/AppointmentsCalendar";
+import PartnerAppsModule from "@/components/PartnerAppsModule";
 import {
   autoCreateInvoiceForBooking,
   getInvoiceForBooking,
@@ -4227,6 +4228,17 @@ const AdminPage = () => {
                   <span>Store Manager</span>
                 </button>
               )}
+
+              <button
+                onClick={() => {
+                  setActiveTab("partner");
+                  setSidebarOpen(false);
+                }}
+                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 ${activeTab === "partner" ? "bg-primary text-primary-foreground shadow-sm shadow-primary/20" : "text-muted-foreground hover:bg-muted hover:text-foreground"}`}
+              >
+                <Zap size={18} className="flex-shrink-0 text-emerald-500" />
+                <span>Partner Apps</span>
+              </button>
             </nav>
           </div>
 
@@ -6154,6 +6166,9 @@ const AdminPage = () => {
 
           {/* TAB CONTENT: CMS */}
           {activeTab === "cms" && <CMSEditor />}
+
+          {/* TAB CONTENT: PARTNER APPS */}
+          {activeTab === "partner" && <PartnerAppsModule />}
 
           {/* TAB CONTENT: MEDIA LIBRARY */}
           {activeTab === "media" && (
