@@ -336,7 +336,7 @@ export default function TivoAssistant({ activeTab = "overview", onAction }) {
     <>
       {/* FLOATING WELCOME GREETING SPEECH BUBBLE */}
       {showWelcomeBubble && !isOpen && (
-        <div className="fixed bottom-20 left-6 z-50 bg-[#0f172a] border border-slate-800 p-3.5 rounded-[3px] text-xs text-slate-200 shadow-2xl w-[290px] animate-slide-up flex flex-col gap-2">
+        <div className="fixed bottom-[100px] left-6 z-50 bg-[#0f172a] border border-slate-800 p-3.5 rounded-[3px] text-xs text-slate-200 shadow-2xl w-[290px] animate-slide-up flex flex-col gap-2">
           <div className="flex items-start justify-between gap-2">
             <div className="flex gap-2 items-center">
               <img 
@@ -354,7 +354,7 @@ export default function TivoAssistant({ activeTab = "overview", onAction }) {
             </button>
           </div>
           <p className="text-slate-300 leading-relaxed text-[11px]">
-            Hey! 📺 I'm Tivo. I can help you book TV mounting, estimate costs, or answer support and setup questions. Tap here to chat!
+            Hey! 📺 I'm Tivo. I can answer any questions or assist you with anything. Tap here to chat!
           </p>
           <button
             onClick={() => {
@@ -377,33 +377,33 @@ export default function TivoAssistant({ activeTab = "overview", onAction }) {
           setIsOpen(!isOpen);
           setShowWelcomeBubble(false);
         }}
-        className="fixed bottom-6 left-6 z-50 h-12 bg-slate-900 border border-slate-700 hover:border-amber-500/50 hover:bg-slate-800 text-white rounded-[3px] shadow-2xl flex items-center gap-2.5 px-4 transition-all duration-200 group focus:outline-none hover:scale-[1.03]"
+        className="fixed bottom-6 left-6 z-50 h-16 bg-slate-900 border border-slate-700 hover:border-amber-500/50 hover:bg-slate-800 text-white rounded-[3px] shadow-2xl flex items-center gap-3 px-6 transition-all duration-200 group focus:outline-none hover:scale-[1.03]"
         title={isOpen ? "Close Assistant" : "Tivo Chat Assistant"}
       >
         <div className="relative flex items-center justify-center">
           <img 
             src={tivoAvatar} 
             alt="Tivo Avatar" 
-            className={`w-8 h-8 object-contain rounded-[3px] group-hover-wiggle ${
+            className={`w-11 h-11 object-contain rounded-[3px] group-hover-wiggle ${
               isOpen ? "animate-tivo-playful" : showWelcomeBubble ? "animate-tivo-wiggle" : ""
             }`} 
             key={isOpen ? "open" : "closed"}
           />
-          <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-emerald-500 border-2 border-slate-900 rounded-full animate-pulse" />
+          <span className="absolute -top-1 -right-1 w-3 h-3 bg-emerald-500 border-2 border-slate-900 rounded-full animate-pulse" />
         </div>
-        <span className="text-xs font-bold tracking-wide text-slate-100 flex items-center gap-1.5">
+        <span className="text-sm font-bold tracking-wide text-slate-100 flex items-center gap-2">
           {isOpen ? "Close Tivo" : "Ask Tivo"}{" "}
           {isOpen ? (
-            <X size={12} className="text-amber-500 ml-0.5" />
+            <X size={16} className="text-amber-500 ml-0.5" />
           ) : (
-            <MessageSquare size={12} className="text-amber-500 animate-pulse" />
+            <MessageSquare size={16} className="text-amber-500 animate-pulse" />
           )}
         </span>
       </button>
 
       {/* CHAT DRAWER PANEL (SLIDES FROM THE LEFT SIDE FOR NATURAL CONTEXT WITH BUTTON) */}
       {isOpen && (
-        <div className="fixed top-0 left-0 h-full w-[380px] max-w-full bg-[#0a0f1d] border-r border-slate-800 shadow-2xl z-[9999] flex flex-col font-sans text-slate-200 animate-slide-in-left">
+        <div className="fixed bottom-[100px] left-6 w-[490px] h-[650px] max-w-[calc(100vw-3rem)] max-h-[calc(100vh-9rem)] bg-[#0a0f1d] border border-slate-800 rounded-[3px] shadow-2xl z-[9999] flex flex-col font-sans text-slate-200 animate-tivo-box">
           {/* Header */}
           <div className="p-4 border-b border-slate-800 bg-[#0f172a] flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -557,6 +557,10 @@ export default function TivoAssistant({ activeTab = "overview", onAction }) {
           75% { transform: scale(1.05) rotate(-1deg); }
           100% { transform: scale(1) rotate(0deg); }
         }
+        @keyframes tivoBoxFadeIn {
+          from { transform: translateY(20px); opacity: 0; }
+          to { transform: translateY(0); opacity: 1; }
+        }
         .animate-slide-in-left {
           animation: slideInLeft 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
         }
@@ -568,6 +572,9 @@ export default function TivoAssistant({ activeTab = "overview", onAction }) {
         }
         .animate-tivo-playful {
           animation: tivoPlayful 0.8s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+        }
+        .animate-tivo-box {
+          animation: tivoBoxFadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
         }
         .group:hover .group-hover-wiggle {
           animation: tivoWiggle 0.6s ease-in-out;
