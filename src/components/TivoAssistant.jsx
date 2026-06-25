@@ -339,7 +339,11 @@ export default function TivoAssistant({ activeTab = "overview", onAction }) {
         <div className="fixed bottom-20 left-6 z-50 bg-[#0f172a] border border-slate-800 p-3.5 rounded-[3px] text-xs text-slate-200 shadow-2xl w-[290px] animate-slide-up flex flex-col gap-2">
           <div className="flex items-start justify-between gap-2">
             <div className="flex gap-2 items-center">
-              <img src={tivoAvatar} alt="Tivo" className="w-5.5 h-5.5 object-contain rounded-[3px] bg-slate-950 p-0.5 border border-slate-800" />
+              <img 
+                src={tivoAvatar} 
+                alt="Tivo" 
+                className={`w-5.5 h-5.5 object-contain rounded-[3px] bg-slate-950 p-0.5 border border-slate-800 ${showWelcomeBubble ? "animate-tivo-wiggle" : ""}`} 
+              />
               <span className="font-bold text-slate-100 text-[11px] tracking-wide">Tivo Assistant</span>
             </div>
             <button 
@@ -384,7 +388,11 @@ export default function TivoAssistant({ activeTab = "overview", onAction }) {
         ) : (
           <>
             <div className="relative flex items-center justify-center">
-              <img src={tivoAvatar} alt="Tivo Avatar" className="w-8 h-8 object-contain rounded-[3px]" />
+              <img 
+                src={tivoAvatar} 
+                alt="Tivo Avatar" 
+                className={`w-8 h-8 object-contain rounded-[3px] group-hover-wiggle ${showWelcomeBubble ? "animate-tivo-wiggle" : ""}`} 
+              />
               <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-emerald-500 border-2 border-slate-900 rounded-full animate-pulse" />
             </div>
             <span className="text-xs font-bold tracking-wide text-slate-100 flex items-center gap-1.5">
@@ -401,7 +409,11 @@ export default function TivoAssistant({ activeTab = "overview", onAction }) {
           <div className="p-4 border-b border-slate-800 bg-[#0f172a] flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="relative">
-                <img src={tivoAvatar} alt="Tivo" className="w-9 h-9 object-contain rounded-[3px] bg-slate-950 p-0.5 border border-slate-800" />
+                <img 
+                  src={tivoAvatar} 
+                  alt="Tivo" 
+                  className="w-9 h-9 object-contain rounded-[3px] bg-slate-950 p-0.5 border border-slate-800 animate-tivo-wiggle" 
+                />
                 <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-500 border border-slate-950 rounded-full" />
               </div>
               <div>
@@ -530,11 +542,24 @@ export default function TivoAssistant({ activeTab = "overview", onAction }) {
           from { transform: translateY(20px); opacity: 0; }
           to { transform: translateY(0); opacity: 1; }
         }
+        @keyframes tivoWiggle {
+          0%, 100% { transform: rotate(0deg) scale(1); }
+          20% { transform: rotate(-12deg) scale(1.15); }
+          40% { transform: rotate(10deg) scale(1.15); }
+          60% { transform: rotate(-8deg) scale(1.1); }
+          80% { transform: rotate(6deg) scale(1.1); }
+        }
         .animate-slide-in-left {
           animation: slideInLeft 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
         }
         .animate-slide-up {
           animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+        .animate-tivo-wiggle {
+          animation: tivoWiggle 1s ease-in-out;
+        }
+        .group:hover .group-hover-wiggle {
+          animation: tivoWiggle 0.6s ease-in-out;
         }
       `}</style>
     </>
