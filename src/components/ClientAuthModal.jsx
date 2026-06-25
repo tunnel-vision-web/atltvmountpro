@@ -25,6 +25,7 @@ const ClientAuthModal = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [agreeTerms, setAgreeTerms] = useState(false);
+  const [signupStep, setSignupStep] = useState(1);
   const [form, setForm] = useState({
     name: "",
     email: "",
@@ -55,6 +56,7 @@ const ClientAuthModal = () => {
       setTimeout(() => {
         setMode("login");
         setAccountType("customer");
+        setSignupStep(1);
         setForm({
           name: "",
           email: "",
@@ -267,6 +269,34 @@ const ClientAuthModal = () => {
         setOtpCode(newOtp);
       }
     }
+  };
+
+  const handleStep1Next = () => {
+    if (!form.name.trim()) {
+      toast.error("Full name is required");
+      return;
+    }
+    if (!form.email.trim()) {
+      toast.error("Email is required");
+      return;
+    }
+    if (!isValidEmail(form.email)) {
+      toast.error("Please enter a valid email address.");
+      return;
+    }
+    setSignupStep(2);
+  };
+
+  const handleStep2Next = () => {
+    if (form.password.length < 8) {
+      toast.error("Password must be at least 8 characters.");
+      return;
+    }
+    if (form.password !== form.confirmPassword) {
+      toast.error("Passwords do not match.");
+      return;
+    }
+    setSignupStep(3);
   };
 
   return (
@@ -612,188 +642,259 @@ const ClientAuthModal = () => {
           {/* SIGNUP FORM */}
           {mode === "signupForm" && (
             <form onSubmit={handleSignup} className="space-y-3">
-              <div className="space-y-1.5">
-                <Label htmlFor="su-name">Full Name</Label>
-                <Input
-                  id="su-name"
-                  value={form.name}
-                  onChange={(e) => updateForm("name", e.target.value)}
-                  required
-                  placeholder="John Doe"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="su-email">Email</Label>
-                <Input
-                  id="su-email"
-                  type="email"
-                  value={form.email}
-                  onChange={(e) => updateForm("email", e.target.value)}
-                  required
-                  placeholder="you@example.com"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="su-phone">Phone</Label>
-                <Input
-                  id="su-phone"
-                  type="tel"
-                  value={form.phone}
-                  onChange={(e) => updateForm("phone", e.target.value)}
-                  placeholder="(555) 123-4567"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="su-channel">Preferred Contact Channel</Label>
-                <select
-                  id="su-channel"
-                  value={form.preferredChannel || "Email"}
-                  onChange={(e) => updateForm("preferredChannel", e.target.value)}
-                  className="w-full bg-muted border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
-                  required
-                >
-                  <option value="Email">Email</option>
-                  <option value="SMS">SMS</option>
-                  <option value="WhatsApp">WhatsApp</option>
-                </select>
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="su-password">Password</Label>
-                <div className="relative">
-                  <Input
-                    id="su-password"
-                    type={showPassword ? "text" : "password"}
-                    value={form.password}
-                    onChange={(e) => updateForm("password", e.target.value)}
-                    required
-                    placeholder="••••••••"
-                    className="pr-10"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground flex items-center"
-                  >
-                    {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
-                  </button>
+              {/* Step indicator */}
+              <div className="flex items-center justify-between mb-5 bg-muted/40 p-2.5 rounded-[3px] border border-border">
+                <div className="flex items-center gap-1.5">
+                  <div className={`w-5 h-5 rounded-[3px] flex items-center justify-center text-[10px] font-bold ${signupStep >= 1 ? 'bg-primary text-primary-foreground' : 'bg-muted-foreground/20 text-muted-foreground'}`}>1</div>
+                  <span className="text-[11px] font-semibold text-foreground">Contact</span>
+                </div>
+                <div className="flex-1 h-0.5 mx-2 bg-border"></div>
+                <div className="flex items-center gap-1.5">
+                  <div className={`w-5 h-5 rounded-[3px] flex items-center justify-center text-[10px] font-bold ${signupStep >= 2 ? 'bg-primary text-primary-foreground' : 'bg-muted-foreground/20 text-muted-foreground'}`}>2</div>
+                  <span className="text-[11px] font-semibold text-foreground">Security</span>
+                </div>
+                <div className="flex-1 h-0.5 mx-2 bg-border"></div>
+                <div className="flex items-center gap-1.5">
+                  <div className={`w-5 h-5 rounded-[3px] flex items-center justify-center text-[10px] font-bold ${signupStep >= 3 ? 'bg-primary text-primary-foreground' : 'bg-muted-foreground/20 text-muted-foreground'}`}>3</div>
+                  <span className="text-[11px] font-semibold text-foreground">Submit</span>
                 </div>
               </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="su-confirm">Confirm Password</Label>
-                <div className="relative">
-                  <Input
-                    id="su-confirm"
-                    type={showPassword ? "text" : "password"}
-                    value={form.confirmPassword}
-                    onChange={(e) =>
-                      updateForm("confirmPassword", e.target.value)
-                    }
-                    required
-                    placeholder="••••••••"
-                    className="pr-10"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground flex items-center"
-                  >
-                    {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
-                  </button>
+
+              {/* STEP 1: CONTACT DETAILS */}
+              {signupStep === 1 && (
+                <div className="space-y-3 animate-fade-in">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="su-name">Full Name *</Label>
+                    <Input
+                      id="su-name"
+                      value={form.name}
+                      onChange={(e) => updateForm("name", e.target.value)}
+                      placeholder="John Doe"
+                      className="rounded-[3px]"
+                      required
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="su-email">Email *</Label>
+                    <Input
+                      id="su-email"
+                      type="email"
+                      value={form.email}
+                      onChange={(e) => updateForm("email", e.target.value)}
+                      placeholder="you@example.com"
+                      className="rounded-[3px]"
+                      required
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="su-phone">Phone</Label>
+                    <Input
+                      id="su-phone"
+                      type="tel"
+                      value={form.phone}
+                      onChange={(e) => updateForm("phone", e.target.value)}
+                      placeholder="(555) 123-4567"
+                      className="rounded-[3px]"
+                    />
+                  </div>
+                  <div className="flex gap-2 pt-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setMode("chooseType")}
+                      className="w-1/2 rounded-[3px]"
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      type="button"
+                      onClick={handleStep1Next}
+                      className="w-1/2 bg-primary hover:bg-primary/90 text-primary-foreground rounded-[3px]"
+                    >
+                      Next Step
+                    </Button>
+                  </div>
                 </div>
-              </div>
-              <div className="flex items-start gap-2.5 py-1 text-xs select-none">
-                <input
-                  type="checkbox"
-                  id="su-agree"
-                  checked={agreeTerms}
-                  onChange={(e) => setAgreeTerms(e.target.checked)}
-                  className="rounded border-border text-primary focus:ring-primary h-4 w-4 bg-muted/40 cursor-pointer mt-0.5"
-                  required
-                />
-                <Label htmlFor="su-agree" className="text-muted-foreground font-normal leading-normal cursor-pointer">
-                  I agree to the{" "}
-                  <Link to="/terms-of-service" target="_blank" className="text-primary hover:underline font-semibold">Terms of Service</Link>
-                  {" "}and{" "}
-                  <Link to="/privacy-policy" target="_blank" className="text-primary hover:underline font-semibold">Privacy Policy</Link>
-                  {accountType === "tech" && (
-                    <>
+              )}
+
+              {/* STEP 2: PREFERENCES & PASSWORD */}
+              {signupStep === 2 && (
+                <div className="space-y-3 animate-fade-in">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="su-channel">Preferred Contact Channel</Label>
+                    <select
+                      id="su-channel"
+                      value={form.preferredChannel || "Email"}
+                      onChange={(e) => updateForm("preferredChannel", e.target.value)}
+                      className="w-full bg-muted border border-border rounded-[3px] px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
+                      required
+                    >
+                      <option value="Email">Email</option>
+                      <option value="SMS">SMS</option>
+                      <option value="WhatsApp">WhatsApp</option>
+                    </select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="su-password">Password *</Label>
+                    <div className="relative">
+                      <Input
+                        id="su-password"
+                        type={showPassword ? "text" : "password"}
+                        value={form.password}
+                        onChange={(e) => updateForm("password", e.target.value)}
+                        placeholder="••••••••"
+                        className="pr-10 rounded-[3px]"
+                        required
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground flex items-center"
+                      >
+                        {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+                      </button>
+                    </div>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="su-confirm">Confirm Password *</Label>
+                    <div className="relative">
+                      <Input
+                        id="su-confirm"
+                        type={showPassword ? "text" : "password"}
+                        value={form.confirmPassword}
+                        onChange={(e) => updateForm("confirmPassword", e.target.value)}
+                        placeholder="••••••••"
+                        className="pr-10 rounded-[3px]"
+                        required
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground flex items-center"
+                      >
+                        {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+                      </button>
+                    </div>
+                  </div>
+                  <div className="flex gap-2 pt-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setSignupStep(1)}
+                      className="w-1/2 rounded-[3px]"
+                    >
+                      Back
+                    </Button>
+                    <Button
+                      type="button"
+                      onClick={handleStep2Next}
+                      className="w-1/2 bg-primary hover:bg-primary/90 text-primary-foreground rounded-[3px]"
+                    >
+                      Next Step
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {/* STEP 3: AGREEMENT & SOCIAL LOGINS */}
+              {signupStep === 3 && (
+                <div className="space-y-3 animate-fade-in">
+                  <div className="flex items-start gap-2.5 py-1 text-xs select-none">
+                    <input
+                      type="checkbox"
+                      id="su-agree"
+                      checked={agreeTerms}
+                      onChange={(e) => setAgreeTerms(e.target.checked)}
+                      className="rounded-[3px] border-border text-primary focus:ring-primary h-4 w-4 bg-muted/40 cursor-pointer mt-0.5"
+                      required
+                    />
+                    <Label htmlFor="su-agree" className="text-muted-foreground font-normal leading-normal cursor-pointer">
+                      I agree to the{" "}
+                      <Link to="/terms-of-service" target="_blank" className="text-primary hover:underline font-semibold">Terms of Service</Link>
                       {" "}and{" "}
-                      <Link to="/technician-terms" target="_blank" className="text-primary hover:underline font-semibold">Technician Membership Terms</Link>
-                    </>
-                  )}
-                  .
-                </Label>
-              </div>
-              <Button
-                type="submit"
-                className="w-full bg-primary hover:bg-primary/90 text-primary-foreground mt-2"
-                disabled={loading}
-              >
-                {loading ? "Creating account…" : "Create Account"}
-              </Button>
+                      <Link to="/privacy-policy" target="_blank" className="text-primary hover:underline font-semibold">Privacy Policy</Link>
+                      {accountType === "tech" && (
+                        <>
+                          {" "}and{" "}
+                          <Link to="/technician-terms" target="_blank" className="text-primary hover:underline font-semibold">Technician Membership Terms</Link>
+                        </>
+                      )}
+                      .
+                    </Label>
+                  </div>
 
-              <div className="relative flex py-2 items-center">
-                <div className="flex-grow border-t border-border"></div>
-                <span className="flex-shrink mx-4 text-muted-foreground text-[10px] uppercase font-bold tracking-wider">Or sign up with</span>
-                <div className="flex-grow border-t border-border"></div>
-              </div>
+                  <Button
+                    type="submit"
+                    className="w-full bg-primary hover:bg-primary/90 text-primary-foreground mt-2 rounded-[3px]"
+                    disabled={loading || !agreeTerms}
+                  >
+                    {loading ? "Creating account…" : "Create Account"}
+                  </Button>
 
-              <div className="grid grid-cols-2 gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={async () => {
-                    try {
-                      await loginWithGoogle();
-                      closeAuthModal();
-                    } catch (err) {
-                      toast.error(err.message || "Google Authentication failed.");
-                    }
-                  }}
-                  className="w-full border-border bg-card hover:bg-muted text-foreground flex items-center justify-center gap-2 h-10 text-xs font-semibold cursor-pointer"
-                >
-                  <svg className="h-4 w-4" viewBox="0 0 24 24">
-                    <path
-                      fill="#EA4335"
-                      d="M5.266 9.765A7.077 7.077 0 0 1 12 4.909c1.69 0 3.218.6 4.418 1.582l3.51-3.51C17.642 1.091 14.973 0 12 0 7.354 0 3.398 2.673 1.48 6.574l3.786 3.191z"
-                    />
-                    <path
-                      fill="#4285F4"
-                      d="M23.49 12.275c0-.818-.073-1.609-.21-2.373H12v4.582h6.44c-.277 1.464-1.1 2.709-2.34 3.545l3.65 2.836c2.136-1.973 3.37-4.873 3.37-8.59z"
-                    />
-                    <path
-                      fill="#FBBC05"
-                      d="M5.266 14.235A7.093 7.093 0 0 1 4.91 12c0-.79.13-1.555.356-2.265L1.48 6.545A11.905 11.905 0 0 0 0 12c0 2.01.5 3.91 1.38 5.61l3.886-3.375z"
-                    />
-                    <path
-                      fill="#34A853"
-                      d="M12 24c3.24 0 5.957-1.077 7.94-2.927l-3.65-2.836c-1.01.677-2.3 1.082-3.79 1.082-2.923 0-5.4-1.973-6.282-4.627L1.38 17.936A11.927 11.927 0 0 0 12 24z"
-                    />
-                  </svg>
-                  <span>Google</span>
-                </Button>
+                  <div className="relative flex py-2 items-center">
+                    <div className="flex-grow border-t border-border"></div>
+                    <span className="flex-shrink mx-4 text-muted-foreground text-[10px] uppercase font-bold tracking-wider">Or sign up with</span>
+                    <div className="flex-grow border-t border-border"></div>
+                  </div>
 
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => {
-                    loginWithIntermaven();
-                    closeAuthModal();
-                  }}
-                  className="w-full border-border bg-card hover:bg-muted text-foreground flex items-center justify-center gap-2 h-10 text-xs font-semibold cursor-pointer"
-                >
-                  <span className="h-4 w-4 bg-[#10b981] rounded-full flex items-center justify-center text-[10px] text-white font-bold">I</span>
-                  <span>Intermaven</span>
-                </Button>
-              </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={async () => {
+                        try {
+                          await loginWithGoogle();
+                          closeAuthModal();
+                        } catch (err) {
+                          toast.error(err.message || "Google Authentication failed.");
+                        }
+                      }}
+                      className="w-full border-border bg-card hover:bg-muted text-foreground flex items-center justify-center gap-2 h-10 text-xs font-semibold cursor-pointer rounded-[3px]"
+                    >
+                      <svg className="h-4 w-4" viewBox="0 0 24 24">
+                        <path
+                          fill="#EA4335"
+                          d="M5.266 9.765A7.077 7.077 0 0 1 12 4.909c1.69 0 3.218.6 4.418 1.582l3.51-3.51C17.642 1.091 14.973 0 12 0 7.354 0 3.398 2.673 1.48 6.574l3.786 3.191z"
+                        />
+                        <path
+                          fill="#4285F4"
+                          d="M23.49 12.275c0-.818-.073-1.609-.21-2.373H12v4.582h6.44c-.277 1.464-1.1 2.709-2.34 3.545l3.65 2.836c2.136-1.973 3.37-4.873 3.37-8.59z"
+                        />
+                        <path
+                          fill="#FBBC05"
+                          d="M5.266 14.235A7.093 7.093 0 0 1 4.91 12c0-.79.13-1.555.356-2.265L1.48 6.545A11.905 11.905 0 0 0 0 12c0 2.01.5 3.91 1.38 5.61l3.886-3.375z"
+                        />
+                        <path
+                          fill="#34A853"
+                          d="M12 24c3.24 0 5.957-1.077 7.94-2.927l-3.65-2.836c-1.01.677-2.3 1.082-3.79 1.082-2.923 0-5.4-1.973-6.282-4.627L1.38 17.936A11.927 11.927 0 0 0 12 24z"
+                        />
+                      </svg>
+                      <span>Google</span>
+                    </Button>
 
-              <button
-                type="button"
-                onClick={() => setMode("chooseType")}
-                className="w-full text-center text-sm text-muted-foreground hover:text-foreground flex items-center justify-center gap-1 cursor-pointer"
-              >
-                <ArrowLeft size={14} /> Back
-              </button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => {
+                        loginWithIntermaven();
+                        closeAuthModal();
+                      }}
+                      className="w-full border-border bg-card hover:bg-muted text-foreground flex items-center justify-center gap-2 h-10 text-xs font-semibold cursor-pointer rounded-[3px]"
+                    >
+                      <span className="h-4 w-4 bg-[#10b981] rounded-full flex items-center justify-center text-[10px] text-white font-bold">I</span>
+                      <span>Intermaven</span>
+                    </Button>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => setSignupStep(2)}
+                    className="w-full text-center text-sm text-muted-foreground hover:text-foreground flex items-center justify-center gap-1 cursor-pointer mt-2"
+                  >
+                    <ArrowLeft size={14} /> Back to Security
+                  </button>
+                </div>
+              )}
             </form>
           )}
         </div>

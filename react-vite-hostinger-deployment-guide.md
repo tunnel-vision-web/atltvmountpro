@@ -155,7 +155,26 @@ This ensures there is no stale document root, `.htaccess`, or publish-path overr
 
 ---
 
-## 8. Troubleshooting Checklist
+## 8. GitHub Actions CI/CD Automation
+
+To automate deployments and ensure Hostinger is updated automatically on every push, we use a GitHub Actions workflow.
+
+### Setup Steps:
+1. **Retrieve the Webhook URL**:
+   - In Hostinger hPanel, go to **Hosting → Your Plan → Git**.
+   - Under the **Auto Deployment** section, copy the webhook URL. It looks like: `https://hpanel.hostinger.com/api/git/deploy/YOUR_USER_ID/YOUR_WEBSITE_ID`.
+2. **Configure GitHub Secrets**:
+   - Go to your GitHub repository settings.
+   - In the sidebar, navigate to **Settings → Secrets and variables → Actions**.
+   - Click **New repository secret**.
+   - Set the name to `HOSTINGER_DEPLOY_WEBHOOK` and paste the URL as the value.
+3. **Workflow Execution**:
+   - On every push to the `main` branch, the `.github/workflows/deploy.yml` workflow will automatically trigger.
+   - The workflow uses `curl` to ping the Hostinger Webhook, which commands Hostinger to pull the latest changes, build, and deploy.
+
+---
+
+## 9. Troubleshooting Checklist
 
 Work through this list top-to-bottom before escalating.
 
@@ -167,13 +186,15 @@ Work through this list top-to-bottom before escalating.
 - [x] Local `npm.cmd run build` completes without errors
 - [x] `dist/index.html` exists after local build
 - [x] Changes committed and pushed to `main`
+- [x] GitHub Actions workflow `.github/workflows/deploy.yml` is committed
+- [ ] `HOSTINGER_DEPLOY_WEBHOOK` secret configured in GitHub repository settings
 - [ ] Hostinger deployment log shows successful build and publish
 - [ ] If previously configured differently: old website entry removed and re-added as Node.js app
 - [ ] Live URL returns 200 and renders the app shell
 
 ---
 
-## 9. Quick Reference - Expected Build Output
+## 10. Quick Reference - Expected Build Output
 
 ```
 dist/

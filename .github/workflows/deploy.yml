@@ -1,0 +1,15 @@
+name: Deploy to Hostinger
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    name: Trigger Hostinger Git Deployment
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Hostinger Webhook
+        run: |
+          curl -s -X POST "${{ secrets.HOSTINGER_DEPLOY_WEBHOOK }}"

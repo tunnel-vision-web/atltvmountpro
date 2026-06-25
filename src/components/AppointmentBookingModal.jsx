@@ -54,6 +54,7 @@ const AppointmentBookingModal = () => {
   const [selectedHardware, setSelectedHardware] = useState([]);
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [bookingStep, setBookingStep] = useState(1);
 
   const getAvailableHardwareOptions = () => {
     if (formData.service_type === "TV Mounting") {
@@ -81,6 +82,13 @@ const AppointmentBookingModal = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    if (bookingStep < 4) {
+      if (bookingStep === 1) handleStep1Next();
+      else if (bookingStep === 2) handleStep2Next();
+      else if (bookingStep === 3) handleStep3Next();
+      return;
+    }
 
     if (
       !formData.name ||
@@ -196,6 +204,7 @@ const AppointmentBookingModal = () => {
     closeBookingModal();
     setTimeout(() => {
       setSubmitted(false);
+      setBookingStep(1);
       setSelectedHardware([]);
       setFormData({
         name: "",
@@ -207,6 +216,43 @@ const AppointmentBookingModal = () => {
         project_description: "",
       });
     }, 300);
+  };
+
+  const handleStep1Next = () => {
+    if (!formData.name.trim()) {
+      toast.error("Full name is required");
+      return;
+    }
+    if (!formData.phone.trim()) {
+      toast.error("Phone number is required");
+      return;
+    }
+    if (!formData.email.trim()) {
+      toast.error("Email address is required");
+      return;
+    }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(formData.email)) {
+      toast.error("Please enter a valid email address.");
+      return;
+    }
+    setBookingStep(2);
+  };
+
+  const handleStep2Next = () => {
+    if (!formData.service_type) {
+      toast.error("Please select a service type");
+      return;
+    }
+    if (!formData.preferred_date) {
+      toast.error("Please select a preferred date");
+      return;
+    }
+    setBookingStep(3);
+  };
+
+  const handleStep3Next = () => {
+    setBookingStep(4);
   };
 
   return (
@@ -246,184 +292,317 @@ const AppointmentBookingModal = () => {
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <Label htmlFor="booking-name">Full Name *</Label>
-                  <Input
-                    id="booking-name"
-                    value={formData.name}
-                    onChange={(e) =>
-                      setFormData({ ...formData, name: e.target.value })
-                    }
-                    placeholder="Your name"
-                    required
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="booking-phone">Phone *</Label>
-                  <Input
-                    id="booking-phone"
-                    type="tel"
-                    value={formData.phone}
-                    onChange={(e) =>
-                      setFormData({ ...formData, phone: e.target.value })
-                    }
-                    placeholder="(555) 123-4567"
-                    required
-                  />
-                </div>
+              {/* Step indicator */}
+              <div className="flex items-center justify-between mb-5 bg-muted/40 p-2.5 rounded-[3px] border border-border">
+                {[
+                  { step: 1, label: "Contact" },
+                  { step: 2, label: "Service" },
+                  { step: 3, label: "Hardware" },
+                  { step: 4, label: "Summary" }
+                ].map((s, idx) => (
+                  <React.Fragment key={s.step}>
+                    {idx > 0 && <div className="flex-1 h-0.5 mx-1 bg-border"></div>}
+                    <div className="flex items-center gap-1">
+                      <div className={`w-5 h-5 rounded-[3px] flex items-center justify-center text-[10px] font-bold ${bookingStep >= s.step ? 'bg-primary text-primary-foreground' : 'bg-muted-foreground/20 text-muted-foreground'}`}>
+                        {s.step}
+                      </div>
+                      <span className="text-[10px] font-semibold text-foreground hidden sm:inline">{s.label}</span>
+                    </div>
+                  </React.Fragment>
+                ))}
               </div>
 
-              <div className="space-y-1.5">
-                <Label htmlFor="booking-email">Email *</Label>
-                <Input
-                  id="booking-email"
-                  type="email"
-                  value={formData.email}
-                  onChange={(e) =>
-                    setFormData({ ...formData, email: e.target.value })
-                  }
-                  placeholder="you@email.com"
-                  required
-                />
-              </div>
+              {/* STEP 1: CONTACT INFO */}
+              {bookingStep === 1 && (
+                <div className="space-y-4 animate-fade-in">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <Label htmlFor="booking-name">Full Name *</Label>
+                      <Input
+                        id="booking-name"
+                        value={formData.name}
+                        onChange={(e) =>
+                          setFormData({ ...formData, name: e.target.value })
+                        }
+                        placeholder="Your name"
+                        className="rounded-[3px]"
+                        required
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="booking-phone">Phone *</Label>
+                      <Input
+                        id="booking-phone"
+                        type="tel"
+                        value={formData.phone}
+                        onChange={(e) =>
+                          setFormData({ ...formData, phone: e.target.value })
+                        }
+                        placeholder="(555) 123-4567"
+                        className="rounded-[3px]"
+                        required
+                      />
+                    </div>
+                  </div>
 
-              <div className="space-y-1.5">
-                <Label>Service Type *</Label>
-                <Select
-                  value={formData.service_type}
-                  onValueChange={(v) =>
-                    setFormData({ ...formData, service_type: v })
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select a service" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {[
-                      "TV Mounting",
-                      "Drywall Repair",
-                      "Painting",
-                      "Carpentry",
-                      "Flooring",
-                      "Plumbing",
-                      "Light Electrical",
-                      "Other",
-                    ].map((s) => (
-                      <SelectItem key={s} value={s}>
-                        {s}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <Label htmlFor="booking-date">Preferred Date *</Label>
-                  <div className="relative">
-                    <CalendarDays className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+                  <div className="space-y-1.5">
+                    <Label htmlFor="booking-email">Email *</Label>
                     <Input
-                      id="booking-date"
-                      type="date"
-                      value={formData.preferred_date}
+                      id="booking-email"
+                      type="email"
+                      value={formData.email}
                       onChange={(e) =>
-                        setFormData({
-                          ...formData,
-                          preferred_date: e.target.value,
-                        })
+                        setFormData({ ...formData, email: e.target.value })
                       }
-                      className="pl-9"
+                      placeholder="you@email.com"
+                      className="rounded-[3px]"
                       required
                     />
                   </div>
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="booking-time">Preferred Time</Label>
-                  <div className="relative">
-                    <Clock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
-                    <Input
-                      id="booking-time"
-                      value={formData.preferred_time}
-                      onChange={(e) =>
-                        setFormData({
-                          ...formData,
-                          preferred_time: e.target.value,
-                        })
-                      }
-                      placeholder="e.g. 10:00 AM"
-                      className="pl-9"
-                    />
-                  </div>
-                </div>
-              </div>
 
-              {formData.service_type && getAvailableHardwareOptions().length > 0 && (
-                <div className="space-y-2 border border-border bg-muted/30 rounded-xl p-3.5">
-                  <div className="flex justify-between items-center mb-1">
-                    <Label className="text-sm font-semibold text-foreground">Need Mounts or Hardware?</Label>
-                    {selectedHardware.length > 0 && (
-                      <span className="text-xs bg-primary/20 text-primary border border-primary/20 px-2 py-0.5 rounded-full font-semibold">
-                        +${selectedHardware.reduce((sum, h) => sum + h.price, 0)} hardware
-                      </span>
-                    )}
-                  </div>
-                  <p className="text-[11px] text-muted-foreground -mt-1 mb-2">
-                    Select any accessories to have the technician arrive with the required hardware.
-                  </p>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                    {getAvailableHardwareOptions().map((opt) => {
-                      const isSelected = selectedHardware.some((item) => item.id === opt.id);
-                      return (
-                        <div
-                          key={opt.id}
-                          onClick={() => toggleHardware(opt)}
-                          className={`flex items-center gap-3 p-2.5 rounded-lg border text-[11px] cursor-pointer select-none transition-all duration-150 ${
-                            isSelected
-                              ? "bg-primary/10 border-primary text-foreground font-medium"
-                              : "bg-muted/40 border-border text-muted-foreground hover:bg-muted/70 hover:text-foreground"
-                          }`}
-                        >
-                          <input
-                            type="checkbox"
-                            checked={isSelected}
-                            readOnly
-                            className="rounded border-border text-primary focus:ring-primary h-3.5 w-3.5 bg-muted/40 cursor-pointer pointer-events-none"
-                          />
-                          <div className="flex-1 min-w-0">
-                            <p className="truncate">{opt.name}</p>
-                            <p className="text-[10px] text-primary/85 font-semibold mt-0.5">+${opt.price}</p>
-                          </div>
-                        </div>
-                      );
-                    })}
+                  <div className="flex gap-2 pt-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={handleClose}
+                      className="w-1/2 rounded-[3px]"
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      type="button"
+                      onClick={handleStep1Next}
+                      className="w-1/2 bg-primary hover:bg-primary/90 text-primary-foreground rounded-[3px]"
+                    >
+                      Next Step
+                    </Button>
                   </div>
                 </div>
               )}
 
-              <div className="space-y-1.5">
-                <Label htmlFor="booking-desc">Project Description</Label>
-                <Textarea
-                  id="booking-desc"
-                  value={formData.project_description}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      project_description: e.target.value,
-                    })
-                  }
-                  placeholder="Tell us about your project..."
-                  rows={3}
-                />
-              </div>
+              {/* STEP 2: SERVICE SELECTION */}
+              {bookingStep === 2 && (
+                <div className="space-y-4 animate-fade-in">
+                  <div className="space-y-1.5">
+                    <Label>Service Type *</Label>
+                    <Select
+                      value={formData.service_type}
+                      onValueChange={(v) =>
+                        setFormData({ ...formData, service_type: v })
+                      }
+                    >
+                      <SelectTrigger className="rounded-[3px]">
+                        <SelectValue placeholder="Select a service" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {[
+                          "TV Mounting",
+                          "Drywall Repair",
+                          "Painting",
+                          "Carpentry",
+                          "Flooring",
+                          "Plumbing",
+                          "Light Electrical",
+                          "Other",
+                        ].map((s) => (
+                          <SelectItem key={s} value={s}>
+                            {s}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
 
-              <Button
-                type="submit"
-                className="w-full bg-primary hover:bg-primary/90 text-primary-foreground"
-                disabled={loading}
-              >
-                {loading ? "Submitting..." : "Request Appointment"}
-              </Button>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <Label htmlFor="booking-date">Preferred Date *</Label>
+                      <div className="relative">
+                        <CalendarDays className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+                        <Input
+                          id="booking-date"
+                          type="date"
+                          value={formData.preferred_date}
+                          onChange={(e) =>
+                            setFormData({
+                              ...formData,
+                              preferred_date: e.target.value,
+                            })
+                          }
+                          className="pl-9 rounded-[3px]"
+                          required
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="booking-time">Preferred Time</Label>
+                      <div className="relative">
+                        <Clock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+                        <Input
+                          id="booking-time"
+                          value={formData.preferred_time}
+                          onChange={(e) =>
+                            setFormData({
+                              ...formData,
+                              preferred_time: e.target.value,
+                            })
+                          }
+                          placeholder="e.g. 10:00 AM"
+                          className="pl-9 rounded-[3px]"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-2 pt-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setBookingStep(1)}
+                      className="w-1/2 rounded-[3px]"
+                    >
+                      Back
+                    </Button>
+                    <Button
+                      type="button"
+                      onClick={handleStep2Next}
+                      className="w-1/2 bg-primary hover:bg-primary/90 text-primary-foreground rounded-[3px]"
+                    >
+                      Next Step
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {/* STEP 3: HARDWARE ACCESSORIES */}
+              {bookingStep === 3 && (
+                <div className="space-y-4 animate-fade-in">
+                  {formData.service_type && getAvailableHardwareOptions().length > 0 ? (
+                    <div className="space-y-2 border border-border bg-muted/30 rounded-[3px] p-3.5">
+                      <div className="flex justify-between items-center mb-1">
+                        <Label className="text-sm font-semibold text-foreground">Need Mounts or Hardware?</Label>
+                        {selectedHardware.length > 0 && (
+                          <span className="text-xs bg-primary/20 text-primary border border-primary/20 px-2 py-0.5 rounded-[3px] font-semibold">
+                            +${selectedHardware.reduce((sum, h) => sum + h.price, 0)} hardware
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-[11px] text-muted-foreground -mt-1 mb-2">
+                        Select any accessories to have the technician arrive with the required hardware.
+                      </p>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 max-h-[180px] overflow-y-auto pr-1">
+                        {getAvailableHardwareOptions().map((opt) => {
+                          const isSelected = selectedHardware.some((item) => item.id === opt.id);
+                          return (
+                            <div
+                              key={opt.id}
+                              onClick={() => toggleHardware(opt)}
+                              className={`flex items-center gap-3 p-2.5 rounded-[3px] border text-[11px] cursor-pointer select-none transition-all duration-150 ${
+                                isSelected
+                                  ? "bg-primary/10 border-primary text-foreground font-medium"
+                                  : "bg-muted/40 border-border text-muted-foreground hover:bg-muted/70 hover:text-foreground"
+                              }`}
+                            >
+                              <input
+                                type="checkbox"
+                                checked={isSelected}
+                                readOnly
+                                className="rounded-[3px] border-border text-primary focus:ring-primary h-3.5 w-3.5 bg-muted/40 cursor-pointer pointer-events-none"
+                              />
+                              <div className="flex-1 min-w-0">
+                                <p className="truncate">{opt.name}</p>
+                                <p className="text-[10px] text-primary/85 font-semibold mt-0.5">+${opt.price}</p>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="text-center py-6 border border-dashed border-border rounded-[3px] bg-muted/10">
+                      <p className="text-sm text-muted-foreground">No additional hardware options for {formData.service_type || "this service"}.</p>
+                      <p className="text-xs text-muted-foreground/70 mt-1">Please continue to the next step.</p>
+                    </div>
+                  )}
+
+                  <div className="flex gap-2 pt-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setBookingStep(2)}
+                      className="w-1/2 rounded-[3px]"
+                    >
+                      Back
+                    </Button>
+                    <Button
+                      type="button"
+                      onClick={handleStep3Next}
+                      className="w-1/2 bg-primary hover:bg-primary/90 text-primary-foreground rounded-[3px]"
+                    >
+                      Next Step
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {/* STEP 4: SUMMARY & DESCRIPTION */}
+              {bookingStep === 4 && (
+                <div className="space-y-4 animate-fade-in">
+                  <div className="bg-muted/40 border border-border p-3.5 rounded-[3px] space-y-2.5 text-xs">
+                    <p className="font-semibold text-foreground border-b border-border pb-1">Booking Summary</p>
+                    <div className="grid grid-cols-2 gap-y-1.5 text-muted-foreground">
+                      <div>Contact:</div>
+                      <div className="text-foreground font-medium text-right truncate">{formData.name}</div>
+                      <div>Service Type:</div>
+                      <div className="text-foreground font-medium text-right">{formData.service_type}</div>
+                      <div>Date & Time:</div>
+                      <div className="text-foreground font-medium text-right">{formData.preferred_date} {formData.preferred_time ? `@ ${formData.preferred_time}` : ""}</div>
+                      {selectedHardware.length > 0 && (
+                        <>
+                          <div className="self-start">Hardware Requested:</div>
+                          <div className="text-foreground font-medium text-right max-w-[180px] break-words ml-auto">
+                            {selectedHardware.map(h => h.name).join(", ")} (+${selectedHardware.reduce((sum, h) => sum + h.price, 0)})
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label htmlFor="booking-desc">Project Details & Notes</Label>
+                    <Textarea
+                      id="booking-desc"
+                      value={formData.project_description}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          project_description: e.target.value,
+                        })
+                      }
+                      placeholder="Please add any special instructions or details about the project..."
+                      className="rounded-[3px]"
+                      rows={2}
+                    />
+                  </div>
+
+                  <div className="flex gap-2 pt-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setBookingStep(3)}
+                      className="w-1/2 rounded-[3px]"
+                    >
+                      Back
+                    </Button>
+                    <Button
+                      type="submit"
+                      className="w-1/2 bg-primary hover:bg-primary/90 text-primary-foreground rounded-[3px]"
+                      disabled={loading}
+                    >
+                      {loading ? "Submitting..." : "Confirm Booking"}
+                    </Button>
+                  </div>
+                </div>
+              )}
             </form>
           )}
         </div>
