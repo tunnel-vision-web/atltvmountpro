@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { MessageSquare, X, Send, HelpCircle, ArrowRight, CornerDownLeft, Sparkles } from "lucide-react";
-import tivoAvatar from "@/assets/tivo_flat_icon_1782228698511.png";
+import tivoAvatar from "@/assets/tivo_assistant_icon_1782228523025.png";
 import { useUI } from "@/contexts/UIContext";
 
 const SUGGESTIONS = {
@@ -378,28 +378,27 @@ export default function TivoAssistant({ activeTab = "overview", onAction }) {
           setShowWelcomeBubble(false);
         }}
         className="fixed bottom-6 left-6 z-50 h-12 bg-slate-900 border border-slate-700 hover:border-amber-500/50 hover:bg-slate-800 text-white rounded-[3px] shadow-2xl flex items-center gap-2.5 px-4 transition-all duration-200 group focus:outline-none hover:scale-[1.03]"
-        title="Tivo Chat Assistant"
+        title={isOpen ? "Close Assistant" : "Tivo Chat Assistant"}
       >
-        {isOpen ? (
-          <>
-            <X size={18} className="text-amber-500" />
-            <span className="text-xs font-semibold text-amber-500">Close Assistant</span>
-          </>
-        ) : (
-          <>
-            <div className="relative flex items-center justify-center">
-              <img 
-                src={tivoAvatar} 
-                alt="Tivo Avatar" 
-                className={`w-8 h-8 object-contain rounded-[3px] group-hover-wiggle ${showWelcomeBubble ? "animate-tivo-wiggle" : ""}`} 
-              />
-              <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-emerald-500 border-2 border-slate-900 rounded-full animate-pulse" />
-            </div>
-            <span className="text-xs font-bold tracking-wide text-slate-100 flex items-center gap-1.5">
-              Ask Tivo <MessageSquare size={12} className="text-amber-500 animate-pulse" />
-            </span>
-          </>
-        )}
+        <div className="relative flex items-center justify-center">
+          <img 
+            src={tivoAvatar} 
+            alt="Tivo Avatar" 
+            className={`w-8 h-8 object-contain rounded-[3px] group-hover-wiggle ${
+              isOpen ? "animate-tivo-playful" : showWelcomeBubble ? "animate-tivo-wiggle" : ""
+            }`} 
+            key={isOpen ? "open" : "closed"}
+          />
+          <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-emerald-500 border-2 border-slate-900 rounded-full animate-pulse" />
+        </div>
+        <span className="text-xs font-bold tracking-wide text-slate-100 flex items-center gap-1.5">
+          {isOpen ? "Close Tivo" : "Ask Tivo"}{" "}
+          {isOpen ? (
+            <X size={12} className="text-amber-500 ml-0.5" />
+          ) : (
+            <MessageSquare size={12} className="text-amber-500 animate-pulse" />
+          )}
+        </span>
       </button>
 
       {/* CHAT DRAWER PANEL (SLIDES FROM THE LEFT SIDE FOR NATURAL CONTEXT WITH BUTTON) */}
@@ -412,7 +411,7 @@ export default function TivoAssistant({ activeTab = "overview", onAction }) {
                 <img 
                   src={tivoAvatar} 
                   alt="Tivo" 
-                  className="w-9 h-9 object-contain rounded-[3px] bg-slate-950 p-0.5 border border-slate-800 animate-tivo-wiggle" 
+                  className="w-9 h-9 object-contain rounded-[3px] bg-slate-950 p-0.5 border border-slate-800 animate-tivo-playful" 
                 />
                 <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-500 border border-slate-950 rounded-full" />
               </div>
@@ -549,6 +548,15 @@ export default function TivoAssistant({ activeTab = "overview", onAction }) {
           60% { transform: rotate(-8deg) scale(1.1); }
           80% { transform: rotate(6deg) scale(1.1); }
         }
+        @keyframes tivoPlayful {
+          0% { transform: scale(1) rotate(0deg); }
+          15% { transform: scale(1.3) translateY(-10px) rotate(-15deg); }
+          30% { transform: scale(0.9) translateY(2px) rotate(10deg); }
+          45% { transform: scale(1.15) translateY(-4px) rotate(-5deg); }
+          60% { transform: scale(0.95) translateY(0) rotate(3deg); }
+          75% { transform: scale(1.05) rotate(-1deg); }
+          100% { transform: scale(1) rotate(0deg); }
+        }
         .animate-slide-in-left {
           animation: slideInLeft 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
         }
@@ -557,6 +565,9 @@ export default function TivoAssistant({ activeTab = "overview", onAction }) {
         }
         .animate-tivo-wiggle {
           animation: tivoWiggle 1s ease-in-out;
+        }
+        .animate-tivo-playful {
+          animation: tivoPlayful 0.8s cubic-bezier(0.25, 1, 0.5, 1) forwards;
         }
         .group:hover .group-hover-wiggle {
           animation: tivoWiggle 0.6s ease-in-out;
