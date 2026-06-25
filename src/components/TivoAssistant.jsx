@@ -48,7 +48,7 @@ const SUGGESTIONS = {
   // Customer Contexts (Public Pages)
   home: [
     { label: "Estimate Quote Cost", action: "openQuoteModal", text: "How much does it cost to mount a TV?" },
-    { label: "Book Installation", action: "openBookingModal", text: "I want to book a TV mounting service" },
+    { label: "Book TV Mounting", action: "openBookingModal", text: "I want to book a TV mounting service" },
     { label: "View Our Services", action: "navigate:/services", text: "What services do you offer?" },
   ],
   services: [
@@ -82,6 +82,7 @@ export default function TivoAssistant({ activeTab = "overview", onAction }) {
   const { openQuoteModal, openBookingModal, openAuthModal } = useUI();
 
   const [isOpen, setIsOpen] = useState(false);
+  const [showWelcomeBubble, setShowWelcomeBubble] = useState(false);
   const [messages, setMessages] = useState([
     {
       id: "welcome",
@@ -103,6 +104,16 @@ export default function TivoAssistant({ activeTab = "overview", onAction }) {
   if ((isAdminPath || isSimulatorPath) && !onAction) {
     return null;
   }
+
+  // Welcome Bubble Trigger: Pop up the bubble after 3 seconds of load time if drawer is closed
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (!isOpen) {
+        setShowWelcomeBubble(true);
+      }
+    }, 3000);
+    return () => clearTimeout(timer);
+  }, [isOpen]);
 
   // Resolve active section code
   let resolvedSection = activeTab;
@@ -237,7 +248,7 @@ export default function TivoAssistant({ activeTab = "overview", onAction }) {
     // Context-sensitive fallbacks
     switch (section) {
       case "home":
-        return "I can help you get an instant quote or schedule a mounting appointment. Try clicking 'Estimate Quote Cost' or 'Book Installation' above!";
+        return "I can help you get an instant quote or schedule a mounting appointment. Try clicking 'Estimate Quote Cost' or 'Book TV Mounting' above!";
       case "services":
         return "Check out our service items. We mount TVs from 32\" to 100\" on drywall, brick, concrete, and wood studs. Tell me what wall surface you have!";
       case "store_public":
@@ -323,25 +334,69 @@ export default function TivoAssistant({ activeTab = "overview", onAction }) {
 
   return (
     <>
-      {/* FLOATING ACTION TRIGGER */}
+      {/* FLOATING WELCOME GREETING SPEECH BUBBLE */}
+      {showWelcomeBubble && !isOpen && (
+        <div className="fixed bottom-20 left-6 z-50 bg-[#0f172a] border border-slate-800 p-3.5 rounded-[3px] text-xs text-slate-200 shadow-2xl w-[290px] animate-slide-up flex flex-col gap-2">
+          <div className="flex items-start justify-between gap-2">
+            <div className="flex gap-2 items-center">
+              <img src={tivoAvatar} alt="Tivo" className="w-5.5 h-5.5 object-contain rounded-[3px] bg-slate-950 p-0.5 border border-slate-800" />
+              <span className="font-bold text-slate-100 text-[11px] tracking-wide">Tivo Assistant</span>
+            </div>
+            <button 
+              onClick={() => setShowWelcomeBubble(false)}
+              className="text-slate-400 hover:text-slate-100 p-0.5 rounded hover:bg-slate-800 transition-colors"
+            >
+              <X size={12} />
+            </button>
+          </div>
+          <p className="text-slate-300 leading-relaxed text-[11px]">
+            Hey! 📺 I'm Tivo. I can help you book TV mounting, estimate costs, or answer support and setup questions. Tap here to chat!
+          </p>
+          <button
+            onClick={() => {
+              setIsOpen(true);
+              setShowWelcomeBubble(false);
+            }}
+            className="text-[10px] text-amber-500 hover:text-amber-400 font-bold flex items-center gap-1 mt-1 transition-colors self-start"
+          >
+            Start Chatting <ArrowRight size={10} />
+          </button>
+          {/* Triangle pointer pointing down towards button */}
+          <div className="absolute -bottom-2 left-6 w-0 h-0 border-l-[8px] border-l-transparent border-r-[8px] border-r-transparent border-t-[8px] border-t-slate-800" />
+          <div className="absolute -bottom-1.5 left-[25px] w-0 h-0 border-l-[7px] border-l-transparent border-r-[7px] border-r-transparent border-t-[7px] border-t-[#0f172a]" />
+        </div>
+      )}
+
+      {/* FLOATING ACTION TRIGGER (MODERN PILL-SHAPED BUTTON TO INDICATE CHAT ASSISTANT AT FIRST GLANCE) */}
       <button
-        onClick={() => setIsOpen(!isOpen)}
-        className="fixed bottom-6 right-6 z-50 w-14 h-14 bg-slate-900 border border-slate-700 hover:border-amber-500/50 hover:bg-slate-800 text-white rounded-[3px] shadow-2xl flex items-center justify-center transition-all duration-200 group focus:outline-none"
-        title="Tivo Assistant"
+        onClick={() => {
+          setIsOpen(!isOpen);
+          setShowWelcomeBubble(false);
+        }}
+        className="fixed bottom-6 left-6 z-50 h-12 bg-slate-900 border border-slate-700 hover:border-amber-500/50 hover:bg-slate-800 text-white rounded-[3px] shadow-2xl flex items-center gap-2.5 px-4 transition-all duration-200 group focus:outline-none hover:scale-[1.03]"
+        title="Tivo Chat Assistant"
       >
         {isOpen ? (
-          <X size={24} className="text-amber-500 transition-transform duration-200" />
+          <>
+            <X size={18} className="text-amber-500" />
+            <span className="text-xs font-semibold text-amber-500">Close Assistant</span>
+          </>
         ) : (
-          <div className="relative flex items-center justify-center">
-            <img src={tivoAvatar} alt="Tivo Avatar" className="w-10 h-10 object-contain rounded-[3px]" />
-            <span className="absolute -top-1.5 -right-1.5 w-3 h-3 bg-emerald-500 border-2 border-slate-900 rounded-full animate-pulse" />
-          </div>
+          <>
+            <div className="relative flex items-center justify-center">
+              <img src={tivoAvatar} alt="Tivo Avatar" className="w-8 h-8 object-contain rounded-[3px]" />
+              <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-emerald-500 border-2 border-slate-900 rounded-full animate-pulse" />
+            </div>
+            <span className="text-xs font-bold tracking-wide text-slate-100 flex items-center gap-1.5">
+              Ask Tivo <MessageSquare size={12} className="text-amber-500 animate-pulse" />
+            </span>
+          </>
         )}
       </button>
 
-      {/* CHAT DRAWER PANEL */}
+      {/* CHAT DRAWER PANEL (SLIDES FROM THE LEFT SIDE FOR NATURAL CONTEXT WITH BUTTON) */}
       {isOpen && (
-        <div className="fixed top-0 right-0 h-full w-[380px] max-w-full bg-[#0a0f1d] border-l border-slate-800 shadow-2xl z-[9999] flex flex-col font-sans text-slate-200 animate-slide-in-right">
+        <div className="fixed top-0 left-0 h-full w-[380px] max-w-full bg-[#0a0f1d] border-r border-slate-800 shadow-2xl z-[9999] flex flex-col font-sans text-slate-200 animate-slide-in-left">
           {/* Header */}
           <div className="p-4 border-b border-slate-800 bg-[#0f172a] flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -465,14 +520,21 @@ export default function TivoAssistant({ activeTab = "overview", onAction }) {
         </div>
       )}
       
-      {/* Slide-in styles */}
+      {/* Drawer and Speech Bubble styles */}
       <style>{`
-        @keyframes slideInRight {
-          from { transform: translateX(100%); }
+        @keyframes slideInLeft {
+          from { transform: translateX(-100%); }
           to { transform: translateX(0); }
         }
-        .animate-slide-in-right {
-          animation: slideInRight 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        @keyframes slideUp {
+          from { transform: translateY(20px); opacity: 0; }
+          to { transform: translateY(0); opacity: 1; }
+        }
+        .animate-slide-in-left {
+          animation: slideInLeft 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+        .animate-slide-up {
+          animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
         }
       `}</style>
     </>
