@@ -1,9 +1,11 @@
 import React, { useState, useEffect, useRef } from "react";
-import { MessageSquare, X, Send, HelpCircle, ArrowRight, CornerDownLeft, Sparkles, RefreshCw } from "lucide-react";
+import { useLocation, useNavigate } from "react-router-dom";
+import { MessageSquare, X, Send, HelpCircle, ArrowRight, CornerDownLeft, Sparkles } from "lucide-react";
 import tivoAvatar from "@/assets/tivo_flat_icon_1782228698511.png";
-import { Button } from "@/components/ui/button";
+import { useUI } from "@/contexts/UIContext";
 
 const SUGGESTIONS = {
+  // Admin Contexts
   overview: [
     { label: "Show revenue breakdown", action: "changeTab:finance", text: "Show me the finance stats" },
     { label: "View projects list", action: "changeTab:projects", text: "Go to project listings" },
@@ -42,15 +44,49 @@ const SUGGESTIONS = {
     { label: "OIDC SSO Setup", action: "query", text: "Explain the OpenID Connect Single Sign-On flow" },
     { label: "Reload Partner App", action: "reloadIframe", text: "Reload the embedded micro-frontend iframe" },
   ],
+  
+  // Customer Contexts (Public Pages)
+  home: [
+    { label: "Estimate Quote Cost", action: "openQuoteModal", text: "How much does it cost to mount a TV?" },
+    { label: "Book Installation", action: "openBookingModal", text: "I want to book a TV mounting service" },
+    { label: "View Our Services", action: "navigate:/services", text: "What services do you offer?" },
+  ],
+  services: [
+    { label: "Do you hide wires?", action: "query", text: "Do you hide the TV power wires?" },
+    { label: "Which mount is best?", action: "query", text: "Which TV mount type should I choose?" },
+    { label: "Book Appointment", action: "openBookingModal", text: "I want to schedule an installation" },
+  ],
+  contact: [
+    { label: "Business Hours", action: "query", text: "What are your operating hours?" },
+    { label: "Service Locations", action: "query", text: "What cities do you service?" },
+    { label: "File Repair Request", action: "navigate:/support", text: "I need to request support or repair work" },
+  ],
+  store_public: [
+    { label: "E-Commerce TV Mounts", action: "query", text: "What wall mounts do you sell?" },
+    { label: "Shipping Options", action: "query", text: "What are your delivery shipping speeds?" },
+    { label: "Technician Sign In", action: "openAuthModal", text: "How do I log in to the system?" },
+  ],
+  support_public: [
+    { label: "How to file ticket?", action: "query", text: "How do I submit a workmanship support ticket?" },
+    { label: "Workmanship Warranty", action: "query", text: "Explain the 48-hour escrow safety guarantee" },
+  ],
+  dashboard_public: [
+    { label: "Earnings Deductions", action: "query", text: "How do paycheck deductions for uniforms work?" },
+    { label: "How-To Guides", action: "query", text: "Where can I find instructions to complete onboarding?" },
+  ],
 };
 
-export default function TivoAssistant({ activeTab, onAction }) {
+export default function TivoAssistant({ activeTab = "overview", onAction }) {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const { openQuoteModal, openBookingModal, openAuthModal } = useUI();
+
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState([
     {
       id: "welcome",
       sender: "tivo",
-      text: "Beep boop! Hello! I am Tivo, your digital TV-headed assistant. 📺🔧 I'm here to help you manage the Atlanta TV Mount PRO admin desk! Ask me anything.",
+      text: "Beep boop! Hello! I am Tivo, your digital TV-headed assistant. 📺🔧 I'm here to help you navigate, answer installation questions, or manage the platform. Ask me anything!",
       timestamp: new Date(),
     },
   ]);
@@ -59,7 +95,29 @@ export default function TivoAssistant({ activeTab, onAction }) {
   
   const messagesEndRef = useRef(null);
 
-  const activeSuggestions = SUGGESTIONS[activeTab] || [
+  const isAdminPath = location.pathname.startsWith("/admin");
+  const isSimulatorPath = location.pathname.startsWith("/apps/");
+
+  // Safety Switch: Hide the global Tivo Assistant instance on admin or simulator pages
+  // if no action callback is bound (preventing duplicate triggers).
+  if ((isAdminPath || isSimulatorPath) && !onAction) {
+    return null;
+  }
+
+  // Resolve active section code
+  let resolvedSection = activeTab;
+  if (!isAdminPath) {
+    const path = location.pathname;
+    if (path === "/" || path === "") resolvedSection = "home";
+    else if (path.startsWith("/services")) resolvedSection = "services";
+    else if (path.startsWith("/contact")) resolvedSection = "contact";
+    else if (path.startsWith("/store")) resolvedSection = "store_public";
+    else if (path.startsWith("/support")) resolvedSection = "support_public";
+    else if (path.startsWith("/dashboard") || path.startsWith("/join")) resolvedSection = "dashboard_public";
+    else resolvedSection = "home";
+  }
+
+  const activeSuggestions = SUGGESTIONS[resolvedSection] || [
     { label: "How does CRM Sync work?", action: "query", text: "Explain partner CRM webhook synchronization" },
     { label: "SSO Login flow", action: "query", text: "Explain OpenID Connect login" },
   ];
@@ -71,38 +129,36 @@ export default function TivoAssistant({ activeTab, onAction }) {
     }
   }, [messages, isTyping]);
 
-  // Context-aware alert when activeTab changes
+  // Context-aware alert when path changes
   useEffect(() => {
-    if (isOpen) {
-      const tabFriendlyNames = {
-        overview: "Overview Dashboard",
-        projects: "Projects Manager",
-        orders: "Bookings & Job Orders",
-        support: "Support Tickets & Disputes",
-        team: "Technician & Team Directory",
-        crm: "Partner CRM Sync Settings",
-        profile: "User Profiles & Permissions",
-        finance: "Escrow Ledger & Earnings",
-        cms: "Content Management (CMS)",
-        media: "Media Asset Library",
-        store: "Store & Uniform Management",
-        partner: "Partner App Portal",
+    if (isOpen && !isAdminPath) {
+      const pathFriendlyNames = {
+        "/": "Homepage",
+        "/services": "Services page",
+        "/about": "About page",
+        "/team": "Team page",
+        "/contact": "Contact page",
+        "/store": "Hardware Shop",
+        "/support": "Support Desk",
+        "/dashboard": "Recruit Dashboard",
+        "/join": "Recruiter Portal",
+        "/projects": "Project Showcases",
       };
       
-      const tabName = tabFriendlyNames[activeTab] || activeTab;
+      const pathName = pathFriendlyNames[location.pathname] || "Atlanta TV Mount";
       
-      // Inject tab change system alert
+      // Inject path change system alert
       setMessages((prev) => [
         ...prev,
         {
           id: `sys-${Date.now()}`,
           sender: "system",
-          text: `Context shifted to: ${tabName}`,
+          text: `Context shifted to: ${pathName}`,
           timestamp: new Date(),
         },
       ]);
     }
-  }, [activeTab]);
+  }, [location.pathname, isOpen]);
 
   const handleSendMessage = (text) => {
     if (!text.trim()) return;
@@ -120,7 +176,7 @@ export default function TivoAssistant({ activeTab, onAction }) {
 
     // Simulated LLM generation delay
     setTimeout(() => {
-      const replyText = getTivoResponse(text, activeTab);
+      const replyText = getTivoResponse(text, resolvedSection);
       const newTivoMessage = {
         id: `tivo-${Date.now()}`,
         sender: "tivo",
@@ -133,54 +189,67 @@ export default function TivoAssistant({ activeTab, onAction }) {
     }, 600);
   };
 
-  const getTivoResponse = (input, tab) => {
+  const getTivoResponse = (input, section) => {
     const query = input.toLowerCase();
 
+    // General Greetings
     if (query.includes("hi") || query.includes("hello") || query.includes("hey") || query.includes("tivo")) {
-      return "Hello! I am Tivo. 📺🤖 How's your admin day going? You can ask me how to manage technicians, track paycheck deductions, handle dispute holds, or connect with Intermaven.";
+      return "Hello! I am Tivo. 📺🤖 How can I help you today? Ask me about mounting types, hiding wires, shipping speeds, or support warranties.";
     }
 
-    if (query.includes("sync") || query.includes("webhook") || query.includes("crm")) {
-      return "We automatically sync all booking_created, quote_created, and ticket_created events directly to Intermaven's server-to-server webhook endpoint (`/api/crm/ingest`). It matches emails to consolidate customer history in the partner desk database.";
+    // Customer specific needs mappings
+    if (query.includes("hide") || query.includes("conceal") || query.includes("wire") || query.includes("cable")) {
+      return "We offer full cable management! You can select **On-Wall concealment** (using professional wire cover sleeves) or **In-Wall concealment** (running power and HDMI cords behind the drywall). Select your wire choice in the booking step.";
     }
 
-    if (query.includes("escrow") || query.includes("freeze") || query.includes("dispute")) {
-      return "When a recruit/technician job is completed, payment commission is held in escrow. If a workmanship dispute is filed (Support Tickets), the hold is locked as 'Frozen' for 48 hours to allow review. If resolved, it releases to earnings; if not, it stays frozen until admin resolution.";
+    if (query.includes("mount") || query.includes("bracket") || query.includes("choose")) {
+      return "We install three main mount types:\n1. **Full Motion (Swivel)**: Tilts and rotates, perfect for corner mounts and large rooms.\n2. **Tilting**: Great above fireplaces or high walls to reduce glare.\n3. **Fixed (Flat)**: Sits flush to the wall for a thin gallery appearance. We also supply heavy-duty wall mounts in our public shop!";
     }
 
-    if (query.includes("uniform") || query.includes("polo") || query.includes("paycheck") || query.includes("onboarding")) {
-      return "New technicians are required to wear branded uniforms. During step 6 of onboarding, recruits select size and shipping options. The uniform kit cost ($30 + shipping fee) is recorded as a paycheck deduction on their account and automatically subtracted from their first payout.";
+    if (query.includes("drywall") || query.includes("hole") || query.includes("patch") || query.includes("repair")) {
+      return "Our technicians carry patching compound, sandpapers, and priming tools. If we need to route cables behind your drywall, we patch the cuts cleanly. We can also repair previous mounting holes.";
     }
 
-    if (query.includes("sso") || query.includes("login") || query.includes("credential") || query.includes("openid") || query.includes("oidc")) {
-      return "Single Sign-On (SSO) links our site to Intermaven. It uses an OIDC redirect handshake. Registered partner clients and techs can sign in via the 'Connect with Intermaven' gateway, generating an auth token used for micro-frontend embeds.";
+    if (query.includes("hours") || query.includes("time") || query.includes("schedule") || query.includes("days")) {
+      return "We operate **7 days a week** from **8:00 AM to 8:00 PM**. You can book online anytime, select a date, and pick a preferred arrival window (Morning, Mid-day, Afternoon). We notify you when the technician is en route!";
     }
 
-    if (query.includes("project") || query.includes("featured") || query.includes("sorting")) {
-      return "In the Projects tab, you can add TV mounting showcase jobs. Enabling the 'Featured Landing' flag adds them to the homepage carousel slider. The 'Sort Order' field determines the relative priority sequence.";
+    if (query.includes("warranty") || query.includes("escrow") || query.includes("guarantee") || query.includes("protect")) {
+      return "Every job is protected by our **48-hour workmanship guarantee**. When you make a booking, the payment is held in escrow. If any damage or issue occurs, file a support ticket within 48 hours to freeze the escrow payout until a technician resolves it.";
     }
 
-    if (query.includes("top technician") || query.includes("top tech")) {
-      return "To see the top performing technicians, check the leaderboards in the Finance or Team tab. John Handyman currently has the highest job completion rating this month!";
+    if (query.includes("location") || query.includes("where") || query.includes("area") || query.includes("city")) {
+      return "We are based in **Atlanta, GA**, serving a 35-mile radius including Buckhead, Midtown, Alpharetta, Marietta, Smyrna, and Decatur. No travel fees within our service circle!";
     }
 
-    // Default tab contexts if no keywords matched
-    switch (tab) {
-      case "overview":
-        return "You're viewing the main dashboard. It aggregates booking volumes, revenue stats, active support tickets, and technician metrics. Let me know if you want to navigate anywhere else!";
-      case "store":
-        return "In the Store Manager, you can edit product listings, add new inventory items, track customer orders, and manage uniform onboarding shipments.";
-      case "partner":
-        return "This panel hosts Intermaven apps (Social AI, Brand Kit, CRM, Files) headlessly. It uses secure OIDC auth token parameters. If you see authorization errors, try reloading the portal using my reload action.";
-      case "cms":
-        return "The CMS page editor allows you to edit website text dynamically. Select the page (Home, About, Contact) from the dropdown, customize the hero headings, and click Save to instantly update the public site.";
+    if (query.includes("shipping") || query.includes("delivery") || query.includes("delivery speeds")) {
+      return "For hardware orders, we offer:\n- **Standard**: 3-5 business days ($4.99)\n- **Next Day**: 1-2 business days ($14.99)\n- **Same Day**: Order before 12 PM for same-day arrival ($24.99).";
+    }
+
+    if (query.includes("uniform") || query.includes("deduction") || query.includes("paycheck")) {
+      return "For recruits, uniform ordering (3 polo shirts + name tag) is step 6 of the checklist. The $30 base cost + selected shipping is logged as a paycheck deduction and automatically subtracted from your first earnings sheet.";
+    }
+
+    if (query.includes("sso") || query.includes("sync") || query.includes("webhook")) {
+      return "Atlanta TV Mount is a partner platform linked with Intermaven. You can log in using your Intermaven account (SSO), and all booking inquiries or tickets are automatically synced to the unified partner CRM.";
+    }
+
+    // Context-sensitive fallbacks
+    switch (section) {
+      case "home":
+        return "I can help you get an instant quote or schedule a mounting appointment. Try clicking 'Estimate Quote Cost' or 'Book Installation' above!";
+      case "services":
+        return "Check out our service items. We mount TVs from 32\" to 100\" on drywall, brick, concrete, and wood studs. Tell me what wall surface you have!";
+      case "store_public":
+        return "Welcome to the shop! We carry premium wall mounts, soundbar brackets, and technician uniforms. Let me know if you need checkout support.";
+      case "support_public":
+        return "Need assistance? If you have an active booking, submit your issue here and our support agents will help you right away.";
       default:
-        return "I'm analyzing the codebase! Ask me about OIDC configurations, CRM webhook sync, workmanship escrow holds, uniform payroll deductions, or tab controls.";
+        return "I am Tivo! Feel free to ask about our TV mounting packages, wire concealment, service locations, or booking process.";
     }
   };
 
   const handleSuggestionClick = (sug) => {
-    // Print the user's click action in the chat
     const newUserMessage = {
       id: `user-${Date.now()}`,
       sender: "user",
@@ -189,11 +258,10 @@ export default function TivoAssistant({ activeTab, onAction }) {
     };
     setMessages((prev) => [...prev, newUserMessage]);
 
-    // Handle deep linked action
     if (sug.action === "query") {
       setIsTyping(true);
       setTimeout(() => {
-        const replyText = getTivoResponse(sug.text, activeTab);
+        const replyText = getTivoResponse(sug.text, resolvedSection);
         const newTivoMessage = {
           id: `tivo-${Date.now()}`,
           sender: "tivo",
@@ -204,28 +272,47 @@ export default function TivoAssistant({ activeTab, onAction }) {
         setMessages((prev) => [...prev, newTivoMessage]);
       }, 500);
     } else {
-      // Trigger callback in parent component
       setIsTyping(true);
       setTimeout(() => {
-        onAction(sug.action);
+        let actionConfirm = "Action completed.";
         
-        let actionConfirm = "Action triggered successfully.";
         if (sug.action.startsWith("changeTab:")) {
-          actionConfirm = `Navigation action completed. Switched to the ${sug.action.split(":")[1].toUpperCase()} tab.`;
-        } else if (sug.action === "triggerSync") {
-          actionConfirm = "CRM Webhook Sync triggered! Lead data synchronized to Intermaven.";
-        } else if (sug.action === "reloadIframe") {
-          actionConfirm = "Embedded Partner App Iframe reloaded.";
-        } else if (sug.action === "openNewProject") {
-          actionConfirm = "Opened the Add New Project dialog modal.";
-        } else if (sug.action === "openInviteTech") {
-          actionConfirm = "Opened the Recruit/Technician Invitation modal.";
+          onAction(sug.action);
+          actionConfirm = `Navigated to the admin ${sug.action.split(":")[1].toUpperCase()} section.`;
+        } else if (sug.action.startsWith("navigate:")) {
+          const dest = sug.action.split(":")[1];
+          navigate(dest);
+          actionConfirm = `Navigated to page: ${dest}`;
+        } else if (sug.action === "openBookingModal") {
+          openBookingModal();
+          actionConfirm = "Opened the booking scheduler modal! Select your TV size and add-on services.";
+        } else if (sug.action === "openQuoteModal") {
+          openQuoteModal();
+          actionConfirm = "Opened the quote cost estimator modal! Click packages to see price estimates.";
+        } else if (sug.action === "openAuthModal") {
+          openAuthModal('login');
+          actionConfirm = "Opened the registration / sign-in screen.";
+        } else {
+          if (onAction) {
+            onAction(sug.action);
+          }
+          if (sug.action === "triggerSync") {
+            actionConfirm = "CRM Webhook Sync triggered! Lead data synchronized to Intermaven.";
+          } else if (sug.action === "reloadIframe") {
+            actionConfirm = "Embedded Partner App Iframe reloaded.";
+          } else if (sug.action === "openNewProject") {
+            actionConfirm = "Opened the Add New Project dialog modal.";
+          } else if (sug.action === "openInviteTech") {
+            actionConfirm = "Opened the Recruit/Technician Invitation modal.";
+          } else if (sug.action === "openNewProduct") {
+            actionConfirm = "Opened the Add Product listing form.";
+          }
         }
         
         const newTivoMessage = {
           id: `tivo-${Date.now()}`,
           sender: "tivo",
-          text: `Beep! ${actionConfirm} Is there anything else you need help with?`,
+          text: `Beep! ${actionConfirm}`,
           timestamp: new Date(),
         };
         setIsTyping(false);
@@ -240,7 +327,7 @@ export default function TivoAssistant({ activeTab, onAction }) {
       <button
         onClick={() => setIsOpen(!isOpen)}
         className="fixed bottom-6 right-6 z-50 w-14 h-14 bg-slate-900 border border-slate-700 hover:border-amber-500/50 hover:bg-slate-800 text-white rounded-[3px] shadow-2xl flex items-center justify-center transition-all duration-200 group focus:outline-none"
-        title="Tivo Admin Assistant"
+        title="Tivo Assistant"
       >
         {isOpen ? (
           <X size={24} className="text-amber-500 transition-transform duration-200" />
@@ -254,7 +341,7 @@ export default function TivoAssistant({ activeTab, onAction }) {
 
       {/* CHAT DRAWER PANEL */}
       {isOpen && (
-        <div className="fixed top-0 right-0 h-full w-[380px] max-w-full bg-[#0a0f1d] border-l border-slate-800 shadow-2xl z-40 flex flex-col font-sans text-slate-200 animate-slide-in-right">
+        <div className="fixed top-0 right-0 h-full w-[380px] max-w-full bg-[#0a0f1d] border-l border-slate-800 shadow-2xl z-[9999] flex flex-col font-sans text-slate-200 animate-slide-in-right">
           {/* Header */}
           <div className="p-4 border-b border-slate-800 bg-[#0f172a] flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -280,8 +367,8 @@ export default function TivoAssistant({ activeTab, onAction }) {
 
           {/* Quick Context Banner */}
           <div className="px-4 py-2 bg-slate-950 border-b border-slate-800 flex items-center justify-between text-[10px] text-slate-400">
-            <span>Active Section: <strong className="text-amber-500 font-semibold">{activeTab.toUpperCase()}</strong></span>
-            <span className="flex items-center gap-1"><Sparkles size={8} className="text-amber-500 animate-pulse" /> Context-Aware Mode</span>
+            <span>Context: <strong className="text-amber-500 font-semibold">{resolvedSection.toUpperCase()}</strong></span>
+            <span className="flex items-center gap-1"><Sparkles size={8} className="text-amber-500 animate-pulse" /> Client Assistance</span>
           </div>
 
           {/* Messages Area */}
@@ -330,7 +417,7 @@ export default function TivoAssistant({ activeTab, onAction }) {
           {/* Action Suggestions (Chips) */}
           <div className="p-3 bg-[#0d1428]/80 border-t border-slate-800 space-y-2">
             <p className="text-[10px] text-slate-400 font-semibold flex items-center gap-1 px-1">
-              <HelpCircle size={10} className="text-amber-500" /> Suggested for this Tab:
+              <HelpCircle size={10} className="text-amber-500" /> Suggested for this Page:
             </p>
             <div className="flex flex-wrap gap-1.5 max-h-[85px] overflow-y-auto p-0.5">
               {activeSuggestions.map((sug, i) => (

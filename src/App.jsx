@@ -32,6 +32,7 @@ import BlogPostDetailPage from "./pages/BlogPostDetailPage";
 import TechnicianTermsPage from "./pages/TechnicianTermsPage";
 import SupportPage from "./pages/SupportPage";
 import StorePage from "./pages/StorePage";
+import TivoAssistant from "./components/TivoAssistant";
 
 function App() {
   React.useEffect(() => {
@@ -234,6 +235,7 @@ function App() {
               }
             />
           </Routes>
+          <TivoAssistant />
           <Toaster />
         </Router>
       </ClientAuthProvider>
