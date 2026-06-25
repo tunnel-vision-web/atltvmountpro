@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import pb from "@/lib/pocketbaseClient";
 import { toast } from "sonner";
+import { syncToIntermavenCRM } from "@/lib/crmSync";
 import PageHero from "@/components/PageHero";
 import { updateEscrowStatusByBooking } from "@/lib/escrowUtils";
 
@@ -285,6 +286,22 @@ const SupportPage = () => {
       const storedTickets = JSON.parse(localStorage.getItem(LOCAL_SUPPORT_TICKETS_KEY) || "[]");
       storedTickets.push(newTicket);
       localStorage.setItem(LOCAL_SUPPORT_TICKETS_KEY, JSON.stringify(storedTickets));
+
+      // Sync support ticket creation to Intermaven partner CRM
+      syncToIntermavenCRM(
+        "ticket_created",
+        newTicket.client_email,
+        newTicket.client_name,
+        newTicket.client_phone,
+        {
+          ticket_id: newTicket.id,
+          booking_id: newTicket.booking_id,
+          booking_service: newTicket.booking_service,
+          category: newTicket.category,
+          description: newTicket.description,
+          status: newTicket.status,
+        }
+      );
 
       // 3. Set outcome result
       setTicketResult({

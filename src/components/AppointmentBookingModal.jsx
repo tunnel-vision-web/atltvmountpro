@@ -22,6 +22,7 @@ import pb from "@/lib/pocketbaseClient";
 import { toast } from "sonner";
 import { CalendarDays, Clock, CheckCircle2 } from "lucide-react";
 import { autoCreateInvoiceForBooking } from "@/lib/invoiceUtils";
+import { syncToIntermavenCRM } from "@/lib/crmSync";
 
 const TV_HARDWARE_OPTIONS = [
   { id: "hw-flat", name: "Standard Flat Mount (Up to 80\")", price: 49 },
@@ -147,6 +148,20 @@ const AppointmentBookingModal = () => {
         hardwareItems: selectedHardware,
       };
       autoCreateInvoiceForBooking(normalized);
+      syncToIntermavenCRM(
+        "booking_created",
+        normalized.email,
+        normalized.name,
+        normalized.phone,
+        {
+          booking_id: normalized.id,
+          service_type: normalized.service_type || formData.service_type,
+          preferred_date: normalized.preferred_date,
+          preferred_time: normalized.preferred_time,
+          project_description: normalized.project_description,
+          hardware_items: normalized.hardwareItems
+        }
+      );
       setSubmitted(true);
     } catch (error) {
       console.warn("Booking submission error, saving locally:", error);
@@ -156,6 +171,20 @@ const AppointmentBookingModal = () => {
         created: new Date().toISOString(),
       });
       autoCreateInvoiceForBooking(localRecord);
+      syncToIntermavenCRM(
+        "booking_created",
+        localRecord.email,
+        localRecord.name,
+        localRecord.phone,
+        {
+          booking_id: localRecord.id,
+          service_type: localRecord.service_type,
+          preferred_date: localRecord.preferred_date,
+          preferred_time: localRecord.preferred_time,
+          project_description: localRecord.project_description,
+          hardware_items: localRecord.hardwareItems
+        }
+      );
       setSubmitted(true);
       toast.success("Appointment booked (saved locally).");
     } finally {

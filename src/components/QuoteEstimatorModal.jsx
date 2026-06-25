@@ -21,6 +21,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useUI } from '@/contexts/UIContext';
 import pb from '@/lib/pocketbaseClient';
 import { toast } from 'sonner';
+import { syncToIntermavenCRM } from "@/lib/crmSync";
 import {
   Calculator,
   CheckCircle2,
@@ -387,7 +388,7 @@ const QuoteEstimatorModal = () => {
     const finalDetails = `${contactData.project_details || ""}${hardwareText}`.trim();
 
     try {
-      await pb.collection('quote_inquiries').create(
+      const record = await pb.collection('quote_inquiries').create(
         {
           name: contactData.name,
           email: contactData.email,
@@ -397,6 +398,18 @@ const QuoteEstimatorModal = () => {
           estimated_quote: finalEstimate,
         },
         { $autoCancel: false }
+      );
+      syncToIntermavenCRM(
+        "quote_created",
+        contactData.email,
+        contactData.name,
+        contactData.phone,
+        {
+          quote_id: record.id,
+          service_type: selectedService,
+          project_details: finalDetails,
+          estimated_quote: finalEstimate,
+        }
       );
       setStep('done');
     } catch (err) {
