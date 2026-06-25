@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { MessageSquare, X, Send, HelpCircle, ArrowRight, CornerDownLeft, Sparkles } from "lucide-react";
-import tivoAvatar from "@/assets/tivo_assistant_icon_1782228523025.png";
+import tivoAvatar from "@/assets/tivo_brand_avatar_1782404474399.png";
 import { useUI } from "@/contexts/UIContext";
 
 const SUGGESTIONS = {
