@@ -168,3 +168,19 @@ To protect customer, technician, and administrator accounts while avoiding obsol
    - On successful verification, allows the user to define a new password (min 8 characters).
    - Updates the live database (or `localStorage` mock users ledger `atltv_local_users`), returning the user to the standard Sign In flow.
 
+
+---
+
+## 5. Partner Music Portal Rebranding & Regional Localization Sync
+
+To support global rollout and multicultural creative workflows, the partner music portal integrations and regional rules have been updated:
+1. **Branding & Domain Update**:
+   - The partner music ecosystem portal previously known as `intermavenmusic.com` or `music.intermaven.io` has been rebranded to **TuneMavens** (`tunemavens.com`).
+   - The portal is hosted on a **Hostinger VPS** using Nginx reverse proxy and Certbot SSL, matching the core deployment architecture.
+2. **Regional Payment & Visual Localization**:
+   - For Western locations (US, Canada, UK, Europe), all references to M-Pesa are hidden and replaced with local options (Venmo, Cash App, Zelle in US/CA; card, Apple Pay, Google Pay in UK/EU).
+   - Cloned multicultural Western cityscape (Atlanta) and creative studio backgrounds are served dynamically via the `imageRegistry.js` proxy based on the user's geo-detected country.
+3. **SSO & Integration Sync**:
+   - The SSO and webhook flows configured on PocketBase have been updated to point to the new OIDC client routes at `tunemavens.com` (formerly `music.intermaven.io`), ensuring seamless cross-platform authentication handshakes.
+
+
