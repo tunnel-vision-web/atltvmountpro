@@ -40,7 +40,7 @@ export default function AuthCallbackPage() {
         const intermavenBackendUrl =
           window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"
             ? "http://localhost:8001"
-            : "https://intermaven-production.up.railway.app";
+            : "https://intermaven.onrender.com";
 
         const redirectUri = window.location.origin + "/auth/callback";
 

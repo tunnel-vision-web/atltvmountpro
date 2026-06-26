@@ -400,7 +400,7 @@ const StorePage = () => {
   };
 
   // Submit checkout
-  const handleCheckoutSubmit = (e) => {
+  const handleCheckoutSubmit = async (e) => {
     e.preventDefault();
     if (!billingForm.name || !billingForm.email || !billingForm.phone || !billingForm.address || !billingForm.city || !billingForm.state || !billingForm.zip) {
       toast.error("Please fill in all shipping details.");
@@ -441,63 +441,92 @@ const StorePage = () => {
 
     setIsProcessing(true);
 
-    setTimeout(async () => {
-      // Create new order record
-      const orderId = `order_${Date.now()}`;
-      const newOrder = {
-        id: orderId,
-        items: cart.map((item) => ({
-          productId: item.product.id,
-          name: item.product.name,
-          quantity: item.quantity,
-          size: item.size,
-          pricePaid: getProductPrice(item.product),
-        })),
-        customerDetails: {
-          ...billingForm,
-          isTech: !!isTech,
-        },
-        billingAddress: sameAsShipping ? null : paymentAddressForm,
-        isGift,
-        giftNote: isGift ? giftNote : null,
-        newsletterOptIn,
-        subtotal: cartSubtotal,
-        discountApplied: discountAmount,
-        shippingFee,
-        tax,
-        total: cartTotal,
-        shippingMethod,
-        timestamp: Date.now(),
-        status: "Pending",
-      };
+    const stripeServerUrl = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+      ? 'http://localhost:3001'
+      : '';
 
-      // Save order to PocketBase (and fallback cache to local storage)
-      try {
-        await pb.collection("atltv_store_orders").create({
+    const orderId = `order_${Date.now()}`;
+    const newOrder = {
+      id: orderId,
+      items: cart.map((item) => ({
+        productId: item.product.id,
+        name: item.product.name,
+        quantity: item.quantity,
+        size: item.size,
+        pricePaid: getProductPrice(item.product),
+      })),
+      customerDetails: {
+        ...billingForm,
+        isTech: !!isTech,
+      },
+      billingAddress: sameAsShipping ? null : paymentAddressForm,
+      isGift,
+      giftNote: isGift ? giftNote : null,
+      newsletterOptIn,
+      subtotal: cartSubtotal,
+      discountApplied: discountAmount,
+      shippingFee,
+      tax,
+      total: cartTotal,
+      shippingMethod,
+      timestamp: Date.now(),
+      status: "Pending",
+    };
+
+    // Save order to PocketBase (and fallback cache to local storage)
+    try {
+      await pb.collection("atltv_store_orders").create({
+        items: newOrder.items,
+        total: newOrder.total,
+        status: newOrder.status,
+        address: JSON.stringify({
+          shipping: newOrder.customerDetails,
+          billing: newOrder.billingAddress,
+          giftNote: newOrder.giftNote,
+          newsletterOptIn: newOrder.newsletterOptIn
+        }),
+        email: newOrder.customerDetails.email,
+        name: newOrder.customerDetails.name,
+        paymentMethod: "card",
+        shippingSpeed: newOrder.shippingMethod
+      });
+    } catch (pbErr) {
+      console.warn("PocketBase store order creation failed, fallback to local storage:", pbErr);
+    }
+
+    try {
+      const storedOrders = JSON.parse(localStorage.getItem("atltv_store_orders") || "[]");
+      storedOrders.push(newOrder);
+      localStorage.setItem("atltv_store_orders", JSON.stringify(storedOrders));
+
+      // Attempt Stripe checkout session creation
+      const response = await fetch(`${stripeServerUrl}/stripe/create-checkout-session`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
           items: newOrder.items,
+          customerEmail: newOrder.customerDetails.email,
           total: newOrder.total,
-          status: newOrder.status,
-          address: JSON.stringify({
-            shipping: newOrder.customerDetails,
-            billing: newOrder.billingAddress,
-            giftNote: newOrder.giftNote,
-            newsletterOptIn: newOrder.newsletterOptIn
-          }),
-          email: newOrder.customerDetails.email,
-          name: newOrder.customerDetails.name,
-          paymentMethod: "card",
-          shippingSpeed: newOrder.shippingMethod
-        });
-      } catch (pbErr) {
-        console.warn("PocketBase store order creation failed, fallback to local storage:", pbErr);
+          referenceId: orderId,
+          type: "store_order"
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error("Stripe integration server returned an error.");
       }
 
+      const data = await response.json();
+      if (data.url) {
+        toast.success("Redirecting to Stripe Sandbox...");
+        window.location.href = data.url;
+      } else {
+        throw new Error("Stripe did not return a session redirect URL.");
+      }
+    } catch (err) {
+      console.warn("Stripe Sandbox offline or unconfigured, completing simulated local transaction:", err);
       try {
-        const storedOrders = JSON.parse(localStorage.getItem("atltv_store_orders") || "[]");
-        storedOrders.push(newOrder);
-        localStorage.setItem("atltv_store_orders", JSON.stringify(storedOrders));
-
-        // Deduct stock levels
+        // Deduct stock levels locally
         const updatedProducts = products.map((p) => {
           const cartItemsForProduct = cart.filter((item) => item.product.id === p.id);
           const totalDeducted = cartItemsForProduct.reduce((sum, i) => sum + i.quantity, 0);
@@ -513,14 +542,14 @@ const StorePage = () => {
         setCart([]);
         setCheckoutStep("success");
         setIsFirstTimeCustomer(false);
-        toast.success("Order processed successfully!");
-      } catch (err) {
-        console.error(err);
+        toast.success("Order processed successfully (Simulation Fallback)!");
+      } catch (fallbackErr) {
+        console.error(fallbackErr);
         toast.error("An error occurred during checkout.");
       } finally {
         setIsProcessing(false);
       }
-    }, 2000);
+    }
   };
 
   return (

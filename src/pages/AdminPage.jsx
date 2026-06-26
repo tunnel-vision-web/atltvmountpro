@@ -41,6 +41,7 @@ import {
   Bell,
   Wrench,
   ShoppingBag,
+  Sparkles,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -3601,6 +3602,97 @@ const AdminPage = () => {
     }
   };
 
+  const handleAutoDispatch = async () => {
+    if (!hasPermission(currentUser, "canEdit", "orders")) {
+      toast.error("You do not have permission to run auto-dispatch.");
+      return;
+    }
+
+    const unassigned = bookings.filter(
+      (b) => !b.assignedTechId && !b.assignedTechName && b.status !== "Cancelled" && b.status !== "Completed" && b.status !== "Paid"
+    );
+
+    if (unassigned.length === 0) {
+      toast.info("No unassigned bookings found requiring dispatch.");
+      return;
+    }
+
+    // Get eligible technicians (non-suspended, TQS >= 75)
+    const eligibleTechs = teamMembers.filter((t) => {
+      const score = t.tqs !== undefined ? t.tqs : 100;
+      return !t.isSuspended && score >= 75;
+    });
+
+    if (eligibleTechs.length === 0) {
+      toast.error("No eligible technicians (TQS >= 75, non-suspended) available in the system.");
+      return;
+    }
+
+    let dispatchCount = 0;
+    const toastId = toast.loading("Running auto-dispatch sweep...");
+
+    for (const booking of unassigned) {
+      const bookingZip = (() => {
+        if (booking.zip && booking.zip.trim().length === 5) return booking.zip.trim();
+        const desc = booking.project_description || booking.Project_Description || "";
+        const match = desc.match(/\b\d{5}\b/);
+        return match ? match[0] : "30303";
+      })();
+
+      // Find techs without conflicts on this booking's date
+      const availableTechs = eligibleTechs.filter((tech) => {
+        const hasConflict = bookings.some(
+          (b) =>
+            b.assignedTechId === tech.id &&
+            b.preferred_date === booking.preferred_date &&
+            b.status !== "Cancelled"
+        );
+        return !hasConflict;
+      });
+
+      if (availableTechs.length === 0) continue;
+
+      // Score available techs
+      const scoredTechs = availableTechs.map((tech) => {
+        const bio = tech.bio || "";
+        const zipMatch = bio.match(/\b\d{5}\b/);
+        const techZip = zipMatch ? zipMatch[0] : "";
+        const tqs = tech.tqs !== undefined ? tech.tqs : 100;
+
+        let score = tqs;
+        if (techZip && bookingZip) {
+          if (techZip === bookingZip) {
+            score += 10000;
+          } else if (techZip.substring(0, 3) === bookingZip.substring(0, 3)) {
+            score += 5000;
+          }
+        }
+        return { tech, score };
+      });
+
+      // Sort by score descending
+      scoredTechs.sort((a, b) => b.score - a.score);
+      const bestTech = scoredTechs[0].tech;
+
+      try {
+        await handleUpdateBooking(booking.id, {
+          assignedTechId: bestTech.id,
+          assignedTechName: bestTech.name,
+          status: "Confirmed"
+        });
+        dispatchCount++;
+      } catch (err) {
+        console.warn(`Failed to auto-dispatch booking ${booking.id}:`, err);
+      }
+    }
+
+    if (dispatchCount > 0) {
+      toast.success(`Auto-dispatch complete! Assigned ${dispatchCount} booking(s).`, { id: toastId });
+    } else {
+      toast.info("Auto-dispatch completed. No assignments could be made due to schedule conflicts or zip mismatch.", { id: toastId });
+    }
+  };
+
   const handleUpdateBooking = async (id, updates) => {
     if (!hasPermission(currentUser, "canEdit", "orders")) {
       toast.error("You do not have permission to edit bookings.");
@@ -4792,19 +4884,27 @@ const AdminPage = () => {
                   </select>
                 </div>
                 {ordersTab === "appointments" && (
-                  <div className="flex gap-1 border border-border rounded-lg p-0.5 bg-muted/40">
-                    <button
-                      onClick={() => setBookingsViewMode("list")}
-                      className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${bookingsViewMode === "list" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
+                  <div className="flex items-center gap-2">
+                    <Button
+                      onClick={handleAutoDispatch}
+                      className="bg-primary hover:bg-primary/90 text-primary-foreground h-9 text-xs font-semibold rounded-[3px] flex items-center gap-1.5"
                     >
-                      <List size={14} /> List
-                    </button>
-                    <button
-                      onClick={() => setBookingsViewMode("calendar")}
-                      className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${bookingsViewMode === "calendar" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
-                    >
-                      <LayoutGrid size={14} /> Calendar
-                    </button>
+                      <Sparkles size={14} /> Auto-Dispatch
+                    </Button>
+                    <div className="flex gap-1 border border-border rounded-lg p-0.5 bg-muted/40">
+                      <button
+                        onClick={() => setBookingsViewMode("list")}
+                        className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${bookingsViewMode === "list" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
+                      >
+                        <List size={14} /> List
+                      </button>
+                      <button
+                        onClick={() => setBookingsViewMode("calendar")}
+                        className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${bookingsViewMode === "calendar" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
+                      >
+                        <LayoutGrid size={14} /> Calendar
+                      </button>
+                    </div>
                   </div>
                 )}
               </div>
