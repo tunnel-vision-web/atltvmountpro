@@ -160,7 +160,7 @@ const ClientDashboard = () => {
   const [uploadingDoc, setUploadingDoc] = useState(false);
 
   // Form states
-  const [bgForm, setBgForm] = useState({ fullName: "", ssn: "", consent: false });
+  const [bgForm, setBgForm] = useState({ fullName: "", consent: false });
   const [payoutForm, setPayoutForm] = useState({ method: "direct_deposit", bankName: "", routing: "", account: "", cashapp: "" });
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -578,33 +578,58 @@ const ClientDashboard = () => {
   // Submit background screening consent
   const handleBgSubmit = async (e) => {
     e.preventDefault();
-    if (!bgForm.fullName || !bgForm.ssn || !bgForm.consent) {
+    if (!bgForm.fullName || !bgForm.consent) {
       toast.error("Please fill out all fields and check the consent box.");
       return;
     }
     setSubmittingBg(true);
     try {
+      let invitationUrl = "";
       if (application?.id && !application.id.startsWith("local_")) {
-        await pb.collection("technician_applications").update(application.id, {
-          bgConsent: true,
-          status: "Background Pending",
+        const response = await fetch("/api/checkr/create-invitation", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ applicationId: application.id })
         });
+        if (response.ok) {
+          const data = await response.json();
+          invitationUrl = data.invitationUrl;
+        } else {
+          throw new Error("Failed to create Checkr invitation");
+        }
+      } else {
+        invitationUrl = `https://invitation.checkr.com/mock/inv_mock_${Math.floor(Math.random() * 1000000)}`;
       }
       
       // Update local storage tech applications list
       const stored = JSON.parse(localStorage.getItem(LOCAL_TECH_APPLICATIONS_KEY) || "[]");
       const idx = stored.findIndex((a) => a.email === user.email);
       if (idx !== -1) {
-        stored[idx] = { ...stored[idx], bgConsent: true, status: "Background Pending" };
+        stored[idx] = { 
+          ...stored[idx], 
+          bgConsent: true, 
+          status: "Background Pending",
+          checkrStatus: "pending",
+          checkrInvitationUrl: invitationUrl
+        };
         localStorage.setItem(LOCAL_TECH_APPLICATIONS_KEY, JSON.stringify(stored));
       }
       
-      setApplication((prev) => prev ? { ...prev, bgConsent: true, status: "Background Pending" } : null);
+      setApplication((prev) => prev ? { 
+        ...prev, 
+        bgConsent: true, 
+        status: "Background Pending",
+        checkrStatus: "pending",
+        checkrInvitationUrl: invitationUrl
+      } : null);
       updateOnboardingKey("bgConsent", true);
-      toast.success("Background check authorization submitted successfully!");
+      toast.success("Redirecting you to Checkr to complete background check...");
       setShowBgModal(false);
+      if (invitationUrl) {
+        window.open(invitationUrl, "_blank", "noopener,noreferrer");
+      }
     } catch (err) {
-      toast.error("An error occurred. Please try again.");
+      toast.error("Failed to generate Checkr screening link. Please try again.");
     } finally {
       setSubmittingBg(false);
     }
@@ -989,7 +1014,7 @@ const ClientDashboard = () => {
   const preChecklist = [
     { id: 1, label: "Submit Recruitment Application", done: !!application, desc: "Fill in skills, toolsets and experience" },
     { id: 2, label: "Double Opt-In Email Verification", done: user.OptIn_Status === "Verified" || user.OptIn_Status === "VerifiedLocal", desc: "Confirm your email via secure link" },
-    { id: 3, label: "Background Screening Consent", done: onboarding.bgConsent, desc: "Submit SSN and sign electronic screening waiver", action: () => setShowBgModal(true) },
+    { id: 3, label: "Background Screening Consent", done: onboarding.bgConsent, desc: "Authorize motor vehicle and criminal screening via Checkr", action: () => setShowBgModal(true) },
     { id: 4, label: "Upload Identity Verification", done: onboarding.idUploaded, desc: "Upload clear photo of Driver's License or ID Card", action: () => setShowUploadModal(true) },
     { id: 5, label: "Operation Phone Interview", done: application?.status === "Screening" || application?.status === "Approved", desc: "Complete brief 15-minute introductory screening call" }
   ];
@@ -2242,61 +2267,40 @@ const ClientDashboard = () => {
           <DialogHeader>
             <DialogTitle>Background Screening Consent</DialogTitle>
             <DialogDescription>
-              Submit details to authorize a standard background verification.
+              Initiate standard background and motor vehicle screening via Checkr.
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleBgSubmit} className="space-y-4 py-2">
             <div>
-              <label className="text-xs font-semibold text-muted-foreground block mb-1">Full Legal Name *</label>
-              <input 
-                type="text" 
-                required 
-                className="input-base w-full"
-                value={bgForm.fullName}
-                onChange={e => setBgForm({ ...bgForm, fullName: e.target.value })}
-                placeholder="e.g. Marcus Thompson"
-              />
-            </div>
-            <div>
-              <label className="text-xs font-semibold text-muted-foreground block mb-1">Social Security Number (SSN) *</label>
-              <div className="relative">
-                <input 
-                  type={showSsn ? "text" : "password"} 
-                  required 
-                  maxLength={11}
-                  className="input-base w-full pr-10"
-                  value={bgForm.ssn}
-                  onChange={e => setBgForm({ ...bgForm, ssn: e.target.value })}
-                  placeholder="XXX-XX-XXXX"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowSsn(!showSsn)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground flex items-center"
-                >
-                  {showSsn ? <EyeOff size={15} /> : <Eye size={15} />}
-                </button>
-              </div>
-            </div>
-            <div className="flex items-start gap-2.5 pt-1">
-              <input 
-                type="checkbox" 
-                id="bgConsentCheck" 
-                required 
-                className="rounded border-border text-primary focus:ring-primary h-4 w-4 bg-muted/40 cursor-pointer mt-0.5"
-                checked={bgForm.consent}
-                onChange={e => setBgForm({ ...bgForm, consent: e.target.checked })}
-              />
-              <label htmlFor="bgConsentCheck" className="text-[11px] text-muted-foreground leading-normal cursor-pointer select-none">
-                I authorize Atlanta TV Mount PRO to conduct a standard motor vehicle and criminal background check. I verify that the information provided is correct.
-              </label>
-            </div>
-            <div className="flex justify-end gap-3 pt-3">
-              <Button type="button" variant="outline" onClick={() => setShowBgModal(false)}>Cancel</Button>
-              <Button type="submit" disabled={submittingBg} className="bg-primary hover:bg-primary/90">
-                {submittingBg ? "Submitting..." : "Submit Authorization"}
-              </Button>
-            </div>
+               <label className="text-xs font-semibold text-muted-foreground block mb-1">Full Legal Name *</label>
+               <input 
+                 type="text" 
+                 required 
+                 className="input-base w-full"
+                 value={bgForm.fullName}
+                 onChange={e => setBgForm({ ...bgForm, fullName: e.target.value })}
+                 placeholder="e.g. Marcus Thompson"
+               />
+             </div>
+             <div className="flex items-start gap-2.5 pt-1">
+               <input 
+                 type="checkbox" 
+                 id="bgConsentCheck" 
+                 required 
+                 className="rounded border-border text-primary focus:ring-primary h-4 w-4 bg-muted/40 cursor-pointer mt-0.5"
+                 checked={bgForm.consent}
+                 onChange={e => setBgForm({ ...bgForm, consent: e.target.checked })}
+               />
+               <label htmlFor="bgConsentCheck" className="text-[11px] text-muted-foreground leading-normal cursor-pointer select-none">
+                 I authorize Atlanta TV Mount PRO and its background screening partner Checkr to perform motor vehicle and criminal screening. I understand I will be redirected to Checkr's secure website to complete my screening.
+               </label>
+             </div>
+             <div className="flex justify-end gap-3 pt-3">
+               <Button type="button" variant="outline" onClick={() => setShowBgModal(false)}>Cancel</Button>
+               <Button type="submit" disabled={submittingBg} className="bg-primary hover:bg-primary/90">
+                 {submittingBg ? "Initializing..." : "Proceed to Checkr"}
+               </Button>
+             </div>
           </form>
         </DialogContent>
       </Dialog>

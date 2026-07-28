@@ -53,7 +53,7 @@ export default defineConfig({
     allowedHosts: true,
     proxy: {
       "/hcgi/platform": {
-        target: "http://127.0.0.1:8090",
+        target: process.env.LOCAL_POCKETBASE ? "http://127.0.0.1:8090" : "https://atlantatvmount.com",
         changeOrigin: true,
         rewrite: (p) => p.replace(/^\/hcgi\/platform/, ""),
       },

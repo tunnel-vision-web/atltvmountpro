@@ -7999,12 +7999,45 @@ const AdminPage = () => {
               )}
 
               <div className="p-3 bg-muted/40 rounded-xl border border-border/50 space-y-2 text-xs">
-                <div className="flex items-center gap-2 text-green-500 font-semibold">
-                  <CheckCircle2 size={14} /> Background Check Consent Authorized
-                </div>
-                <div className="flex items-center gap-2 text-green-500 font-semibold">
-                  <CheckCircle2 size={14} /> Legal Work Authorization Confirmed
-                </div>
+                {selectedApplication.checkrCandidateId ? (
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <span className="font-semibold text-muted-foreground">Checkr Candidate ID:</span>
+                      <span className="font-mono text-[11px] text-foreground">{selectedApplication.checkrCandidateId}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="font-semibold text-muted-foreground">Checkr Report Status:</span>
+                      <span className={`font-bold px-2 py-0.5 rounded text-[10px] uppercase ${
+                        selectedApplication.checkrStatus === 'clear' 
+                          ? "bg-green-500/10 text-green-500 border border-green-500/20" 
+                          : selectedApplication.checkrStatus === 'consider'
+                          ? "bg-destructive/10 text-destructive border border-destructive/20"
+                          : "bg-yellow-500/10 text-yellow-500 border border-yellow-500/20"
+                      }`}>
+                        {selectedApplication.checkrStatus || 'pending'}
+                      </span>
+                    </div>
+                    <div className="pt-1.5 border-t border-border/50 flex justify-end">
+                      <a 
+                        href={`https://dashboard.checkr.com/candidates/${selectedApplication.checkrCandidateId}`} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="text-[10px] text-primary hover:underline font-bold flex items-center gap-1"
+                      >
+                        View Report on Checkr ↗
+                      </a>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <div className="flex items-center gap-2 text-green-500 font-semibold">
+                      <CheckCircle2 size={14} /> Background Check Consent Authorized
+                    </div>
+                    <div className="flex items-center gap-2 text-green-500 font-semibold">
+                      <CheckCircle2 size={14} /> Legal Work Authorization Confirmed
+                    </div>
+                  </>
+                )}
               </div>
 
               <div className="flex justify-between items-center pt-3 border-t border-border/60">

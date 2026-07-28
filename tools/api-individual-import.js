@@ -84,20 +84,62 @@ async function run() {
         continue;
       }
 
-      console.log(`Creating collection: ${c.name}...`);
-      const createRes = await fetch("http://127.0.0.1:8090/api/collections", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": token
-        },
-        body: JSON.stringify(c)
+      // Check if collection already exists
+      const getRes = await fetch(`http://127.0.0.1:8090/api/collections/${c.name}`, {
+        headers: { "Authorization": token }
       });
-
-      if (!createRes.ok) {
-        console.error(`Failed to create collection ${c.name}: ${await createRes.text()}`);
+ 
+      if (getRes.ok) {
+        console.log(`Updating existing collection: ${c.name}...`);
+        const existingCol = await getRes.json();
+        
+        // Merge fields
+        const mergedFields = [...existingCol.fields];
+        if (c.fields) {
+          c.fields.forEach(f => {
+            const idx = mergedFields.findIndex(ef => ef.name === f.name);
+            if (idx === -1) {
+              mergedFields.push(f);
+              console.log(`Adding field: ${f.name} to ${c.name}`);
+            } else {
+              mergedFields[idx] = { ...mergedFields[idx], ...f };
+            }
+          });
+        }
+ 
+        const updateRes = await fetch(`http://127.0.0.1:8090/api/collections/${existingCol.id}`, {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": token
+          },
+          body: JSON.stringify({
+            ...c,
+            fields: mergedFields
+          })
+        });
+ 
+        if (!updateRes.ok) {
+          console.error(`Failed to update collection ${c.name}: ${await updateRes.text()}`);
+        } else {
+          console.log(`Successfully updated collection: ${c.name}`);
+        }
       } else {
-        console.log(`Successfully created collection: ${c.name}`);
+        console.log(`Creating collection: ${c.name}...`);
+        const createRes = await fetch("http://127.0.0.1:8090/api/collections", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": token
+          },
+          body: JSON.stringify(c)
+        });
+ 
+        if (!createRes.ok) {
+          console.error(`Failed to create collection ${c.name}: ${await createRes.text()}`);
+        } else {
+          console.log(`Successfully created collection: ${c.name}`);
+        }
       }
     }
   } catch (err) {

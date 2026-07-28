@@ -1761,6 +1761,111 @@
         "type": "text"
       },
       {
+        "help": "",
+        "hidden": false,
+        "id": "bool_app_bgconsent",
+        "name": "bgConsent",
+        "presentable": false,
+        "required": false,
+        "system": false,
+        "type": "bool"
+      },
+      {
+        "help": "",
+        "hidden": false,
+        "id": "bool_app_iduploaded",
+        "name": "idUploaded",
+        "presentable": false,
+        "required": false,
+        "system": false,
+        "type": "bool"
+      },
+      {
+        "help": "",
+        "hidden": false,
+        "id": "bool_app_insuploaded",
+        "name": "insuranceUploaded",
+        "presentable": false,
+        "required": false,
+        "system": false,
+        "type": "bool"
+      },
+      {
+        "autogeneratePattern": "",
+        "help": "",
+        "hidden": false,
+        "id": "text_app_bio",
+        "max": 0,
+        "min": 0,
+        "name": "bio",
+        "pattern": "",
+        "presentable": false,
+        "primaryKey": false,
+        "required": false,
+        "system": false,
+        "type": "text"
+      },
+      {
+        "autogeneratePattern": "",
+        "help": "",
+        "hidden": false,
+        "id": "text_app_ckrcand",
+        "max": 0,
+        "min": 0,
+        "name": "checkrCandidateId",
+        "pattern": "",
+        "presentable": false,
+        "primaryKey": false,
+        "required": false,
+        "system": false,
+        "type": "text"
+      },
+      {
+        "autogeneratePattern": "",
+        "help": "",
+        "hidden": false,
+        "id": "text_app_ckrinv",
+        "max": 0,
+        "min": 0,
+        "name": "checkrInvitationId",
+        "pattern": "",
+        "presentable": false,
+        "primaryKey": false,
+        "required": false,
+        "system": false,
+        "type": "text"
+      },
+      {
+        "autogeneratePattern": "",
+        "help": "",
+        "hidden": false,
+        "id": "text_app_ckrinvurl",
+        "max": 0,
+        "min": 0,
+        "name": "checkrInvitationUrl",
+        "pattern": "",
+        "presentable": false,
+        "primaryKey": false,
+        "required": false,
+        "system": false,
+        "type": "text"
+      },
+      {
+        "autogeneratePattern": "",
+        "help": "",
+        "hidden": false,
+        "id": "text_app_ckrstat",
+        "max": 0,
+        "min": 0,
+        "name": "checkrStatus",
+        "pattern": "",
+        "presentable": false,
+        "primaryKey": false,
+        "required": false,
+        "system": false,
+        "type": "text"
+      },
+      {
         "hidden": false,
         "id": "autodate2990389176",
         "name": "created",
@@ -2415,6 +2520,123 @@
     "listRule": "@request.auth.id != \"\"",
     "viewRule": "@request.auth.id != \"\"",
     "createRule": "@request.auth.id != \"\"",
+    "updateRule": "@request.auth.id != \"\"",
+    "deleteRule": "@request.auth.id != \"\"",
+    "options": {}
+  },
+  {
+    "id": "pbc_support_tix",
+    "name": "support_tickets",
+    "type": "base",
+    "system": false,
+    "fields": [
+      {
+        "id": "text_st_id",
+        "name": "id",
+        "type": "text",
+        "primaryKey": true,
+        "required": true,
+        "system": true,
+        "pattern": "^[a-z0-9]+$"
+      },
+      {
+        "id": "text_st_clname",
+        "name": "client_name",
+        "type": "text",
+        "required": true,
+        "system": false
+      },
+      {
+        "id": "text_st_clemail",
+        "name": "client_email",
+        "type": "email",
+        "required": true,
+        "system": false
+      },
+      {
+        "id": "text_st_clphone",
+        "name": "client_phone",
+        "type": "text",
+        "required": true,
+        "system": false
+      },
+      {
+        "id": "text_st_bkid",
+        "name": "booking_id",
+        "type": "text",
+        "required": false,
+        "system": false
+      },
+      {
+        "id": "text_st_bkservice",
+        "name": "booking_service",
+        "type": "text",
+        "required": false,
+        "system": false
+      },
+      {
+        "id": "text_st_techid",
+        "name": "technician_id",
+        "type": "text",
+        "required": false,
+        "system": false
+      },
+      {
+        "id": "text_st_techname",
+        "name": "technician_name",
+        "type": "text",
+        "required": false,
+        "system": false
+      },
+      {
+        "id": "text_st_category",
+        "name": "category",
+        "type": "text",
+        "required": true,
+        "system": false
+      },
+      {
+        "id": "text_st_description",
+        "name": "description",
+        "type": "text",
+        "required": true,
+        "system": false
+      },
+      {
+        "id": "json_st_attachments",
+        "name": "attachments",
+        "type": "json",
+        "required": false,
+        "system": false
+      },
+      {
+        "id": "text_st_status",
+        "name": "status",
+        "type": "text",
+        "required": true,
+        "system": false
+      },
+      {
+        "id": "autodate_st_c",
+        "name": "created",
+        "type": "autodate",
+        "onCreate": true,
+        "onUpdate": false,
+        "system": false
+      },
+      {
+        "id": "autodate_st_u",
+        "name": "updated",
+        "type": "autodate",
+        "onCreate": true,
+        "onUpdate": true,
+        "system": false
+      }
+    ],
+    "indexes": [],
+    "listRule": "@request.auth.id != \"\"",
+    "viewRule": "@request.auth.id != \"\"",
+    "createRule": "",
     "updateRule": "@request.auth.id != \"\"",
     "deleteRule": "@request.auth.id != \"\"",
     "options": {}

@@ -306,10 +306,12 @@ export function useCMS(page) {
       setLocalCMS(allLocal);
       setData(parsedData);
     } catch (err) {
-      console.warn(
-        `PocketBase CMS fetch failed for "${page}", using localStorage:`,
-        err,
-      );
+      if (err?.status !== 404) {
+        console.warn(
+          `PocketBase CMS fetch failed for "${page}", using fallback:`,
+          err?.message || err,
+        );
+      }
       const local = getLocalCMS();
       setData(local[page] || DEFAULT_CMS_DATA[page] || {});
       setError(err);

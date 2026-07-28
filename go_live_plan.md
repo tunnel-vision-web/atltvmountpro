@@ -43,6 +43,8 @@ To ensure a smooth release and keep changes manageable, development is structure
       AI Testing Agent & Admin Trigger Desk    :day10, 2026-06-27, 1d
       section Phase 11: Partner Site SSO & CRM
       Partner SSO & Webhook Sync               :day11, 2026-06-28, 1d
+      section Phase 12: Checkr Integration
+      Checkr Candidate & Webhook API Sync      :day12, 2026-06-29, 1d
  ```
  
  ### Day 1: Core Admin & Metrics (Completed)
@@ -113,18 +115,27 @@ To ensure a smooth release and keep changes manageable, development is structure
 - **Unified CRM Sync Webhooks**: Configured automated payload dispatch to Intermaven `/api/crm/ingest` during bookings confirmation, support ticket logging, and quote inquiries creation.
 - **Iframe Widget Mounting**: Added "Partner Apps" panel in the admin sidebar to embed Intermaven's Brand Kit and Social AI tools with postMessage communication logic.
  
+### Day 12: Checkr Background Check Integration (Phase 12)
+- **Checkr Candidate & Invitation API Setup**: Implement `/api/checkr/create-invitation` endpoint to generate unique hosted screening disclosures via the Checkr REST API.
+- **Hosted Portal Redirection**: Redirect recruits from the onboarding checklist in `ClientDashboard.jsx` to Checkr’s compliant document and disclosure submission flow.
+- **Real-Time Webhook Processor**: Deploy `/api/checkr/webhook` listener to update PocketBase `technician_applications` records dynamically upon receiving webhook status reports (`clear`, `consider`).
+- **Admin Report Links**: Embed Checkr Candidate ID, status badges, and manual review dashboard references within the Recruit details panel in `AdminPage.jsx`.
+ 
  ---
  
  ## 2. Launch Readiness Checklist
-
+ 
 - [ ] Production compilation (`npm run build`) completes successfully.
 - [ ] Connect PocketBase server with live API credentials (`VITE_POCKETBASE_API_URL`).
 - [ ] Verify SSL configurations and Hostinger Node.js application startup files.
 - [ ] Run backend migrations to create the `support_tickets` and `onboarding_status` tables.
+- [ ] Migrate Checkr integration database fields to `technician_applications` in PocketBase (`bgConsent`, `idUploaded`, `insuranceUploaded`, `bio`, `checkrCandidateId`, `checkrInvitationId`, `checkrInvitationUrl`, `checkrStatus`).
 - [ ] Seed base system users (Admins, Accountants, Moderators) with custom dashboard permissions.
 - [ ] Set Stripe variables (`VITE_STRIPE_PUBLIC_KEY`) in the client `.env` files.
+- [ ] Set Checkr environment variables (`CHECKR_API_KEY`) on the server environment.
+- [ ] Configure live Checkr webhook URL inside Checkr Developer Dashboard targeting `/api/checkr/webhook`.
 - [ ] Validate AI Testing Agent suite connectivity and verify trigger sweeps from the Admin portal.
-
+ 
 ---
 
 ## 3. Hardware & AV E-Commerce Integration Strategy
