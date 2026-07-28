@@ -2838,10 +2838,12 @@ const AdminPage = () => {
       setQuotes(qts);
       localStorage.setItem(LOCAL_QUOTES_STORAGE, JSON.stringify(qts));
     } catch (err) {
-      console.warn(
-        "PocketBase quotes fetch failed, reading localStorage:",
-        err,
-      );
+      if (!err?.isAbort && err?.name !== "AbortError") {
+        console.warn(
+          "PocketBase quotes fetch failed, reading localStorage:",
+          err?.message || err,
+        );
+      }
       const stored = localStorage.getItem(LOCAL_QUOTES_STORAGE);
       setQuotes(stored ? JSON.parse(stored) : []);
     }
@@ -3353,12 +3355,14 @@ const AdminPage = () => {
       }
       if (hasPermission(currentUser, "canView", "team")) allowed.push("team");
       if (hasPermission(currentUser, "canView", "crm")) allowed.push("crm");
+      if (hasPermission(currentUser, "canView", "clients")) allowed.push("clients");
       if (hasPermission(currentUser, "canView", "profile")) allowed.push("profile");
       if (hasPermission(currentUser, "canView", "finance")) allowed.push("finance");
       if (hasPermission(currentUser, "canView", "cms")) allowed.push("cms");
       if (hasPermission(currentUser, "canView", "media")) allowed.push("media");
       if (hasPermission(currentUser, "canView", "recruitment")) allowed.push("recruitment");
       if (hasPermission(currentUser, "canView", "store")) allowed.push("store");
+      allowed.push("partner");
       
       if (allowed.length > 0 && !allowed.includes(activeTab)) {
         setActiveTab(allowed[0]);
