@@ -66,6 +66,7 @@ import pb from "@/lib/pocketbaseClient";
 import CMSEditor from "@/components/CMSEditor";
 import FinanceModule from "@/components/FinanceModule";
 import CRMModule from "@/components/CRMModule";
+import ClientsModule from "@/components/ClientsModule";
 import MediaLibraryAdmin from "@/components/MediaLibraryAdmin";
 import MediaPickerButton from "@/components/MediaPickerButton";
 import RichTextEditor from "@/components/RichTextEditor";
@@ -139,7 +140,7 @@ const ROLES = {
 
 const PERMISSIONS = {
   [ROLES.Admin]: {
-    canView: ["projects", "orders", "team", "profile", "cms", "finance", "media", "crm", "recruitment", "store"],
+    canView: ["projects", "orders", "team", "profile", "cms", "finance", "media", "crm", "clients", "recruitment", "store"],
     canEdit: [
       "projects",
       "orders",
@@ -150,6 +151,7 @@ const PERMISSIONS = {
       "finance",
       "media",
       "crm",
+      "clients",
       "recruitment",
       "store",
     ],
@@ -163,17 +165,18 @@ const PERMISSIONS = {
       "finance",
       "media",
       "crm",
+      "clients",
       "recruitment",
       "store",
     ],
   },
   [ROLES.Moderator]: {
-    canView: ["projects", "orders", "team", "profile", "finance", "media", "store"],
-    canEdit: ["projects", "orders", "team", "finance", "media", "store"],
-    canDelete: ["projects", "orders", "team", "media"],
+    canView: ["projects", "orders", "team", "profile", "finance", "media", "clients", "store"],
+    canEdit: ["projects", "orders", "team", "finance", "media", "clients", "store"],
+    canDelete: ["projects", "orders", "team", "media", "clients"],
   },
   [ROLES.Viewer]: {
-    canView: ["projects", "orders", "team", "profile", "finance", "media", "store"],
+    canView: ["projects", "orders", "team", "profile", "finance", "media", "clients", "store"],
     canEdit: [],
     canDelete: [],
   },
@@ -4314,6 +4317,19 @@ const AdminPage = () => {
                 </button>
               )}
 
+              {hasPermission(currentUser, "canView", "clients") && (
+                <button
+                  onClick={() => {
+                    setActiveTab("clients");
+                    setSidebarOpen(false);
+                  }}
+                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 ${activeTab === "clients" ? "bg-primary text-primary-foreground shadow-sm shadow-primary/20" : "text-muted-foreground hover:bg-muted hover:text-foreground"}`}
+                >
+                  <Users size={18} className="flex-shrink-0 text-blue-500" />
+                  <span>Clients Directory</span>
+                </button>
+              )}
+
               {hasPermission(currentUser, "canView", "profile") && (
                 <button
                   onClick={() => {
@@ -6321,6 +6337,9 @@ const AdminPage = () => {
 
           {/* TAB CONTENT: CRM */}
           {activeTab === "crm" && <CRMModule />}
+
+          {/* TAB CONTENT: CLIENTS DIRECTORY */}
+          {activeTab === "clients" && <ClientsModule />}
 
           {/* TAB CONTENT: CMS */}
           {activeTab === "cms" && <CMSEditor />}
