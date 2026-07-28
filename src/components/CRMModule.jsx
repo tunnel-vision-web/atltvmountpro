@@ -29,6 +29,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { toast } from "sonner";
 import pb from "@/lib/pocketbaseClient";
 import RichTextEditor from "./RichTextEditor";
+import { saveClientToDirectory } from "@/lib/invoiceUtils";
 
 export default function CRMModule() {
   const [contacts, setContacts] = useState([]);
@@ -786,7 +787,7 @@ export default function CRMModule() {
                         </select>
                       </div>
 
-                      <div className="pt-2">
+                      <div className="pt-2 flex flex-col gap-2">
                         <Button
                           onClick={() => triggerOptInInvite(selectedContact)}
                           variant="outline"
@@ -794,6 +795,24 @@ export default function CRMModule() {
                           className="w-full justify-center text-xs"
                         >
                           {selectedContact.optInStatus === "Confirmed" ? "Resend Confirmation Alert" : "Send Double Opt-In Link"}
+                        </Button>
+                        <Button
+                          onClick={() => {
+                            const saved = saveClientToDirectory({
+                              name: selectedContact.name,
+                              email: selectedContact.email,
+                              phone: selectedContact.phone,
+                              optInStatus: selectedContact.optInStatus || "Confirmed",
+                            });
+                            toast.success(`Selected ${selectedContact.name}! Invoice directory synced.`, {
+                              description: "Open Finance -> Create Invoice to generate invoice."
+                            });
+                          }}
+                          size="xs"
+                          className="w-full justify-center text-xs bg-primary text-primary-foreground font-bold gap-1"
+                        >
+                          <FileText size={12} />
+                          Use Client for Invoice
                         </Button>
                       </div>
                     </div>

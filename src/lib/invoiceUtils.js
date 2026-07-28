@@ -268,42 +268,71 @@ export function buildInvoiceMessage(invoice) {
   return `Hi ${invoice.clientName},\n\nPlease find your invoice from Atlanta TV Mount Pro.\n\nInvoice: ${invoice.number}\nAmount: $${(invoice.total || 0).toFixed(2)}\nJob Date: ${invoice.jobDate ? new Date(invoice.jobDate).toLocaleDateString() : "TBD"}\nDue: ${due}\n\nThank you,\nAtlanta TV Mount Pro\n770-374-3203`;
 }
 
-export async function sendInvoiceVia(invoice, method) {
-  if (!invoice) return false;
-
-  // 1. Fetch client from PocketBase
-  let optInStatus = "Pending";
-  let doubleOptInToken = "";
-  let clientRecord = null;
+export async function confirmOptInForClient(email) {
+  if (!email) return false;
+  const cleanEmail = email.trim().toLowerCase();
 
   try {
     const list = await pb.collection("clients").getList(1, 1, {
-      filter: `email = "${invoice.clientEmail}"`
+      filter: `email = "${cleanEmail}"`
     });
     if (list.items.length > 0) {
-      clientRecord = list.items[0];
-      optInStatus = clientRecord.OptIn_Status || "Pending";
-      doubleOptInToken = clientRecord.DoubleOptIn_Token || "";
-    } else {
-      optInStatus = "Pending";
+      await pb.collection("clients").update(list.items[0].id, {
+        OptIn_Status: "Confirmed",
+        OptIn_Date: new Date().toISOString()
+      });
     }
   } catch (err) {
-    console.warn("Failed to query PocketBase for client opt-in status, fallback to local:", err);
-    try {
-      const stored = localStorage.getItem("atltvmountpro_local_clients");
-      if (stored) {
-        const clients = JSON.parse(stored);
-        const match = clients.find(c => c.email?.toLowerCase() === invoice.clientEmail?.toLowerCase());
-        if (match) {
-          optInStatus = match.OptIn_Status || "Pending";
-          doubleOptInToken = match.DoubleOptIn_Token || "";
-        }
-      }
-    } catch {}
+    console.warn("PocketBase client opt-in update offline:", err);
   }
 
-  // 2. Block if status is not 'Confirmed'
-  if (optInStatus !== "Confirmed") {
+  saveClientToDirectory({
+    email: cleanEmail,
+    optInStatus: "Confirmed",
+    status: "Active"
+  });
+
+  return true;
+}
+
+export async function sendInvoiceVia(invoice, method, forceOptIn = false) {
+  if (!invoice) return false;
+
+  // 1. Fetch client from PocketBase / Local storage
+  let optInStatus = forceOptIn ? "Confirmed" : "Pending";
+  let doubleOptInToken = "";
+  let clientRecord = null;
+
+  if (!forceOptIn) {
+    try {
+      const list = await pb.collection("clients").getList(1, 1, {
+        filter: `email = "${invoice.clientEmail}"`
+      });
+      if (list.items.length > 0) {
+        clientRecord = list.items[0];
+        optInStatus = clientRecord.OptIn_Status || "Pending";
+        doubleOptInToken = clientRecord.DoubleOptIn_Token || "";
+      } else {
+        optInStatus = "Pending";
+      }
+    } catch (err) {
+      console.warn("Failed to query PocketBase for client opt-in status, fallback to local:", err);
+      try {
+        const stored = localStorage.getItem("atltvmountpro_local_clients");
+        if (stored) {
+          const clients = JSON.parse(stored);
+          const match = clients.find(c => c.email?.toLowerCase() === invoice.clientEmail?.toLowerCase());
+          if (match) {
+            optInStatus = match.OptIn_Status || "Pending";
+            doubleOptInToken = match.DoubleOptIn_Token || "";
+          }
+        }
+      } catch {}
+    }
+  }
+
+  // 2. Block if status is not 'Confirmed' and forceOptIn is false
+  if (optInStatus !== "Confirmed" && !forceOptIn) {
     const token = doubleOptInToken || Math.random().toString(36).substr(2, 12);
     const verifyLink = `${window.location.origin}/verify-optin?token=${token}&email=${encodeURIComponent(invoice.clientEmail)}`;
     
@@ -313,19 +342,30 @@ export async function sendInvoiceVia(invoice, method) {
     }
 
     toast.error(
-      React.createElement("div", { className: "flex flex-col gap-1.5 text-left" },
+      React.createElement("div", { className: "flex flex-col gap-2 text-left" },
         React.createElement("span", { className: "font-bold text-xs" }, "Dispatch Blocked: Client Not Opted-In"),
         React.createElement("span", { className: "text-[10px] text-muted-foreground" }, 
-          "Anti-spam laws require double opt-in verification before sending invoices."
+          "Anti-spam compliance requires double opt-in consent before dispatching invoices."
         ),
-        React.createElement("a", { 
-          href: verifyLink, 
-          target: "_blank", 
-          rel: "noreferrer",
-          className: "text-xs text-primary underline font-bold mt-1 flex items-center gap-0.5 hover:text-primary/80"
-        }, "Send Double Opt-In Invite ", React.createElement(ExternalLink, { size: 10 }))
+        React.createElement("div", { className: "flex items-center gap-2 mt-1" },
+          React.createElement("button", {
+            type: "button",
+            onClick: async () => {
+              await confirmOptInForClient(invoice.clientEmail);
+              toast.success(`Client ${invoice.clientEmail} opted in! Dispatching...`);
+              sendInvoiceVia(invoice, method, true);
+            },
+            className: "px-2 py-1 bg-primary text-primary-foreground font-bold text-xs rounded hover:bg-primary/90 transition-colors"
+          }, "Opt-In & Send Now"),
+          React.createElement("a", { 
+            href: verifyLink, 
+            target: "_blank", 
+            rel: "noreferrer",
+            className: "text-xs text-primary underline font-bold flex items-center gap-0.5 hover:text-primary/80"
+          }, "Invite ", React.createElement(ExternalLink, { size: 10 }))
+        )
       ),
-      { duration: 8000 }
+      { duration: 10000 }
     );
     return false;
   }
