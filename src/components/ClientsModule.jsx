@@ -161,8 +161,10 @@ export default function ClientsModule() {
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showSuspendModal, setShowSuspendModal] = useState(false);
+  const [showInvoicesModal, setShowInvoicesModal] = useState(false);
+  const [targetClientInvoices, setTargetClientInvoices] = useState([]);
 
-  // Selected client for Edit/Delete/Suspend
+  // Selected client for Edit/Delete/Suspend/Invoices
   const [selectedClient, setSelectedClient] = useState(null);
 
   // Form State
@@ -369,6 +371,20 @@ export default function ClientsModule() {
       Clients: monthCounts[m]
     }));
   }, [clients]);
+
+  // Open Client Invoices Modal
+  const handleViewClientInvoices = (client) => {
+    setSelectedClient(client);
+    let invoices = [];
+    try {
+      invoices = JSON.parse(localStorage.getItem(LOCAL_INVOICES_KEY)) || [];
+    } catch {}
+    const clientInvoices = invoices.filter(
+      (inv) => (inv.clientEmail || "").toLowerCase() === client.email.toLowerCase()
+    );
+    setTargetClientInvoices(clientInvoices);
+    setShowInvoicesModal(true);
+  };
 
   // Status Distribution Data
   const statusPieData = useMemo(() => {
@@ -931,6 +947,17 @@ export default function ClientsModule() {
                       {/* Action Buttons */}
                       <td className="py-3.5 px-4 text-right">
                         <div className="flex items-center justify-end gap-1.5">
+                          {/* View Invoices */}
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-blue-500 hover:text-blue-600 hover:bg-blue-500/10"
+                            onClick={() => handleViewClientInvoices(client)}
+                            title="View Invoices"
+                          >
+                            <FileText size={14} />
+                          </Button>
+
                           {/* Edit */}
                           <Button
                             variant="ghost"
@@ -1311,6 +1338,67 @@ export default function ClientsModule() {
             </Button>
             <Button variant="destructive" onClick={handleDeleteSubmit}>
               Delete Permanently
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── CLIENT INVOICES MODAL ────────────────────────────────────────── */}
+      <Dialog open={showInvoicesModal} onOpenChange={setShowInvoicesModal}>
+        <DialogContent className="sm:max-w-[650px] max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-lg font-bold">
+              <FileText className="text-primary" size={20} />
+              Invoices for {selectedClient?.name}
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-4 pt-2">
+            <div className="text-xs text-muted-foreground">
+              Client: <span className="font-semibold text-foreground">{selectedClient?.email}</span>
+            </div>
+
+            {targetClientInvoices.length === 0 ? (
+              <div className="text-center py-8 border border-dashed rounded-xl space-y-2">
+                <FileText size={32} className="mx-auto text-muted-foreground/40" />
+                <p className="text-sm font-medium text-muted-foreground">No invoices found for this client.</p>
+                <p className="text-xs text-muted-foreground">Invoices created for this client in Finance will appear here.</p>
+              </div>
+            ) : (
+              <div className="space-y-3 max-h-96 overflow-y-auto pr-1">
+                {targetClientInvoices.map((inv) => (
+                  <div key={inv.id} className="p-4 rounded-xl border border-border/50 bg-muted/20 flex items-center justify-between gap-4">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono font-bold text-foreground text-sm">{inv.number}</span>
+                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
+                          inv.status === "paid"
+                            ? "bg-emerald-500/10 text-emerald-500"
+                            : inv.status === "sent"
+                            ? "bg-blue-500/10 text-blue-500"
+                            : "bg-amber-500/10 text-amber-500"
+                        }`}>
+                          {inv.status}
+                        </span>
+                      </div>
+                      <div className="text-xs text-muted-foreground mt-1">
+                        Issued: {new Date(inv.created).toLocaleDateString()}
+                        {inv.dueDate && ` • Due: ${new Date(inv.dueDate).toLocaleDateString()}`}
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-base font-extrabold text-foreground">${(inv.total || 0).toFixed(2)}</div>
+                      <div className="text-[10px] text-muted-foreground">{(inv.items || []).length} items</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <DialogFooter className="pt-4 border-t">
+            <Button variant="outline" onClick={() => setShowInvoicesModal(false)}>
+              Close
             </Button>
           </DialogFooter>
         </DialogContent>

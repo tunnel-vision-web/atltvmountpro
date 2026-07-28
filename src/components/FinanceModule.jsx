@@ -369,7 +369,17 @@ const FinanceModule = ({ initialData = null, currentUser = null }) => {
     setInvoices(next);
     setShowCreate(false);
     setForm(blankForm);
-    toast.success(`Invoice ${invoice.number} created.`);
+    setSelectedInvoice(invoice);
+    setShowViewInvoice(true);
+    toast.success(`Invoice ${invoice.number} created successfully.`, {
+      action: {
+        label: "View Invoice",
+        onClick: () => {
+          setSelectedInvoice(invoice);
+          setShowViewInvoice(true);
+        }
+      }
+    });
   };
 
   const openEditInvoice = (inv) => {
@@ -1988,6 +1998,20 @@ const FinanceModule = ({ initialData = null, currentUser = null }) => {
                 >
                   <Printer size={14} /> Print Invoice
                 </Button>
+                {(selectedInvoice.status === "draft" ||
+                  selectedInvoice.status === "sent" ||
+                  selectedInvoice.status === "pending") && (
+                  <Button
+                    variant="outline"
+                    className="gap-1.5 border-primary/40 text-primary hover:bg-primary/10"
+                    onClick={() => {
+                      setShowViewInvoice(false);
+                      openSend(selectedInvoice);
+                    }}
+                  >
+                    <Send size={14} /> Send Invoice
+                  </Button>
+                )}
                 {role !== "Viewer" && (
                   <Button
                     variant="outline"
