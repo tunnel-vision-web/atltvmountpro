@@ -29,7 +29,14 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { toast } from "sonner";
 import pb from "@/lib/pocketbaseClient";
 import RichTextEditor from "./RichTextEditor";
-import { saveClientToDirectory } from "@/lib/invoiceUtils";
+import { 
+  getInvoices, 
+  saveInvoices, 
+  generateInvoiceNumber, 
+  addSevenDays, 
+  sendInvoiceVia, 
+  saveClientToDirectory 
+} from "@/lib/invoiceUtils";
 
 export default function CRMModule() {
   const [contacts, setContacts] = useState([]);
@@ -45,6 +52,18 @@ export default function CRMModule() {
   
   // Selected Contact for Detail/Timeline panel
   const [selectedContact, setSelectedContact] = useState(null);
+
+  // Multi-Selection State (Checkbox Array)
+  const [selectedContactKeys, setSelectedContactKeys] = useState([]);
+
+  // In-CRM Quick Invoice Modal States
+  const [showQuickInvoiceModal, setShowQuickInvoiceModal] = useState(false);
+  const [quickInvoiceTarget, setQuickInvoiceTarget] = useState(null);
+  const [quickInvoiceItems, setQuickInvoiceItems] = useState([
+    { description: "TV Mounting & Handyman Service", quantity: 1, rate: 120 }
+  ]);
+  const [quickInvoiceNotes, setQuickInvoiceNotes] = useState("");
+  const [quickInvoiceJobDate, setQuickInvoiceJobDate] = useState(new Date().toISOString().slice(0, 10));
   
   // Blast Form States
   const [blastAudience, setBlastAudience] = useState("Clients"); // "Clients" | "Techs" | "All"
@@ -250,6 +269,135 @@ export default function CRMModule() {
       </div>,
       { duration: 10000 }
     );
+  };
+
+  // Toggle selection of a single contact
+  const toggleSelectContact = (contactKey) => {
+    setSelectedContactKeys((prev) =>
+      prev.includes(contactKey)
+        ? prev.filter((k) => k !== contactKey)
+        : [...prev, contactKey]
+    );
+  };
+
+  // Toggle select all contacts on current page
+  const toggleSelectAllPage = (paginatedList) => {
+    const pageKeys = paginatedList.map((c) => `${c.type}-${c.id || c.email}`);
+    const allSelected = pageKeys.length > 0 && pageKeys.every((k) => selectedContactKeys.includes(k));
+    if (allSelected) {
+      setSelectedContactKeys((prev) => prev.filter((k) => !pageKeys.includes(k)));
+    } else {
+      setSelectedContactKeys((prev) => Array.from(new Set([...prev, ...pageKeys])));
+    }
+  };
+
+  // Bulk Opt-In selected contacts
+  const handleBulkOptIn = async () => {
+    if (selectedContactKeys.length === 0) return;
+    let count = 0;
+    const selectedList = contacts.filter((c) =>
+      selectedContactKeys.includes(`${c.type}-${c.id || c.email}`)
+    );
+
+    for (const c of selectedList) {
+      if (c.type === "Client") {
+        await handleUpdateStatus(c, "Confirmed");
+        count++;
+      }
+    }
+    toast.success(`Bulk opted-in ${count} clients! Status set to Confirmed.`);
+    setSelectedContactKeys([]);
+  };
+
+  // Bulk Export CSV Action
+  const handleBulkExportCSV = () => {
+    const selectedList = contacts.filter((c) =>
+      selectedContactKeys.includes(`${c.type}-${c.id || c.email}`)
+    );
+    if (selectedList.length === 0) return;
+
+    const headers = ["Name", "Email", "Phone", "Type", "OptIn Channel", "OptIn Status", "Created"];
+    const rows = selectedList.map((c) => [
+      `"${c.name}"`,
+      `"${c.email}"`,
+      `"${c.phone}"`,
+      `"${c.type}"`,
+      `"${c.optInChannel}"`,
+      `"${c.optInStatus}"`,
+      `"${new Date(c.created).toLocaleDateString()}"`
+    ]);
+
+    const csvContent = "data:text/csv;charset=utf-8," + [headers.join(","), ...rows.map((r) => r.join(","))].join("\n");
+    const link = document.createElement("a");
+    link.setAttribute("href", encodeURI(csvContent));
+    link.setAttribute("download", `CRM_Selected_Contacts_${Date.now()}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    toast.success(`Exported ${selectedList.length} selected contacts to CSV.`);
+  };
+
+  // Open Quick Invoice Modal for a contact
+  const handleOpenQuickInvoice = (contact) => {
+    if (!contact || contact.type !== "Client") {
+      toast.error("Invoices can only be generated for clients.");
+      return;
+    }
+    setQuickInvoiceTarget(contact);
+    setQuickInvoiceItems([
+      { description: "TV Mounting & Handyman Service", quantity: 1, rate: 120 }
+    ]);
+    setQuickInvoiceNotes(`Invoice created from CRM for ${contact.name}`);
+    setQuickInvoiceJobDate(new Date().toISOString().slice(0, 10));
+    setShowQuickInvoiceModal(true);
+  };
+
+  // Submit Quick Invoice
+  const handleQuickInvoiceSubmit = async (e) => {
+    e.preventDefault();
+    if (!quickInvoiceTarget) return;
+
+    // 1. Confirm opt-in for client
+    await saveClientToDirectory({
+      name: quickInvoiceTarget.name,
+      email: quickInvoiceTarget.email,
+      phone: quickInvoiceTarget.phone,
+      optInStatus: "Confirmed",
+      status: "Active"
+    });
+
+    // 2. Calculate subtotal & tax
+    const subtotal = quickInvoiceItems.reduce((sum, item) => sum + (Number(item.rate) || 0) * (Number(item.quantity) || 1), 0);
+    const tax = subtotal * 0.07;
+    const total = subtotal + tax;
+
+    const invoice = {
+      id: "inv_" + Math.random().toString(36).substr(2, 9),
+      number: generateInvoiceNumber(),
+      clientName: quickInvoiceTarget.name,
+      clientEmail: quickInvoiceTarget.email,
+      clientPhone: quickInvoiceTarget.phone || "",
+      clientId: null,
+      bookingId: null,
+      items: quickInvoiceItems,
+      notes: quickInvoiceNotes,
+      subtotal,
+      tax,
+      total,
+      status: "draft",
+      created: new Date().toISOString(),
+      jobDate: quickInvoiceJobDate || null,
+      dueDate: quickInvoiceJobDate ? addSevenDays(quickInvoiceJobDate) : null,
+      paidDate: null,
+      paymentMethod: null
+    };
+
+    const next = [invoice, ...getInvoices()];
+    saveInvoices(next);
+    setShowQuickInvoiceModal(false);
+    
+    toast.success(`Invoice ${invoice.number} created for ${quickInvoiceTarget.name}! Dispatching...`);
+    sendInvoiceVia(invoice, "email", true);
   };
 
   // Run the Mass Blast queue with setTimeout delays to simulate networks
@@ -565,11 +713,62 @@ export default function CRMModule() {
               </div>
             </div>
 
+            {/* Bulk Action Toolbar */}
+            {selectedContactKeys.length > 0 && (
+              <div className="bg-primary/10 border border-primary/20 rounded-lg p-3 flex flex-wrap items-center justify-between gap-3 text-xs">
+                <div className="flex items-center gap-2 font-bold text-primary">
+                  <CheckCircle2 size={16} />
+                  <span>{selectedContactKeys.length} Contact(s) Selected</span>
+                </div>
+
+                <div className="flex items-center gap-2 flex-wrap">
+                  <Button size="xs" onClick={handleBulkOptIn} className="bg-emerald-600 hover:bg-emerald-700 text-white gap-1 text-[11px]">
+                    <CheckCircle2 size={12} />
+                    Confirm Bulk Opt-In
+                  </Button>
+
+                  <Button size="xs" variant="outline" onClick={handleBulkExportCSV} className="gap-1 text-[11px]">
+                    <FileText size={12} />
+                    Export CSV
+                  </Button>
+
+                  <Button size="xs" variant="ghost" onClick={() => setSelectedContactKeys([])} className="text-muted-foreground text-[11px]">
+                    Clear Selection
+                  </Button>
+                </div>
+              </div>
+            )}
+
             {/* Contacts Table */}
             <div className="border border-border/80 rounded-lg overflow-x-auto bg-background">
               <table className="w-full text-xs text-left">
                 <thead className="bg-muted/80 text-muted-foreground font-semibold border-b border-border">
                   <tr>
+                    <th className="w-10 px-3 py-3 text-center">
+                      <input
+                        type="checkbox"
+                        className="rounded border-border text-primary focus:ring-primary h-3.5 w-3.5 cursor-pointer"
+                        onChange={() => {
+                          const pageKeys = filteredContacts
+                            .slice((contactsPage - 1) * contactsItemsPerPage, contactsPage * contactsItemsPerPage)
+                            .map((c) => `${c.type}-${c.id || c.email}`);
+                          const allSelected = pageKeys.length > 0 && pageKeys.every((k) => selectedContactKeys.includes(k));
+                          if (allSelected) {
+                            setSelectedContactKeys((prev) => prev.filter((k) => !pageKeys.includes(k)));
+                          } else {
+                            setSelectedContactKeys((prev) => Array.from(new Set([...prev, ...pageKeys])));
+                          }
+                        }}
+                        checked={
+                          filteredContacts
+                            .slice((contactsPage - 1) * contactsItemsPerPage, contactsPage * contactsItemsPerPage)
+                            .length > 0 &&
+                          filteredContacts
+                            .slice((contactsPage - 1) * contactsItemsPerPage, contactsPage * contactsItemsPerPage)
+                            .every((c) => selectedContactKeys.includes(`${c.type}-${c.id || c.email}`))
+                        }
+                      />
+                    </th>
                     <th className="px-4 py-3">Contact</th>
                     <th className="px-4 py-3">Type</th>
                     <th className="px-4 py-3">Preferred Channel</th>
@@ -586,7 +785,7 @@ export default function CRMModule() {
                     if (loading) {
                       return (
                         <tr>
-                          <td colSpan={5} className="text-center py-10">
+                          <td colSpan={6} className="text-center py-10">
                             <Loader2 className="w-6 h-6 animate-spin mx-auto text-primary" />
                             <span className="text-xs text-muted-foreground mt-2 block">Loading Directory...</span>
                           </td>
@@ -597,85 +796,114 @@ export default function CRMModule() {
                     if (filteredContacts.length === 0) {
                       return (
                         <tr>
-                          <td colSpan={5} className="text-center py-12 text-muted-foreground">
+                          <td colSpan={6} className="text-center py-12 text-muted-foreground">
                             No contacts found matching criteria.
                           </td>
                         </tr>
                       );
                     }
 
-                    return paginatedContacts.map(c => (
-                      <tr 
-                        key={`${c.type}-${c.id}`}
-                        onClick={() => setSelectedContact(c)}
-                        className={`border-b border-border last:border-0 hover:bg-muted/20 cursor-pointer transition-colors ${
-                          selectedContact && selectedContact.id === c.id && selectedContact.type === c.type
-                            ? "bg-primary/5 border-l-2 border-l-primary"
-                            : ""
-                        }`}
-                      >
-                        <td className="px-4 py-3.5">
-                          <div className="font-bold text-foreground">{c.name}</div>
-                          <div className="text-muted-foreground text-[10px] flex flex-wrap items-center gap-1.5 mt-0.5 break-all">
-                            <span>{c.email}</span>
-                            {c.phone && <span className="before:content-['•'] before:mr-1.5 shrink-0">{c.phone}</span>}
-                          </div>
-                        </td>
-                        <td className="px-4 py-3.5">
-                          <span className={`px-2 py-0.5 rounded text-[9px] font-semibold uppercase tracking-wider ${
-                            c.type === "Client" 
-                              ? "bg-blue-500/10 text-blue-400 border border-blue-500/20" 
-                              : "bg-purple-500/10 text-purple-400 border border-purple-500/20"
-                          }`}>
-                            {c.type}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3.5">
-                          <div className="flex items-center gap-1.5 text-muted-foreground">
-                            {c.optInChannel === "Email" && <Mail size={12} className="text-indigo-400" />}
-                            {c.optInChannel === "SMS" && <Smartphone size={12} className="text-emerald-400" />}
-                            {c.optInChannel === "WhatsApp" && <MessageSquare size={12} className="text-teal-400" />}
-                            <span>{c.optInChannel}</span>
-                          </div>
-                        </td>
-                        <td className="px-4 py-3.5">
-                          <span className={`flex items-center gap-1 font-semibold ${
-                            c.optInStatus === "Confirmed" 
-                              ? "text-emerald-500" 
-                              : c.optInStatus === "Opted_Out"
-                              ? "text-destructive"
-                              : "text-amber-500"
-                          }`}>
-                            {c.optInStatus === "Confirmed" && <CheckCircle2 size={13} />}
-                            {c.optInStatus === "Opted_Out" && <AlertTriangle size={13} />}
-                            {c.optInStatus === "Pending" && <Clock size={13} />}
-                            <span className="capitalize">{c.optInStatus}</span>
-                          </span>
-                        </td>
-                        <td className="px-4 py-3.5 text-right" onClick={e => e.stopPropagation()}>
-                          <div className="flex items-center justify-end gap-1.5">
-                            {c.type === "Client" && c.optInStatus === "Pending" && (
+                    return paginatedContacts.map((c) => {
+                      const contactKey = `${c.type}-${c.id || c.email}`;
+                      const isSelected = selectedContactKeys.includes(contactKey);
+
+                      return (
+                        <tr
+                          key={contactKey}
+                          onClick={() => setSelectedContact(c)}
+                          className={`border-b border-border last:border-0 hover:bg-muted/20 cursor-pointer transition-colors ${
+                            selectedContact && selectedContact.id === c.id && selectedContact.type === c.type
+                              ? "bg-primary/5 border-l-2 border-l-primary"
+                              : isSelected
+                              ? "bg-primary/10"
+                              : ""
+                          }`}
+                        >
+                          <td className="px-3 py-3.5 text-center" onClick={(e) => e.stopPropagation()}>
+                            <input
+                              type="checkbox"
+                              className="rounded border-border text-primary focus:ring-primary h-3.5 w-3.5 cursor-pointer"
+                              checked={isSelected}
+                              onChange={() => toggleSelectContact(contactKey)}
+                            />
+                          </td>
+                          <td className="px-4 py-3.5">
+                            <div className="font-bold text-foreground">{c.name}</div>
+                            <div className="text-muted-foreground text-[10px] flex flex-wrap items-center gap-1.5 mt-0.5 break-all">
+                              <span>{c.email}</span>
+                              {c.phone && <span className="before:content-['•'] before:mr-1.5 shrink-0">{c.phone}</span>}
+                            </div>
+                          </td>
+                          <td className="px-4 py-3.5">
+                            <span
+                              className={`px-2 py-0.5 rounded text-[9px] font-semibold uppercase tracking-wider ${
+                                c.type === "Client"
+                                  ? "bg-blue-500/10 text-blue-400 border border-blue-500/20"
+                                  : "bg-purple-500/10 text-purple-400 border border-purple-500/20"
+                              }`}
+                            >
+                              {c.type}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3.5">
+                            <div className="flex items-center gap-1.5 text-muted-foreground">
+                              {c.optInChannel === "Email" && <Mail size={12} className="text-indigo-400" />}
+                              {c.optInChannel === "SMS" && <Smartphone size={12} className="text-emerald-400" />}
+                              {c.optInChannel === "WhatsApp" && <MessageSquare size={12} className="text-teal-400" />}
+                              <span>{c.optInChannel}</span>
+                            </div>
+                          </td>
+                          <td className="px-4 py-3.5">
+                            <span
+                              className={`flex items-center gap-1 font-semibold ${
+                                c.optInStatus === "Confirmed"
+                                  ? "text-emerald-500"
+                                  : c.optInStatus === "Opted_Out"
+                                  ? "text-destructive"
+                                  : "text-amber-500"
+                              }`}
+                            >
+                              {c.optInStatus === "Confirmed" && <CheckCircle2 size={13} />}
+                              {c.optInStatus === "Opted_Out" && <AlertTriangle size={13} />}
+                              {c.optInStatus === "Pending" && <Clock size={13} />}
+                              <span className="capitalize">{c.optInStatus}</span>
+                            </span>
+                          </td>
+                          <td className="px-4 py-3.5 text-right" onClick={(e) => e.stopPropagation()}>
+                            <div className="flex items-center justify-end gap-1.5">
+                              {c.type === "Client" && (
+                                <Button
+                                  size="xs"
+                                  variant="outline"
+                                  className="h-7 px-2 text-[10px] text-primary border-primary/30 hover:bg-primary/10 gap-1 font-bold"
+                                  onClick={() => handleOpenQuickInvoice(c)}
+                                  title="Generate Invoice for Client"
+                                >
+                                  <FileText size={11} />
+                                  Invoice
+                                </Button>
+                              )}
+                              {c.type === "Client" && c.optInStatus === "Pending" && (
+                                <Button
+                                  size="xs"
+                                  variant="outline"
+                                  className="h-7 px-2 text-[10px] text-emerald-500 border-emerald-500/30 hover:bg-emerald-500/10"
+                                  onClick={() => triggerOptInInvite(c)}
+                                >
+                                  Send Invite
+                                </Button>
+                              )}
                               <Button
                                 size="xs"
-                                variant="outline"
-                                className="h-7 px-2 text-[10px] text-primary border-primary/20 hover:bg-primary/5"
-                                onClick={() => triggerOptInInvite(c)}
+                                variant="ghost"
+                                className="h-7 w-7 p-0"
+                                onClick={() => setSelectedContact(c)}
                               >
-                                Send Invite
+                                <ChevronRight size={14} />
                               </Button>
-                            )}
-                            <Button
-                              size="xs"
-                              variant="ghost"
-                              className="h-7 w-7 p-0"
-                              onClick={() => setSelectedContact(c)}
-                            >
-                              <ChevronRight size={14} />
-                            </Button>
-                          </div>
-                        </td>
-                      </tr>
-                    ));
+                            </div>
+                      );
+                    });
                   })()}
                 </tbody>
               </table>
@@ -1404,6 +1632,105 @@ export default function CRMModule() {
           <div className="px-5 py-4 border-t border-border flex justify-end shrink-0 bg-muted/10">
             <Button onClick={() => setSelectedBlast(null)}>Close Details</Button>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── QUICK INVOICE DIALOG ────────────────────────────────────────── */}
+      <Dialog open={showQuickInvoiceModal} onOpenChange={setShowQuickInvoiceModal}>
+        <DialogContent className="sm:max-w-[550px] max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-lg font-bold">
+              <FileText className="text-primary" size={20} />
+              Create & Send Invoice for {quickInvoiceTarget?.name}
+            </DialogTitle>
+          </DialogHeader>
+
+          <form onSubmit={handleQuickInvoiceSubmit} className="space-y-4 pt-2">
+            <div className="p-3 bg-muted/30 border border-border/60 rounded-lg text-xs space-y-1">
+              <div className="font-bold text-foreground">{quickInvoiceTarget?.name}</div>
+              <div className="text-muted-foreground">{quickInvoiceTarget?.email} {quickInvoiceTarget?.phone && `• ${quickInvoiceTarget.phone}`}</div>
+              <div className="text-[10px] text-emerald-500 font-bold">Opt-In Status: Confirmed</div>
+            </div>
+
+            <div>
+              <label className="text-xs font-semibold block text-muted-foreground mb-1">Job / Service Date</label>
+              <input
+                type="date"
+                value={quickInvoiceJobDate}
+                onChange={(e) => setQuickInvoiceJobDate(e.target.value)}
+                className="input-base w-full py-1.5 text-xs bg-muted/50"
+              />
+            </div>
+
+            <div>
+              <label className="text-xs font-semibold block text-muted-foreground mb-1">Line Items</label>
+              <div className="space-y-2">
+                {quickInvoiceItems.map((item, idx) => (
+                  <div key={idx} className="flex gap-2 items-center">
+                    <input
+                      type="text"
+                      placeholder="Item Description"
+                      value={item.description}
+                      onChange={(e) => {
+                        const next = [...quickInvoiceItems];
+                        next[idx].description = e.target.value;
+                        setQuickInvoiceItems(next);
+                      }}
+                      className="input-base flex-1 py-1 text-xs bg-muted/50"
+                    />
+                    <input
+                      type="number"
+                      placeholder="Qty"
+                      value={item.quantity}
+                      onChange={(e) => {
+                        const next = [...quickInvoiceItems];
+                        next[idx].quantity = Number(e.target.value) || 1;
+                        setQuickInvoiceItems(next);
+                      }}
+                      className="input-base w-16 py-1 text-xs bg-muted/50 text-center"
+                    />
+                    <input
+                      type="number"
+                      placeholder="Rate ($)"
+                      value={item.rate}
+                      onChange={(e) => {
+                        const next = [...quickInvoiceItems];
+                        next[idx].rate = Number(e.target.value) || 0;
+                        setQuickInvoiceItems(next);
+                      }}
+                      className="input-base w-24 py-1 text-xs bg-muted/50 text-right"
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <label className="text-xs font-semibold block text-muted-foreground mb-1">Notes / Terms</label>
+              <textarea
+                value={quickInvoiceNotes}
+                onChange={(e) => setQuickInvoiceNotes(e.target.value)}
+                rows={2}
+                className="input-base w-full py-1 text-xs bg-muted/50"
+                placeholder="Notes for client..."
+              />
+            </div>
+
+            <div className="p-3 bg-primary/5 rounded-lg text-xs space-y-1 text-right">
+              <div>Subtotal: <strong className="text-foreground">${(quickInvoiceItems.reduce((s, i) => s + (Number(i.rate) || 0) * (Number(i.quantity) || 1), 0)).toFixed(2)}</strong></div>
+              <div>Sales Tax (7%): <strong className="text-foreground">${(quickInvoiceItems.reduce((s, i) => s + (Number(i.rate) || 0) * (Number(i.quantity) || 1), 0) * 0.07).toFixed(2)}</strong></div>
+              <div className="text-sm font-bold text-primary pt-1 border-t border-border">Total: ${(quickInvoiceItems.reduce((s, i) => s + (Number(i.rate) || 0) * (Number(i.quantity) || 1), 0) * 1.07).toFixed(2)}</div>
+            </div>
+
+            <div className="pt-3 border-t border-border flex justify-end gap-2">
+              <Button type="button" variant="outline" onClick={() => setShowQuickInvoiceModal(false)}>
+                Cancel
+              </Button>
+              <Button type="submit" className="bg-primary text-primary-foreground font-bold gap-1">
+                <Send size={14} /> Create & Send Invoice
+              </Button>
+            </div>
+          </form>
         </DialogContent>
       </Dialog>
     </div>
