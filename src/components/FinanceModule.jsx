@@ -516,15 +516,17 @@ const FinanceModule = ({ initialData = null, currentUser = null }) => {
     : clientDirectory;
 
   const pickClient = (client) => {
+    if (!client) return;
     setForm((prev) => ({
       ...prev,
-      clientName: client.name,
-      clientEmail: client.email,
+      clientName: client.name || "",
+      clientEmail: client.email || "",
       clientPhone: client.phone || "",
     }));
     setShowDirectoryPicker(false);
     setShowNewClientForm(false);
     setDirectorySearch("");
+    toast.success(`Selected client: ${client.name || client.email}`);
   };
 
   const addNewClientAndUse = () => {
@@ -1400,7 +1402,10 @@ const FinanceModule = ({ initialData = null, currentUser = null }) => {
                         <button
                           key={c.id || c.email}
                           type="button"
-                          onClick={() => pickClient(c)}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            pickClient(c);
+                          }}
                           className="w-full text-left px-3 py-2 text-sm hover:bg-muted/60 transition-colors flex flex-col gap-0.5"
                         >
                           <span className="font-medium">{c.name}</span>

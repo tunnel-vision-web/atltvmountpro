@@ -41,23 +41,26 @@ export function addSevenDays(dateStr) {
   return d.toISOString().slice(0, 10);
 }
 
-/** Merge clients from dedicated directory, local users, and bookings */
+/** Merge clients from dedicated directory, local clients, local users, and bookings */
 export function getClientDirectory() {
   const seen = new Set();
   const clients = [];
 
   const add = (c) => {
-    const email = (c.email || "").trim().toLowerCase();
+    const email = (c?.email || c?.Email || "").trim().toLowerCase();
     if (!email || seen.has(email)) return;
     seen.add(email);
     clients.push({
       id: c.id || `client_${email.replace(/[^a-z0-9]/g, "_")}`,
-      name: c.name || c.email,
-      email: c.email,
-      phone: c.phone || "",
+      name: c.name || c.Name || c.email,
+      email: email,
+      phone: c.phone || c.Phone_Number || c.phone_number || "",
     });
   };
 
+  try {
+    JSON.parse(localStorage.getItem("atltvmountpro_local_clients") || "[]").forEach(add);
+  } catch {}
   try {
     JSON.parse(localStorage.getItem(CLIENT_DIRECTORY_KEY) || "[]").forEach(add);
   } catch {}
@@ -77,23 +80,42 @@ export function getClientDirectory() {
 
 export function saveClientToDirectory(client) {
   if (!client?.email) return null;
-  const existing = getClientDirectory();
   const email = client.email.trim().toLowerCase();
   const record = {
     id: client.id || `client_${Date.now()}`,
     name: client.name || client.email,
-    email: client.email,
+    email: email,
     phone: client.phone || "",
+    status: client.status || "Active",
+    optInChannel: client.optInChannel || "Email",
+    optInStatus: client.optInStatus || "Confirmed",
     created: new Date().toISOString(),
   };
-  const stored = JSON.parse(localStorage.getItem(CLIENT_DIRECTORY_KEY) || "[]");
-  const idx = stored.findIndex((c) => c.email?.toLowerCase() === email);
-  if (idx >= 0) {
-    stored[idx] = { ...stored[idx], ...record };
-  } else {
-    stored.push(record);
-  }
-  localStorage.setItem(CLIENT_DIRECTORY_KEY, JSON.stringify(stored));
+
+  // 1. Save to CLIENT_DIRECTORY_KEY
+  try {
+    const stored = JSON.parse(localStorage.getItem(CLIENT_DIRECTORY_KEY) || "[]");
+    const idx = stored.findIndex((c) => c.email?.toLowerCase() === email);
+    if (idx >= 0) {
+      stored[idx] = { ...stored[idx], ...record };
+    } else {
+      stored.unshift(record);
+    }
+    localStorage.setItem(CLIENT_DIRECTORY_KEY, JSON.stringify(stored));
+  } catch {}
+
+  // 2. Save to atltvmountpro_local_clients
+  try {
+    const localClients = JSON.parse(localStorage.getItem("atltvmountpro_local_clients") || "[]");
+    const idx = localClients.findIndex((c) => (c.email || c.Email)?.toLowerCase() === email);
+    if (idx >= 0) {
+      localClients[idx] = { ...localClients[idx], ...record };
+    } else {
+      localClients.unshift(record);
+    }
+    localStorage.setItem("atltvmountpro_local_clients", JSON.stringify(localClients));
+  } catch {}
+
   return record;
 }
 
